@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validate migrations before committing
+echo "🔍 Validating database migrations..."
+npm run migration:validate
+
+if [ $? -ne 0 ]; then
+  echo "❌ Migration validation failed. Please fix the issues before committing."
+  echo "See docs/DATABASE-SYNC.md for help."
+  exit 1
+fi
+
+echo "✅ Migrations validated successfully"
+
