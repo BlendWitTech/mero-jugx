@@ -956,9 +956,10 @@ export default function PackagesPage() {
                           }
 
                           // Check if this is an upgrade (higher tier) or downgrade (lower tier)
+                          // Higher sort_order = Higher tier (Freemium=1, Basic=2, Platinum=3, Diamond=4)
                           const currentPackageSortOrder = currentPackage?.package?.sort_order || 999;
-                          const isUpgrade = pkg.sort_order < currentPackageSortOrder;
-                          const isDowngrade = pkg.sort_order > currentPackageSortOrder;
+                          const isUpgrade = pkg.sort_order > currentPackageSortOrder;
+                          const isDowngrade = pkg.sort_order < currentPackageSortOrder;
                           const hasActiveSubscription = currentPackage?.package_expires_at && 
                             new Date(currentPackage.package_expires_at) > new Date();
 

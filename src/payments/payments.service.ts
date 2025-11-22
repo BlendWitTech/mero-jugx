@@ -20,6 +20,7 @@ import {
   OrganizationMemberStatus,
 } from '../database/entities/organization-member.entity';
 import { OrganizationPackageFeature } from '../database/entities/organization-package-feature.entity';
+import { Role } from '../database/entities/role.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EsewaService } from './esewa.service';
 import { StripeService } from './stripe.service';
@@ -47,6 +48,8 @@ export class PaymentsService {
     private memberRepository: Repository<OrganizationMember>,
     @InjectRepository(OrganizationPackageFeature)
     private orgFeatureRepository: Repository<OrganizationPackageFeature>,
+    @InjectRepository(Role)
+    private roleRepository: Repository<Role>,
     private esewaService: EsewaService,
     private stripeService: StripeService,
     private packagesService: PackagesService,
@@ -64,22 +67,60 @@ export class PaymentsService {
         `Creating payment: ${JSON.stringify({ userId, organizationId, gateway: createPaymentDto.gateway, amount: createPaymentDto.amount, payment_type: createPaymentDto.payment_type })}`,
       );
 
-      // Verify user is member of organization
+      // Verify organization exists
       const organization = await this.organizationRepository.findOne({
         where: { id: organizationId },
-        relations: ['members'],
       });
 
       if (!organization) {
         throw new NotFoundException('Organization not found');
       }
 
-      const isMember = organization.members.some(
-        (member) => member.user_id === userId && member.status === 'active',
-      );
+      // Check permissions based on payment type BEFORE creating payment
+      // This ensures users can't initiate payments they don't have permission for
+      const membership = await this.memberRepository.findOne({
+        where: {
+          user_id: userId,
+          organization_id: organizationId,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+        relations: ['role'],
+      });
 
-      if (!isMember) {
-        throw new ForbiddenException('You are not a member of this organization');
+      if (!membership) {
+        throw new ForbiddenException('You are not an active member of this organization');
+      }
+
+      // Check permission based on payment type
+      let requiredPermission: string;
+      if (createPaymentDto.payment_type === PaymentType.PACKAGE_UPGRADE) {
+        requiredPermission = 'packages.upgrade';
+      } else if (createPaymentDto.payment_type === PaymentType.ONE_TIME) {
+        // For feature purchases
+        requiredPermission = 'packages.features.purchase';
+      } else {
+        // For other payment types, skip permission check (or add as needed)
+        requiredPermission = null;
+      }
+
+      if (requiredPermission) {
+        // Organization owners always have permission
+        if (!membership.role.is_organization_owner) {
+          const roleWithPermissions = await this.roleRepository.findOne({
+            where: { id: membership.role_id },
+            relations: ['role_permissions', 'role_permissions.permission'],
+          });
+
+          const hasPermission = roleWithPermissions?.role_permissions?.some(
+            (rp) => rp.permission.slug === requiredPermission,
+          );
+
+          if (!hasPermission) {
+            throw new ForbiddenException(
+              `You do not have permission to ${requiredPermission === 'packages.upgrade' ? 'upgrade packages' : 'purchase features'}. Please contact your organization administrator.`,
+            );
+          }
+        }
       }
 
       // Generate unique transaction ID

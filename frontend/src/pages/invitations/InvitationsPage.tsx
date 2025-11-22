@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +32,7 @@ export default function InvitationsPage() {
   });
 
   // Fetch roles for the dropdown
-  const { data: roles } = useQuery({
+  const { data: roles, refetch: refetchRoles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.get('/roles');
@@ -40,6 +40,21 @@ export default function InvitationsPage() {
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
   });
+
+  // Listen for package update events to refresh roles
+  useEffect(() => {
+    const handlePackageUpdate = () => {
+      console.log('[Invitations] Package update event received, refetching roles...');
+      // Invalidate and refetch roles to show newly available roles after package upgrade
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      refetchRoles();
+    };
+    
+    window.addEventListener('package-updated', handlePackageUpdate);
+    return () => {
+      window.removeEventListener('package-updated', handlePackageUpdate);
+    };
+  }, [refetchRoles, queryClient]);
 
   const {
     register,
@@ -467,20 +482,29 @@ export default function InvitationsPage() {
                               <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
                               <span className="text-green-600 font-medium">Accepted</span>
                             </div>
-                          ) : latestInvitation.status === 'cancelled' && latestInvitation.canceller ? (
+                          ) : latestInvitation.status === 'cancelled' ? (
                             <div className="text-right">
-                              <div className="text-xs text-gray-500 mb-1">Cancelled by</div>
-                              <div className="flex items-center justify-end">
-                                <span className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center mr-2">
-                                  <span className="text-red-600 font-medium text-xs">
-                                    {latestInvitation.canceller.first_name?.[0]?.toUpperCase() || ''}
-                                    {latestInvitation.canceller.last_name?.[0]?.toUpperCase() || ''}
-                                  </span>
-                                </span>
-                                <span className="text-sm text-gray-700">
-                                  {latestInvitation.canceller.first_name} {latestInvitation.canceller.last_name}
-                                </span>
-                              </div>
+                              {latestInvitation.canceller ? (
+                                <>
+                                  <div className="text-xs text-gray-500 mb-1">Cancelled by</div>
+                                  <div className="flex items-center justify-end">
+                                    <span className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center mr-2">
+                                      <span className="text-red-600 font-medium text-xs">
+                                        {latestInvitation.canceller.first_name?.[0]?.toUpperCase() || ''}
+                                        {latestInvitation.canceller.last_name?.[0]?.toUpperCase() || ''}
+                                      </span>
+                                    </span>
+                                    <span className="text-sm text-gray-700">
+                                      {latestInvitation.canceller.first_name} {latestInvitation.canceller.last_name}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex items-center justify-end">
+                                  <X className="h-4 w-4 text-red-600 mr-2" />
+                                  <span className="text-red-600 font-medium">Cancelled</span>
+                                </div>
+                              )}
                             </div>
                           ) : null}
                         </td>

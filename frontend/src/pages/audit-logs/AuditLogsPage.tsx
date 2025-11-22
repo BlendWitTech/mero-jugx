@@ -51,13 +51,20 @@ export default function AuditLogsPage() {
   const { data: stats } = useQuery({
     queryKey: ['audit-logs-stats', dateFrom, dateTo],
     queryFn: async () => {
-      const params: any = {};
-      if (dateFrom) params.from_date = dateFrom;
-      if (dateTo) params.to_date = dateTo;
-      const response = await api.get('/audit-logs/stats', { params });
-      return response.data;
+      try {
+        const params: any = {};
+        if (dateFrom) params.from_date = dateFrom;
+        if (dateTo) params.to_date = dateTo;
+        const response = await api.get('/audit-logs/stats', { params });
+        return response.data;
+      } catch (error) {
+        // Don't fail the page if stats fail - it's optional data
+        console.warn('Failed to load audit log stats:', error);
+        return null;
+      }
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    retry: 1,
   });
 
   const handleViewDetails = (log: any) => {
@@ -147,14 +154,14 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Statistics Cards */}
-      {stats && (
+      {stats && typeof stats === 'object' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="card">
             <div className="flex items-center">
               <Activity className="h-8 w-8 text-primary-500 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Total Logs</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_logs || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">{(stats as any)?.total_logs || 0}</p>
               </div>
             </div>
           </div>
@@ -163,7 +170,7 @@ export default function AuditLogsPage() {
               <User className="h-8 w-8 text-blue-500 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Unique Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.unique_users || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">{(stats as any)?.unique_users || 0}</p>
               </div>
             </div>
           </div>
@@ -172,7 +179,7 @@ export default function AuditLogsPage() {
               <FileText className="h-8 w-8 text-green-500 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Actions Today</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.actions_today || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">{(stats as any)?.actions_today || 0}</p>
               </div>
             </div>
           </div>
@@ -181,7 +188,7 @@ export default function AuditLogsPage() {
               <Calendar className="h-8 w-8 text-purple-500 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Actions This Week</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.actions_this_week || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">{(stats as any)?.actions_this_week || 0}</p>
               </div>
             </div>
           </div>

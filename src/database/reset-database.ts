@@ -6,6 +6,7 @@ import { seedPackages } from './seeds/001-packages.seed';
 import { seedPermissions } from './seeds/002-permissions.seed';
 import { seedRoles } from './seeds/003-roles.seed';
 import { seedPackageFeatures } from './seeds/004-package-features.seed';
+import { seedRoleTemplates } from './seeds/005-role-templates.seed';
 
 // Load environment variables
 config();
@@ -111,6 +112,7 @@ async function resetDatabase() {
     await seedPermissions(AppDataSource);
     await seedRoles(AppDataSource);
     await seedPackageFeatures(AppDataSource);
+    await seedRoleTemplates(AppDataSource);
     console.log('  ✓ Seeds completed.');
 
     console.log('\n✅ Database reset completed successfully!');

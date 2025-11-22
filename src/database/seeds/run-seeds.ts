@@ -6,6 +6,7 @@ import { seedPackages } from './001-packages.seed';
 import { seedPermissions } from './002-permissions.seed';
 import { seedRoles } from './003-roles.seed';
 import { seedPackageFeatures } from './004-package-features.seed';
+import { seedRoleTemplates } from './005-role-templates.seed';
 
 // Load environment variables
 config();
@@ -40,6 +41,9 @@ async function runSeeds() {
     console.log('');
 
     await seedPackageFeatures(dataSource);
+    console.log('');
+
+    await seedRoleTemplates(dataSource);
     console.log('');
 
     console.log('✅ All seeds completed successfully!');

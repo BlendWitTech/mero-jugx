@@ -24,12 +24,22 @@ export const convertUSDToNPR = (usd: number): number => {
 };
 
 /**
- * Format currency amount
+ * Format currency amount with elegant display
  */
 export const formatCurrency = (amount: number, currency: string): string => {
+  if (currency === 'NPR') {
+    // Format NPR with proper formatting (NPR symbol: रू or Rs.)
+    const formatted = new Intl.NumberFormat('en-NP', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+    return `Rs. ${formatted}`;
+  }
+  
+  // Format USD with $ symbol
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currency,
+    currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);

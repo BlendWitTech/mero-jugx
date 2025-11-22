@@ -9,6 +9,7 @@ import { Organization } from '../database/entities/organization.entity';
 import { User } from '../database/entities/user.entity';
 import { OrganizationMember } from '../database/entities/organization-member.entity';
 import { OrganizationPackageFeature } from '../database/entities/organization-package-feature.entity';
+import { Role } from '../database/entities/role.entity';
 import { PackagesModule } from '../packages/packages.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CommonModule } from '../common/common.module';
@@ -21,6 +22,7 @@ import { CommonModule } from '../common/common.module';
       User,
       OrganizationMember,
       OrganizationPackageFeature,
+      Role,
     ]),
     forwardRef(() => PackagesModule),
     NotificationsModule,

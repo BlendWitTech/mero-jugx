@@ -176,6 +176,8 @@ export class NotificationHelperService {
       [NotificationType.INVITATION_EXPIRED]: 'user_invitations',
       [NotificationType.ORGANIZATION_UPDATED]: 'organization_updates',
       [NotificationType.PACKAGE_UPGRADED]: 'organization_updates',
+      [NotificationType.PACKAGE_EXPIRING_SOON]: 'organization_updates',
+      [NotificationType.PACKAGE_EXPIRED]: 'organization_updates',
       [NotificationType.MFA_ENABLED]: 'security_alerts',
       [NotificationType.MFA_DISABLED]: 'security_alerts',
       [NotificationType.SECURITY_ALERT]: 'security_alerts',

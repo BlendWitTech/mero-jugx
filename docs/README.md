@@ -8,6 +8,9 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 - **[Organization User Guide](./ORGANIZATION-USER-GUIDE.md)** 📖
   - Complete guide for using the platform
   - User management, roles, packages, payments, and more
+- **[Role Management Guide](./ROLE-MANAGEMENT-GUIDE.md)** 🔐
+  - How to create roles and assign permissions based on your package
+  - Step-by-step workflow for role customization
 
 ### 👨‍💻 For Developers
 - **[Developer Guide](../DEVELOPER_GUIDE.md)** 🛠️ - Start here for development setup
@@ -28,6 +31,7 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 | Document | Description |
 |----------|-------------|
 | [Organization User Guide](./ORGANIZATION-USER-GUIDE.md) | Complete guide for organizations using the platform |
+| [Role Management Guide](./ROLE-MANAGEMENT-GUIDE.md) | How to create roles and assign permissions based on package |
 | [Login Access Guide](./LOGIN-ACCESS-GUIDE.md) | How to access and log into the system |
 | [Environment Setup](./ENVIRONMENT-SETUP.md) | Development environment setup guide |
 
@@ -73,6 +77,7 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 
 | Document | Description |
 |----------|-------------|
+| [Role Management Guide](./ROLE-MANAGEMENT-GUIDE.md) | How to create roles and assign permissions based on package |
 | [Audit Logs Guide](./AUDIT-LOGS-GUIDE.md) | Understanding and using audit logs |
 
 ---

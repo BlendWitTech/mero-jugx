@@ -28,7 +28,7 @@ export default function RolesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<any>(null);
 
-  const { data: roles, isLoading, error } = useQuery({
+  const { data: roles, isLoading, error, refetch: refetchRoles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.get('/roles');
@@ -48,24 +48,11 @@ export default function RolesPage() {
     refetchOnWindowFocus: true,
   });
 
-  // Listen for package update events
-  useEffect(() => {
-    const handlePackageUpdate = () => {
-      console.log('[Roles] Package update event received, refetching package data...');
-      refetchPackage();
-    };
-    
-    window.addEventListener('package-updated', handlePackageUpdate);
-    return () => {
-      window.removeEventListener('package-updated', handlePackageUpdate);
-    };
-  }, [refetchPackage]);
-
   const isFreemium = packageInfo?.package?.slug === 'freemium';
   const canCreateRoles = !isFreemium;
 
   // Fetch role usage counts (user counts per role)
-  const { data: roleUsageCounts, refetch: refetchRoleUsageCounts } = useQuery({
+  const { data: roleUsageCounts } = useQuery({
     queryKey: ['role-usage-counts'],
     queryFn: async () => {
       const response = await api.get('/roles/usage-counts');
@@ -86,14 +73,38 @@ export default function RolesPage() {
   });
 
   // Fetch role templates
-  const { data: roleTemplates } = useQuery({
+  const { data: roleTemplates, refetch: refetchRoleTemplates, isLoading: isLoadingTemplates } = useQuery({
     queryKey: ['role-templates'],
     queryFn: async () => {
       const response = await api.get('/role-templates');
       return Array.isArray(response.data) ? response.data : [];
     },
-    enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    enabled: _hasHydrated && isAuthenticated && !!accessToken && canCreateRoles,
   });
+
+  // Listen for package update events (must be after all query declarations)
+  useEffect(() => {
+    const handlePackageUpdate = () => {
+      console.log('[Roles] Package update event received, refetching package, roles, and templates...');
+      // Refetch package info to get updated package limits
+      refetchPackage().then(() => {
+        // After package info is updated, refetch roles and templates
+        // This ensures we have the latest package info before fetching roles
+        setTimeout(() => {
+          refetchRoles();
+          refetchRoleTemplates();
+        }, 500); // Small delay to ensure package update is reflected
+      });
+      // Also invalidate queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: ['role-templates'] });
+    };
+    
+    window.addEventListener('package-updated', handlePackageUpdate);
+    return () => {
+      window.removeEventListener('package-updated', handlePackageUpdate);
+    };
+  }, [refetchPackage, refetchRoles, refetchRoleTemplates, queryClient]);
 
   // Create role from template mutation
   const createFromTemplateMutation = useMutation({
@@ -276,11 +287,25 @@ export default function RolesPage() {
           <p className="mt-2 text-gray-600">Manage organization roles and their permissions</p>
         </div>
         <div className="flex items-center space-x-3">
-          {canCreateRoles && roleTemplates && roleTemplates.length > 0 && (
-            <button onClick={() => setShowTemplateModal(true)} className="btn btn-primary">
-              <Shield className="mr-2 h-4 w-4" />
-              Create Role from Template
-            </button>
+          {canCreateRoles && (
+            <>
+              {isLoadingTemplates ? (
+                <button disabled className="btn btn-primary opacity-50 cursor-not-allowed">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Loading Templates...
+                </button>
+              ) : roleTemplates && roleTemplates.length > 0 ? (
+                <button onClick={() => setShowTemplateModal(true)} className="btn btn-primary">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Create Role from Template
+                </button>
+              ) : (
+                <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <p className="font-medium text-blue-800">No Templates Available</p>
+                  <p className="text-blue-700">No role templates are available for your current package. Please contact support or check back later.</p>
+                </div>
+              )}
+            </>
           )}
           {!canCreateRoles && (
             <div className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2">

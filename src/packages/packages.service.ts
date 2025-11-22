@@ -82,6 +82,8 @@ export class PackagesService {
     package: Package;
     current_limits: { users: number; roles: number };
     active_features: OrganizationPackageFeature[];
+    package_expires_at: Date | null;
+    package_auto_renew: boolean;
   }> {
     // Verify user is member
     const membership = await this.memberRepository.findOne({
@@ -139,7 +141,13 @@ export class PackagesService {
     userId: string,
     organizationId: string,
     dto: UpgradePackageDto,
-  ): Promise<{ message: string; package: Package; new_limits: { users: number; roles: number } }> {
+  ): Promise<{
+    message: string;
+    package: Package;
+    new_limits: { users: number; roles: number };
+    prorated_credit?: number;
+    final_price?: number;
+  }> {
     // Verify user is member and has permission (packages.upgrade)
     const membership = await this.memberRepository.findOne({
       where: {

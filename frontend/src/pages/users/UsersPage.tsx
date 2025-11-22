@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -64,7 +64,7 @@ export default function UsersPage() {
   });
 
   // Fetch roles for role assignment
-  const { data: roles } = useQuery({
+  const { data: roles, refetch: refetchRoles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.get('/roles');
@@ -72,6 +72,21 @@ export default function UsersPage() {
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
   });
+
+  // Listen for package update events to refresh roles
+  useEffect(() => {
+    const handlePackageUpdate = () => {
+      console.log('[Users] Package update event received, refetching roles...');
+      // Invalidate and refetch roles to show newly available roles after package upgrade
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      refetchRoles();
+    };
+    
+    window.addEventListener('package-updated', handlePackageUpdate);
+    return () => {
+      window.removeEventListener('package-updated', handlePackageUpdate);
+    };
+  }, [refetchRoles, queryClient]);
 
   // Fetch user details for view/edit
   const { data: userDetails } = useQuery({
@@ -735,11 +750,11 @@ export default function UsersPage() {
                     </label>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {/* Default Roles Section - Always visible */}
-                      {roles?.filter((role: any) => role.is_default || role.is_system_role).length > 0 && (
+                      {roles && roles.filter((role: any) => role.is_default || role.is_system_role).length > 0 && (
                         <div className="mb-4">
                           <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Default Roles</p>
                           {roles
-                            .filter((role: any) => role.is_default || role.is_system_role)
+                            ?.filter((role: any) => role.is_default || role.is_system_role)
                             .map((role: any) => (
                               <button
                                 key={role.id}
@@ -782,11 +797,11 @@ export default function UsersPage() {
                       )}
                       
                       {/* Custom Roles Section */}
-                      {roles?.filter((role: any) => !role.is_default && !role.is_system_role).length > 0 && (
+                      {roles && roles.filter((role: any) => !role.is_default && !role.is_system_role).length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Custom Roles</p>
                           {roles
-                            .filter((role: any) => !role.is_default && !role.is_system_role)
+                            ?.filter((role: any) => !role.is_default && !role.is_system_role)
                             .map((role: any) => (
                               <button
                                 key={role.id}
