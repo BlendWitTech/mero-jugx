@@ -98,13 +98,16 @@ export class InitialMigration1763103799252 implements MigrationInterface {
       `CREATE TYPE "public"."organizations_status_enum" AS ENUM('active', 'suspended', 'deleted')`,
     );
     await queryRunner.query(
-      `CREATE TABLE "organizations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "slug" character varying(255) NOT NULL, "email" character varying(255) NOT NULL, "phone" character varying(50), "address" text, "city" character varying(100), "state" character varying(100), "country" character varying(100), "postal_code" character varying(20), "website" character varying(255), "logo_url" character varying(500), "description" text, "package_id" integer NOT NULL, "user_limit" integer NOT NULL DEFAULT '10', "role_limit" integer NOT NULL DEFAULT '2', "mfa_enabled" boolean NOT NULL DEFAULT false, "email_verified" boolean NOT NULL DEFAULT false, "status" "public"."organizations_status_enum" NOT NULL DEFAULT 'active', "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP, CONSTRAINT "UQ_9b7ca6d30b94fef571cff876884" UNIQUE ("name"), CONSTRAINT "UQ_963693341bd612aa01ddf3a4b68" UNIQUE ("slug"), CONSTRAINT "UQ_4ad920935f4d4eb73fc58b40f72" UNIQUE ("email"), CONSTRAINT "PK_6b031fcd0863e3f6b44230163f9" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "organizations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(255) NOT NULL, "slug" character varying(255) NOT NULL, "email" character varying(255) NOT NULL, "phone" character varying(50), "address" text, "city" character varying(100), "state" character varying(100), "country" character varying(100), "postal_code" character varying(20), "website" character varying(255), "logo_url" character varying(500), "description" text, "package_id" integer NOT NULL, "user_limit" integer NOT NULL DEFAULT '10', "role_limit" integer NOT NULL DEFAULT '2', "mfa_enabled" boolean NOT NULL DEFAULT false, "email_verified" boolean NOT NULL DEFAULT false, "status" "public"."organizations_status_enum" NOT NULL DEFAULT 'active', "package_expires_at" TIMESTAMP NULL, "package_auto_renew" boolean NOT NULL DEFAULT false, "has_upgraded_from_freemium" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP, CONSTRAINT "UQ_9b7ca6d30b94fef571cff876884" UNIQUE ("name"), CONSTRAINT "UQ_963693341bd612aa01ddf3a4b68" UNIQUE ("slug"), CONSTRAINT "UQ_4ad920935f4d4eb73fc58b40f72" UNIQUE ("email"), CONSTRAINT "PK_6b031fcd0863e3f6b44230163f9" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_68d007d564953c00ae74c13dc2" ON "organizations" ("package_id") `,
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_f3770f157bd77d83ab022e92fc" ON "organizations" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_organizations_package_expires_at" ON "organizations" ("package_expires_at") `,
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX "IDX_4ad920935f4d4eb73fc58b40f7" ON "organizations" ("email") `,
