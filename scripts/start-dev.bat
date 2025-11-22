@@ -7,6 +7,11 @@ echo.
 
 REM Change to project root directory
 pushd "%~dp0\.."
+if errorlevel 1 (
+    echo ERROR: Failed to change to project root directory!
+    pause
+    exit /b 1
+)
 set "PROJECT_ROOT=!CD!"
 
 REM Check if .env file exists
@@ -14,6 +19,25 @@ if not exist ".env" (
     echo WARNING: .env file not found!
     echo Please create a .env file with your configuration.
     echo Run 'scripts\setup.bat' first if you haven't set up the project.
+    echo.
+    popd
+    pause
+    exit /b 1
+)
+
+REM Check if node_modules exists
+if not exist "node_modules" (
+    echo WARNING: Backend node_modules not found!
+    echo Run 'scripts\setup.bat' first to install dependencies.
+    echo.
+    popd
+    pause
+    exit /b 1
+)
+
+if not exist "frontend\node_modules" (
+    echo WARNING: Frontend node_modules not found!
+    echo Run 'scripts\setup.bat' first to install dependencies.
     echo.
     popd
     pause
@@ -29,9 +53,25 @@ if exist "docker-compose.yml" (
         echo Continuing anyway...
     ) else (
         echo Docker containers started successfully.
+        echo Waiting for PostgreSQL to be ready...
+        timeout /t 5 /nobreak >nul
     )
     echo.
-    timeout /t 3 /nobreak >nul
+)
+
+REM Check if ports are already in use
+netstat -ano | findstr ":3000" >nul 2>&1
+if not errorlevel 1 (
+    echo WARNING: Port 3000 is already in use!
+    echo Please stop the process using port 3000 or change PORT in .env
+    echo.
+)
+
+netstat -ano | findstr ":3001" >nul 2>&1
+if not errorlevel 1 (
+    echo WARNING: Port 3001 is already in use!
+    echo Please stop the process using port 3001 or change FRONTEND_URL in .env
+    echo.
 )
 
 REM Create temporary batch files to avoid quote issues
@@ -42,6 +82,7 @@ REM Write backend batch file
 (
 echo @echo off
 echo cd /d "!PROJECT_ROOT!"
+echo echo Starting Backend Server...
 echo npm run start:dev
 ) > "%BACKEND_BAT%"
 
@@ -49,6 +90,7 @@ REM Write frontend batch file
 (
 echo @echo off
 echo cd /d "!PROJECT_ROOT!\frontend"
+echo echo Starting Frontend Server...
 echo npm run dev
 ) > "%FRONTEND_BAT%"
 
@@ -66,7 +108,7 @@ popd
 
 echo.
 echo ========================================
-echo   Development Servers Running!
+echo   Development Servers Starting!
 echo ========================================
 echo.
 if exist "docker-compose.yml" (
@@ -84,4 +126,3 @@ echo Close those windows to stop the servers.
 echo.
 echo Press any key to exit this script (servers will keep running)...
 pause >nul
-

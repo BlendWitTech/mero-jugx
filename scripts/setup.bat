@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 echo ========================================
 echo   Mero Jugx - Project Setup
 echo ========================================
@@ -8,6 +9,11 @@ echo.
 
 REM Change to project root directory
 cd /d "%~dp0\.."
+if errorlevel 1 (
+    echo ERROR: Failed to change to project root directory!
+    pause
+    exit /b 1
+)
 
 REM Check if Node.js is installed
 where node >nul 2>&1
@@ -28,6 +34,11 @@ if errorlevel 1 (
 
 echo.
 echo [2/5] Installing frontend dependencies...
+if not exist "frontend" (
+    echo ERROR: Frontend directory not found!
+    pause
+    exit /b 1
+)
 cd frontend
 call npm install
 if errorlevel 1 (
@@ -45,12 +56,17 @@ if not exist ".env" (
     echo.
     echo Please create a .env file with the following variables:
     echo   DB_HOST=localhost
-    echo   DB_PORT=5432
+    echo   DB_PORT=5433
     echo   DB_USER=postgres
     echo   DB_PASSWORD=postgres
     echo   DB_NAME=mero_jugx
-    echo   JWT_SECRET=your-secret-key-here
-    echo   JWT_EXPIRES_IN=7d
+    echo   JWT_SECRET=your-secret-key-here-change-in-production
+    echo   JWT_EXPIRES_IN=15m
+    echo   JWT_REFRESH_SECRET=your-refresh-secret-key-here
+    echo   JWT_REFRESH_EXPIRES_IN=7d
+    echo   PORT=3000
+    echo   NODE_ENV=development
+    echo   FRONTEND_URL=http://localhost:3001
     echo.
     echo See docs/ENVIRONMENT-SETUP.md for more details.
     echo.
@@ -77,7 +93,8 @@ if exist "docker-compose.yml" (
             echo Make sure Docker Desktop is running.
         ) else (
             echo Docker containers started successfully.
-            timeout /t 5 /nobreak >nul
+            echo Waiting for PostgreSQL to be ready...
+            timeout /t 10 /nobreak >nul
         )
     )
 ) else (
@@ -100,7 +117,15 @@ if "%db_choice%"=="1" (
     echo Resetting database...
     call npm run db:reset
     if errorlevel 1 (
-        echo WARNING: Database reset failed. You may need to create the database manually.
+        echo WARNING: Database reset failed.
+        echo You may need to:
+        echo   1. Create the database manually: CREATE DATABASE mero_jugx;
+        echo   2. Check your .env file has correct database credentials
+        echo   3. Ensure PostgreSQL is running
+        echo.
+        echo See docs/DATABASE-GUIDE.md for troubleshooting.
+    ) else (
+        echo Database reset completed successfully!
     )
 ) else if "%db_choice%"=="2" (
     echo.
@@ -108,6 +133,9 @@ if "%db_choice%"=="1" (
     call npm run migration:run
     if errorlevel 1 (
         echo WARNING: Migration failed. Check your database connection.
+        echo See docs/DATABASE-GUIDE.md for troubleshooting.
+    ) else (
+        echo Migrations completed successfully!
     )
 ) else (
     echo Skipping database setup.
@@ -124,7 +152,7 @@ echo ========================================
 echo.
 echo Next steps:
 echo   1. Make sure your .env file is configured correctly
-echo   2. Ensure PostgreSQL is running
+echo   2. Ensure PostgreSQL is running (or Docker containers are up)
 echo   3. Start development servers:
 echo      scripts\start-dev.bat
 echo.
@@ -133,4 +161,3 @@ echo   Backend:  npm run start:dev
 echo   Frontend: cd frontend ^&^& npm run dev
 echo.
 pause
-
