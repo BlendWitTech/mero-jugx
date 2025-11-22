@@ -65,4 +65,3 @@ export class Session {
     return new Date() > this.expires_at || this.revoked_at !== null;
   }
 }
-

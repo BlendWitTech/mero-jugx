@@ -1,12 +1,11 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, In } from 'typeorm';
 import { AuditLog } from '../database/entities/audit-log.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 import { User } from '../database/entities/user.entity';
 import { AuditLogQueryDto } from './dto/audit-log-query.dto';
@@ -35,7 +34,11 @@ export class AuditLogsService {
       return 1; // Highest level
     }
     // Admin role can be identified by slug 'admin' or by being a default/system role with admin-like permissions
-    if (role.slug === 'admin' || (role.is_default && role.slug === 'admin') || (role.is_system_role && role.slug === 'admin')) {
+    if (
+      role.slug === 'admin' ||
+      (role.is_default && role.slug === 'admin') ||
+      (role.is_system_role && role.slug === 'admin')
+    ) {
       return 2; // Second level
     }
     // For other roles, use creation order or a default level
@@ -120,7 +123,7 @@ export class AuditLogsService {
 
     // Always include requesting user's own ID
     const viewableUserIds = [requestingUserId, ...members.map((m) => m.user_id)];
-    
+
     // Remove duplicates
     return [...new Set(viewableUserIds)];
   }
@@ -167,9 +170,7 @@ export class AuditLogsService {
         );
 
         if (!hasPermission) {
-          throw new ForbiddenException(
-            'You do not have permission to view audit logs',
-          );
+          throw new ForbiddenException('You do not have permission to view audit logs');
         }
       }
 
@@ -188,85 +189,88 @@ export class AuditLogsService {
         viewableRoleIds,
       );
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const skip = (page - 1) * limit;
+      const page = query.page || 1;
+      const limit = query.limit || 20;
+      const skip = (page - 1) * limit;
 
-    // Build query - filter by viewable users
-    const queryBuilder = this.auditLogRepository
-      .createQueryBuilder('audit_log')
-      .leftJoinAndSelect('audit_log.user', 'user')
-      .where('audit_log.organization_id = :organizationId', { organizationId });
+      // Build query - filter by viewable users
+      const queryBuilder = this.auditLogRepository
+        .createQueryBuilder('audit_log')
+        .leftJoinAndSelect('audit_log.user', 'user')
+        .where('audit_log.organization_id = :organizationId', { organizationId });
 
-    // Handle empty viewableUserIds array (shouldn't happen, but handle gracefully)
-    if (viewableUserIds.length === 0) {
-      // If no viewable users, only show logs with null user_id (system logs)
-      queryBuilder.andWhere('audit_log.user_id IS NULL');
-    } else {
-      queryBuilder.andWhere('(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)', {
-        viewableUserIds,
-      });
-    }
-
-    // Apply search filter (searches in action, entity_type, user name/email)
-    if (query.search) {
-      queryBuilder.andWhere(
-        '(audit_log.action ILIKE :search OR audit_log.entity_type ILIKE :search OR CAST(audit_log.entity_id AS TEXT) ILIKE :search OR (user.first_name IS NOT NULL AND user.first_name ILIKE :search) OR (user.last_name IS NOT NULL AND user.last_name ILIKE :search) OR (user.email IS NOT NULL AND user.email ILIKE :search))',
-        { search: `%${query.search}%` },
-      );
-    }
-
-    // Apply filters
-    if (query.action) {
-      queryBuilder.andWhere('audit_log.action = :action', { action: query.action });
-    }
-
-    if (query.entity_type) {
-      queryBuilder.andWhere('audit_log.entity_type = :entityType', {
-        entityType: query.entity_type,
-      });
-    }
-
-    if (query.entity_id) {
-      queryBuilder.andWhere('audit_log.entity_id = :entityId', {
-        entityId: query.entity_id,
-      });
-    }
-
-    // If user_id filter is provided, ensure it's in viewable users
-    if (query.user_id) {
-      if (!viewableUserIds.includes(query.user_id)) {
-        throw new ForbiddenException(
-          'You do not have permission to view audit logs for this user',
+      // Handle empty viewableUserIds array (shouldn't happen, but handle gracefully)
+      if (viewableUserIds.length === 0) {
+        // If no viewable users, only show logs with null user_id (system logs)
+        queryBuilder.andWhere('audit_log.user_id IS NULL');
+      } else {
+        queryBuilder.andWhere(
+          '(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)',
+          {
+            viewableUserIds,
+          },
         );
       }
-      queryBuilder.andWhere('audit_log.user_id = :userId', { userId: query.user_id });
-    }
 
-    if (query.from_date && query.to_date) {
-      queryBuilder.andWhere('audit_log.created_at BETWEEN :fromDate AND :toDate', {
-        fromDate: query.from_date,
-        toDate: query.to_date,
-      });
-    } else if (query.from_date) {
-      queryBuilder.andWhere('audit_log.created_at >= :fromDate', {
-        fromDate: query.from_date,
-      });
-    } else if (query.to_date) {
-      queryBuilder.andWhere('audit_log.created_at <= :toDate', {
-        toDate: query.to_date,
-      });
-    }
+      // Apply search filter (searches in action, entity_type, user name/email)
+      if (query.search) {
+        queryBuilder.andWhere(
+          '(audit_log.action ILIKE :search OR audit_log.entity_type ILIKE :search OR CAST(audit_log.entity_id AS TEXT) ILIKE :search OR (user.first_name IS NOT NULL AND user.first_name ILIKE :search) OR (user.last_name IS NOT NULL AND user.last_name ILIKE :search) OR (user.email IS NOT NULL AND user.email ILIKE :search))',
+          { search: `%${query.search}%` },
+        );
+      }
 
-    // Get total count
-    const total = await queryBuilder.getCount();
+      // Apply filters
+      if (query.action) {
+        queryBuilder.andWhere('audit_log.action = :action', { action: query.action });
+      }
 
-    // Get paginated results
-    const auditLogs = await queryBuilder
-      .orderBy('audit_log.created_at', 'DESC')
-      .skip(skip)
-      .take(limit)
-      .getMany();
+      if (query.entity_type) {
+        queryBuilder.andWhere('audit_log.entity_type = :entityType', {
+          entityType: query.entity_type,
+        });
+      }
+
+      if (query.entity_id) {
+        queryBuilder.andWhere('audit_log.entity_id = :entityId', {
+          entityId: query.entity_id,
+        });
+      }
+
+      // If user_id filter is provided, ensure it's in viewable users
+      if (query.user_id) {
+        if (!viewableUserIds.includes(query.user_id)) {
+          throw new ForbiddenException(
+            'You do not have permission to view audit logs for this user',
+          );
+        }
+        queryBuilder.andWhere('audit_log.user_id = :userId', { userId: query.user_id });
+      }
+
+      if (query.from_date && query.to_date) {
+        queryBuilder.andWhere('audit_log.created_at BETWEEN :fromDate AND :toDate', {
+          fromDate: query.from_date,
+          toDate: query.to_date,
+        });
+      } else if (query.from_date) {
+        queryBuilder.andWhere('audit_log.created_at >= :fromDate', {
+          fromDate: query.from_date,
+        });
+      } else if (query.to_date) {
+        queryBuilder.andWhere('audit_log.created_at <= :toDate', {
+          toDate: query.to_date,
+        });
+      }
+
+      // Get total count
+      const total = await queryBuilder.getCount();
+
+      // Get paginated results
+      const auditLogs = await queryBuilder
+        .orderBy('audit_log.created_at', 'DESC')
+        .skip(skip)
+        .take(limit)
+        .getMany();
 
       return {
         audit_logs: auditLogs,
@@ -318,9 +322,7 @@ export class AuditLogsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view audit logs',
-        );
+        throw new ForbiddenException('You do not have permission to view audit logs');
       }
     }
 
@@ -351,9 +353,7 @@ export class AuditLogsService {
       );
 
       if (!viewableUserIds.includes(auditLog.user_id)) {
-        throw new ForbiddenException(
-          'You do not have permission to view this audit log',
-        );
+        throw new ForbiddenException('You do not have permission to view this audit log');
       }
     }
 
@@ -401,18 +401,12 @@ export class AuditLogsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view audit logs',
-        );
+        throw new ForbiddenException('You do not have permission to view audit logs');
       }
     }
 
     // Get viewable role IDs and user IDs
-    const viewableRoleIds = await this.getViewableRoleIds(
-      userId,
-      organizationId,
-      membership.role,
-    );
+    const viewableRoleIds = await this.getViewableRoleIds(userId, organizationId, membership.role);
     const viewableUserIds = await this.getViewableUserIds(
       userId,
       organizationId,
@@ -430,9 +424,12 @@ export class AuditLogsService {
     if (viewableUserIds.length === 0) {
       queryBuilder.andWhere('audit_log.user_id IS NULL');
     } else {
-      queryBuilder.andWhere('(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)', {
-        viewableUserIds,
-      });
+      queryBuilder.andWhere(
+        '(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)',
+        {
+          viewableUserIds,
+        },
+      );
     }
 
     if (fromDate && toDate) {
@@ -455,14 +452,15 @@ export class AuditLogsService {
     if (viewableUserIds.length === 0) {
       actionsByTypeQuery.andWhere('audit_log.user_id IS NULL');
     } else {
-      actionsByTypeQuery.andWhere('(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)', {
-        viewableUserIds,
-      });
+      actionsByTypeQuery.andWhere(
+        '(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)',
+        {
+          viewableUserIds,
+        },
+      );
     }
 
-    const actionsByType = await actionsByTypeQuery
-      .groupBy('audit_log.action')
-      .getRawMany();
+    const actionsByType = await actionsByTypeQuery.groupBy('audit_log.action').getRawMany();
 
     const actionsByTypeMap: Record<string, number> = {};
     actionsByType.forEach((item) => {
@@ -520,9 +518,12 @@ export class AuditLogsService {
     if (viewableUserIds.length === 0) {
       actionsTodayQuery.andWhere('audit_log.user_id IS NULL');
     } else {
-      actionsTodayQuery.andWhere('(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)', {
-        viewableUserIds,
-      });
+      actionsTodayQuery.andWhere(
+        '(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)',
+        {
+          viewableUserIds,
+        },
+      );
     }
 
     const actionsToday = await actionsTodayQuery.getCount();
@@ -543,9 +544,12 @@ export class AuditLogsService {
     if (viewableUserIds.length === 0) {
       actionsThisWeekQuery.andWhere('audit_log.user_id IS NULL');
     } else {
-      actionsThisWeekQuery.andWhere('(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)', {
-        viewableUserIds,
-      });
+      actionsThisWeekQuery.andWhere(
+        '(audit_log.user_id IN (:...viewableUserIds) OR audit_log.user_id IS NULL)',
+        {
+          viewableUserIds,
+        },
+      );
     }
 
     const actionsThisWeek = await actionsThisWeekQuery.getCount();
@@ -620,32 +624,32 @@ export class AuditLogsService {
         throw new ForbiddenException('Your role information is missing. Please contact support.');
       }
 
-    // Get viewable role IDs based on role hierarchy
-    const viewableRoleIds = await this.getViewableRoleIds(
-      userId,
-      organizationId,
-      membership.role,
-    );
+      // Get viewable role IDs based on role hierarchy
+      const viewableRoleIds = await this.getViewableRoleIds(
+        userId,
+        organizationId,
+        membership.role,
+      );
 
-    // Get viewable user IDs (users with viewable roles + requesting user)
-    const viewableUserIds = await this.getViewableUserIds(
-      userId,
-      organizationId,
-      membership.role,
-      viewableRoleIds,
-    );
+      // Get viewable user IDs (users with viewable roles + requesting user)
+      const viewableUserIds = await this.getViewableUserIds(
+        userId,
+        organizationId,
+        membership.role,
+        viewableRoleIds,
+      );
 
-    if (viewableUserIds.length === 0) {
-      return [];
-    }
+      if (viewableUserIds.length === 0) {
+        return [];
+      }
 
-    // Get user details for viewable users
-    const users = await this.userRepository.find({
-      where: {
-        id: In(viewableUserIds),
-      },
-      select: ['id', 'first_name', 'last_name', 'email'],
-    });
+      // Get user details for viewable users
+      const users = await this.userRepository.find({
+        where: {
+          id: In(viewableUserIds),
+        },
+        select: ['id', 'first_name', 'last_name', 'email'],
+      });
 
       return users;
     } catch (error: any) {
@@ -657,4 +661,3 @@ export class AuditLogsService {
     }
   }
 }
-

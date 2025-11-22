@@ -1,13 +1,15 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../database/entities/notification.entity';
-import { NotificationPreference, NotificationPreferenceScope } from '../database/entities/notification-preference.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  NotificationPreference,
+  NotificationPreferenceScope,
+} from '../database/entities/notification-preference.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 import { NotificationQueryDto, NotificationReadStatus } from './dto/notification-query.dto';
 import { MarkReadDto } from './dto/mark-read.dto';
@@ -60,9 +62,12 @@ export class NotificationsService {
     const queryBuilder = this.notificationRepository
       .createQueryBuilder('notification')
       .where('notification.user_id = :userId', { userId })
-      .andWhere('(notification.organization_id = :organizationId OR notification.organization_id IS NULL)', {
-        organizationId,
-      });
+      .andWhere(
+        '(notification.organization_id = :organizationId OR notification.organization_id IS NULL)',
+        {
+          organizationId,
+        },
+      );
 
     // Apply filters
     if (query.read_status) {
@@ -99,9 +104,12 @@ export class NotificationsService {
     const readCount = await this.notificationRepository
       .createQueryBuilder('notification')
       .where('notification.user_id = :userId', { userId })
-      .andWhere('(notification.organization_id = :organizationId OR notification.organization_id IS NULL)', {
-        organizationId,
-      })
+      .andWhere(
+        '(notification.organization_id = :organizationId OR notification.organization_id IS NULL)',
+        {
+          organizationId,
+        },
+      )
       .andWhere('notification.read_at IS NOT NULL')
       .getCount();
 
@@ -296,9 +304,12 @@ export class NotificationsService {
       const unreadCount = await this.notificationRepository
         .createQueryBuilder('notification')
         .where('notification.user_id = :userId', { userId })
-        .andWhere('(notification.organization_id = :organizationId OR notification.organization_id IS NULL)', {
-          organizationId,
-        })
+        .andWhere(
+          '(notification.organization_id = :organizationId OR notification.organization_id IS NULL)',
+          {
+            organizationId,
+          },
+        )
         .andWhere('notification.read_at IS NULL')
         .getCount();
 
@@ -306,9 +317,12 @@ export class NotificationsService {
       const readCount = await this.notificationRepository
         .createQueryBuilder('notification')
         .where('notification.user_id = :userId', { userId })
-        .andWhere('(notification.organization_id = :organizationId OR notification.organization_id IS NULL)', {
-          organizationId,
-        })
+        .andWhere(
+          '(notification.organization_id = :organizationId OR notification.organization_id IS NULL)',
+          {
+            organizationId,
+          },
+        )
         .andWhere('notification.read_at IS NOT NULL')
         .getCount();
 
@@ -341,7 +355,7 @@ export class NotificationsService {
 
       // For personal scope, organization_id should be null
       let queryOrganizationId: string | null = null;
-      
+
       // If organization scope is requested, verify user is Organization Owner
       if (preferenceScope === NotificationPreferenceScope.ORGANIZATION && organizationId) {
         const membership = await this.memberRepository.findOne({
@@ -405,7 +419,7 @@ export class NotificationsService {
     dto: NotificationPreferenceDto,
   ): Promise<{ message: string; preferences: any }> {
     // Determine scope - default to personal if not specified
-    let preferenceScope = dto.scope || NotificationPreferenceScope.PERSONAL;
+    const preferenceScope = dto.scope || NotificationPreferenceScope.PERSONAL;
 
     // If organization scope is requested, verify user is Organization Owner
     if (preferenceScope === NotificationPreferenceScope.ORGANIZATION && organizationId) {
@@ -473,4 +487,3 @@ export class NotificationsService {
     };
   }
 }
-

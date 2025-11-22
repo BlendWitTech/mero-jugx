@@ -64,4 +64,3 @@ export class NotificationPreference {
   @UpdateDateColumn()
   updated_at: Date;
 }
-

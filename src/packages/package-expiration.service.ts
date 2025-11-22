@@ -4,11 +4,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, Between } from 'typeorm';
 import { Organization } from '../database/entities/organization.entity';
 import { Package } from '../database/entities/package.entity';
-import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
+import {
+  NotificationHelperService,
+  NotificationType,
+} from '../notifications/notification-helper.service';
 import { EmailService } from '../common/services/email.service';
 import { EmailTemplatesService } from '../common/services/email-templates.service';
 import { User } from '../database/entities/user.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
@@ -36,7 +42,7 @@ export class PackageExpirationService {
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkPackagesExpiringIn7Days() {
     this.logger.log('Checking for packages expiring in 7 days...');
-    
+
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
     sevenDaysFromNow.setHours(0, 0, 0, 0);
@@ -58,11 +64,7 @@ export class PackageExpirationService {
 
       try {
         // Send notification (once per day, so this will only send once)
-        await this.notificationHelper.notifyPackageExpiringSoon(
-          org.id,
-          org.package.name,
-          7,
-        );
+        await this.notificationHelper.notifyPackageExpiringSoon(org.id, org.package.name, 7);
 
         // Send email to organization email and admin emails
         await this.sendPackageExpiringEmails(org, 7);
@@ -83,10 +85,10 @@ export class PackageExpirationService {
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkPackagesExpiringIn3Days() {
     this.logger.log('Checking for packages expiring in 3 days or less...');
-    
+
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
+
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
     threeDaysFromNow.setHours(23, 59, 59, 999);
@@ -105,7 +107,7 @@ export class PackageExpirationService {
 
       try {
         const daysRemaining = Math.ceil(
-          (org.package_expires_at.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          (org.package_expires_at.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
         );
 
         // Send notification (will be sent daily, so twice in 3 days)
@@ -133,7 +135,7 @@ export class PackageExpirationService {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async checkExpiredPackages() {
     this.logger.log('Checking for expired packages...');
-    
+
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
@@ -165,11 +167,11 @@ export class PackageExpirationService {
 
         // Revert to freemium
         const freemiumLimits = await this.calculateFreemiumLimits(org.id, freemiumPackage.id);
-        
+
         const oldPackageId = org.package_id;
         const oldUserLimit = org.user_limit;
         const oldRoleLimit = org.role_limit;
-        
+
         await this.organizationRepository.update(
           { id: org.id },
           {
@@ -385,4 +387,3 @@ export class PackageExpirationService {
     };
   }
 }
-

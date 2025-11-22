@@ -7,5 +7,3 @@ export class AssignRoleDto {
   @IsNotEmpty()
   role_id: number;
 }
-
-

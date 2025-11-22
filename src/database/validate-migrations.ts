@@ -1,6 +1,6 @@
 /**
  * Migration Validation Script
- * 
+ *
  * This script validates that database migrations are in sync with entity definitions.
  * Run this before creating new migrations to ensure consistency.
  */
@@ -85,7 +85,7 @@ async function validateMigrations() {
       console.log('⚠️  Could not connect to database. Skipping database validation.');
       console.log('   This is okay if the database is not set up yet.\n');
       console.log('✅ Entity enum definitions are valid:');
-      EXPECTED_ENUMS.forEach(enumDef => {
+      EXPECTED_ENUMS.forEach((enumDef) => {
         console.log(`   - ${enumDef.name}: ${enumDef.values.join(', ')}`);
       });
       console.log('\n💡 Tip: Run migrations and connect to database for full validation.');
@@ -129,14 +129,16 @@ async function validateMigrations() {
         const expectedEnumValues = expectedEnum.values;
 
         // Compare values
-        const missing = expectedEnumValues.filter(v => !actualEnumValues.includes(v));
-        const extra = actualEnumValues.filter(v => !expectedEnumValues.includes(v));
+        const missing = expectedEnumValues.filter((v) => !actualEnumValues.includes(v));
+        const extra = actualEnumValues.filter((v) => !expectedEnumValues.includes(v));
 
         if (missing.length > 0 || extra.length > 0) {
           console.log(`  ❌ Mismatch found in ${expectedEnum.name}:`);
           if (missing.length > 0) {
             console.log(`     Missing values: ${missing.join(', ')}`);
-            console.log(`     Add these to the initial migration or create a migration to add them.`);
+            console.log(
+              `     Add these to the initial migration or create a migration to add them.`,
+            );
           }
           if (extra.length > 0) {
             console.log(`     Extra values in DB: ${extra.join(', ')}`);
@@ -175,4 +177,3 @@ async function validateMigrations() {
 }
 
 validateMigrations();
-

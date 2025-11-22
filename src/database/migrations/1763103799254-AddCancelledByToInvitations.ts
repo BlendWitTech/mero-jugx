@@ -40,4 +40,3 @@ export class AddCancelledByToInvitations1763103799254 implements MigrationInterf
     await queryRunner.dropColumn('invitations', 'cancelled_by');
   }
 }
-

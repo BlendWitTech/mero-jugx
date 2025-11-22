@@ -10,13 +10,9 @@ import { CommonModule } from '../common/common.module';
 import { MfaSetupGuard } from '../auth/guards/mfa-setup.guard';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User, Organization, OrganizationMember, Role]),
-    CommonModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User, Organization, OrganizationMember, Role]), CommonModule],
   controllers: [MfaController],
   providers: [MfaService, MfaSetupGuard],
   exports: [MfaService],
 })
 export class MfaModule {}
-

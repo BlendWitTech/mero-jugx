@@ -162,9 +162,9 @@ describe('UsersService', () => {
     it('should throw ForbiddenException when user is not a member', async () => {
       memberRepository.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.getCurrentUser('user-id', 'org-id'),
-      ).rejects.toThrow('You are not a member of this organization');
+      await expect(service.getCurrentUser('user-id', 'org-id')).rejects.toThrow(
+        'You are not a member of this organization',
+      );
     });
   });
 
@@ -241,12 +241,9 @@ describe('UsersService', () => {
       };
       mockDataSource.createQueryRunner.mockReturnValue(queryRunner);
 
-      const result = await service.revokeAccess(
-        'requester-id',
-        'org-id',
-        'target-id',
-        { transfer_data: false },
-      );
+      const result = await service.revokeAccess('requester-id', 'org-id', 'target-id', {
+        transfer_data: false,
+      });
 
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('revoked_user');
@@ -283,4 +280,3 @@ describe('UsersService', () => {
     });
   });
 });
-

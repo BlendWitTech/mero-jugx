@@ -11,13 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -48,15 +42,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'User profile updated successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
-  async updateCurrentUser(
-    @CurrentUser() user: any,
-    @Body() dto: UpdateUserDto,
-  ) {
-    return this.usersService.updateCurrentUser(
-      user.userId,
-      user.organizationId,
-      dto,
-    );
+  async updateCurrentUser(@CurrentUser() user: any, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateCurrentUser(user.userId, user.organizationId, dto);
   }
 
   @Get()
@@ -64,15 +51,8 @@ export class UsersController {
   @ApiOperation({ summary: 'List organization users' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async getOrganizationUsers(
-    @CurrentUser() user: any,
-    @Query() query: UserQueryDto,
-  ) {
-    return this.usersService.getOrganizationUsers(
-      user.userId,
-      user.organizationId,
-      query,
-    );
+  async getOrganizationUsers(@CurrentUser() user: any, @Query() query: UserQueryDto) {
+    return this.usersService.getOrganizationUsers(user.userId, user.organizationId, query);
   }
 
   @Get(':id')
@@ -82,15 +62,8 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUserById(
-    @CurrentUser() user: any,
-    @Param('id') targetUserId: string,
-  ) {
-    return this.usersService.getUserById(
-      user.userId,
-      user.organizationId,
-      targetUserId,
-    );
+  async getUserById(@CurrentUser() user: any, @Param('id') targetUserId: string) {
+    return this.usersService.getUserById(user.userId, user.organizationId, targetUserId);
   }
 
   @Put(':id')
@@ -107,12 +80,7 @@ export class UsersController {
     @Param('id') targetUserId: string,
     @Body() dto: UpdateUserAdminDto,
   ) {
-    return this.usersService.updateUser(
-      user.userId,
-      user.organizationId,
-      targetUserId,
-      dto,
-    );
+    return this.usersService.updateUser(user.userId, user.organizationId, targetUserId, dto);
   }
 
   @Post(':id/revoke')
@@ -123,18 +91,16 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User access revoked successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 400, description: 'Invalid request (e.g., cannot revoke own access or organization owner)' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request (e.g., cannot revoke own access or organization owner)',
+  })
   async revokeAccess(
     @CurrentUser() user: any,
     @Param('id') targetUserId: string,
     @Body() dto: RevokeAccessDto,
   ) {
-    return this.usersService.revokeAccess(
-      user.userId,
-      user.organizationId,
-      targetUserId,
-      dto,
-    );
+    return this.usersService.revokeAccess(user.userId, user.organizationId, targetUserId, dto);
   }
 
   @Delete(':id/revoke')
@@ -146,16 +112,9 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 400, description: 'Invalid request' })
-  async revokeAccessSimple(
-    @CurrentUser() user: any,
-    @Param('id') targetUserId: string,
-  ) {
-    return this.usersService.revokeAccess(
-      user.userId,
-      user.organizationId,
-      targetUserId,
-      { transfer_data: false },
-    );
+  async revokeAccessSimple(@CurrentUser() user: any, @Param('id') targetUserId: string) {
+    return this.usersService.revokeAccess(user.userId, user.organizationId, targetUserId, {
+      transfer_data: false,
+    });
   }
 }
-

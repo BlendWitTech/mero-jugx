@@ -11,7 +11,10 @@ import { Role } from '../database/entities/role.entity';
 import { Permission } from '../database/entities/permission.entity';
 import { RolePermission } from '../database/entities/role-permission.entity';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Notification } from '../database/entities/notification.entity';
 import { Package } from '../database/entities/package.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -67,7 +70,7 @@ export class RolesService {
 
     // Count users per role
     const roleCounts: Record<number, number> = {};
-    
+
     members.forEach((member) => {
       if (member.role_id) {
         const roleId = member.role_id;
@@ -80,17 +83,14 @@ export class RolesService {
       console.log(`[Role Usage Counts] Organization ${organizationId}:`, {
         totalMembers: members.length,
         roleCounts,
-        members: members.map(m => ({ userId: m.user_id, roleId: m.role_id, status: m.status })),
+        members: members.map((m) => ({ userId: m.user_id, roleId: m.role_id, status: m.status })),
       });
     }
 
     return roleCounts;
   }
 
-  async getRoles(
-    userId: string,
-    organizationId: string,
-  ): Promise<Role[]> {
+  async getRoles(userId: string, organizationId: string): Promise<Role[]> {
     // Verify user is member of organization
     const membership = await this.memberRepository.findOne({
       where: {
@@ -119,9 +119,7 @@ export class RolesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view roles',
-        );
+        throw new ForbiddenException('You do not have permission to view roles');
       }
     }
 
@@ -169,11 +167,7 @@ export class RolesService {
     return [...defaultRoles, ...orgRoles];
   }
 
-  async getRoleById(
-    userId: string,
-    organizationId: string,
-    roleId: number,
-  ): Promise<Role> {
+  async getRoleById(userId: string, organizationId: string, roleId: number): Promise<Role> {
     // Verify user is member and has permission
     const membership = await this.memberRepository.findOne({
       where: {
@@ -202,9 +196,7 @@ export class RolesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view roles',
-        );
+        throw new ForbiddenException('You do not have permission to view roles');
       }
     }
 
@@ -224,14 +216,10 @@ export class RolesService {
     return role;
   }
 
-  async createRole(
-    userId: string,
-    organizationId: string,
-    dto: CreateRoleDto,
-  ): Promise<Role> {
+  async createRole(userId: string, organizationId: string, dto: CreateRoleDto): Promise<Role> {
     // Organizations can no longer create custom roles directly
     // They must use role templates based on their package
-      throw new BadRequestException(
+    throw new BadRequestException(
       'Custom role creation is not allowed. Please use role templates from your package. Use POST /role-templates/create-role instead.',
     );
   }
@@ -270,9 +258,7 @@ export class RolesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to edit roles',
-        );
+        throw new ForbiddenException('You do not have permission to edit roles');
       }
     }
 
@@ -280,9 +266,9 @@ export class RolesService {
     const role = await this.roleRepository.findOne({
       where: [
         {
-        id: roleId,
-        organization_id: organizationId,
-      },
+          id: roleId,
+          organization_id: organizationId,
+        },
         {
           id: roleId,
           organization_id: null,
@@ -377,9 +363,7 @@ export class RolesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to delete roles',
-        );
+        throw new ForbiddenException('You do not have permission to delete roles');
       }
     }
 
@@ -387,9 +371,9 @@ export class RolesService {
     const role = await this.roleRepository.findOne({
       where: [
         {
-        id: roleId,
-        organization_id: organizationId,
-      },
+          id: roleId,
+          organization_id: organizationId,
+        },
         {
           id: roleId,
           organization_id: null,
@@ -487,9 +471,7 @@ export class RolesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to assign roles',
-        );
+        throw new ForbiddenException('You do not have permission to assign roles');
       }
     }
 
@@ -609,15 +591,12 @@ export class RolesService {
     }
   }
 
-  private async assignPermissionsToRole(
-    roleId: number,
-    permissionIds: number[],
-  ): Promise<void> {
+  private async assignPermissionsToRole(roleId: number, permissionIds: number[]): Promise<void> {
     // Verify all permissions exist
     const permissions = await this.permissionRepository.find({
       where: permissionIds.map((id) => ({ id })),
     });
-    
+
     if (permissions.length !== permissionIds.length) {
       throw new NotFoundException('One or more permissions not found');
     }
@@ -633,4 +612,3 @@ export class RolesService {
     await this.rolePermissionRepository.save(rolePermissions);
   }
 }
-

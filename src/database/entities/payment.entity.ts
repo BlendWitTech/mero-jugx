@@ -98,4 +98,3 @@ export class Payment {
   @UpdateDateColumn()
   updated_at: Date;
 }
-

@@ -7,13 +7,7 @@ import {
   ParseIntPipe,
   ForbiddenException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AuditLogsService } from './audit-logs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -33,18 +27,11 @@ export class AuditLogsController {
   @ApiOperation({ summary: 'List audit logs' })
   @ApiResponse({ status: 200, description: 'Audit logs retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async getAuditLogs(
-    @CurrentUser() user: any,
-    @Query() query: AuditLogQueryDto,
-  ) {
+  async getAuditLogs(@CurrentUser() user: any, @Query() query: AuditLogQueryDto) {
     if (!user.organizationId) {
       throw new ForbiddenException('Organization context is required');
     }
-    return this.auditLogsService.getAuditLogs(
-      user.userId,
-      user.organizationId,
-      query,
-    );
+    return this.auditLogsService.getAuditLogs(user.userId, user.organizationId, query);
   }
 
   @Get('stats')
@@ -77,10 +64,7 @@ export class AuditLogsController {
     if (!user.organizationId) {
       throw new ForbiddenException('Organization context is required');
     }
-    return this.auditLogsService.getViewableUsers(
-      user.userId,
-      user.organizationId,
-    );
+    return this.auditLogsService.getViewableUsers(user.userId, user.organizationId);
   }
 
   @Get(':id')
@@ -90,15 +74,7 @@ export class AuditLogsController {
   @ApiResponse({ status: 200, description: 'Audit log retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Audit log not found' })
-  async getAuditLogById(
-    @CurrentUser() user: any,
-    @Param('id', ParseIntPipe) auditLogId: number,
-  ) {
-    return this.auditLogsService.getAuditLogById(
-      user.userId,
-      user.organizationId,
-      auditLogId,
-    );
+  async getAuditLogById(@CurrentUser() user: any, @Param('id', ParseIntPipe) auditLogId: number) {
+    return this.auditLogsService.getAuditLogById(user.userId, user.organizationId, auditLogId);
   }
 }
-

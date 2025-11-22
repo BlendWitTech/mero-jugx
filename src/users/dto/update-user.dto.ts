@@ -28,4 +28,3 @@ export class UpdateUserDto {
   @MaxLength(500)
   avatar_url?: string;
 }
-

@@ -7,16 +7,27 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Payment, PaymentStatus, PaymentGateway, PaymentType } from '../database/entities/payment.entity';
+import {
+  Payment,
+  PaymentStatus,
+  PaymentGateway,
+  PaymentType,
+} from '../database/entities/payment.entity';
 import { Organization } from '../database/entities/organization.entity';
 import { User } from '../database/entities/user.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { OrganizationPackageFeature } from '../database/entities/organization-package-feature.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EsewaService } from './esewa.service';
 import { StripeService } from './stripe.service';
 import { PackagesService } from '../packages/packages.service';
-import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
+import {
+  NotificationHelperService,
+  NotificationType,
+} from '../notifications/notification-helper.service';
 import { EmailService } from '../common/services/email.service';
 import { EmailTemplatesService } from '../common/services/email-templates.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -47,13 +58,11 @@ export class PaymentsService {
   /**
    * Create a new payment and generate eSewa payment form
    */
-  async createPayment(
-    userId: string,
-    organizationId: string,
-    createPaymentDto: CreatePaymentDto,
-  ) {
+  async createPayment(userId: string, organizationId: string, createPaymentDto: CreatePaymentDto) {
     try {
-      this.logger.log(`Creating payment: ${JSON.stringify({ userId, organizationId, gateway: createPaymentDto.gateway, amount: createPaymentDto.amount, payment_type: createPaymentDto.payment_type })}`);
+      this.logger.log(
+        `Creating payment: ${JSON.stringify({ userId, organizationId, gateway: createPaymentDto.gateway, amount: createPaymentDto.amount, payment_type: createPaymentDto.payment_type })}`,
+      );
 
       // Verify user is member of organization
       const organization = await this.organizationRepository.findOne({
@@ -76,94 +85,59 @@ export class PaymentsService {
       // Generate unique transaction ID
       const transactionId = uuidv4();
 
-    // Determine currency based on gateway
-    // eSewa uses NPR, Stripe can use USD or NPR
-    const currency = createPaymentDto.gateway === PaymentGateway.ESEWA ? 'NPR' : 'USD';
-    
-    // Calculate amount - ensure it's a valid number with 2 decimal places
-    const amount = Math.round(createPaymentDto.amount * 100) / 100;
+      // Determine currency based on gateway
+      // eSewa uses NPR, Stripe can use USD or NPR
+      const currency = createPaymentDto.gateway === PaymentGateway.ESEWA ? 'NPR' : 'USD';
 
-    // For eSewa: calculate tax (13% VAT in Nepal)
-    // For Stripe: amount is as-is (no tax calculation needed, Stripe handles it)
-    let finalAmount = amount;
-    let baseAmount = amount;
-    let taxAmount = 0;
+      // Calculate amount - ensure it's a valid number with 2 decimal places
+      const amount = Math.round(createPaymentDto.amount * 100) / 100;
 
-    if (createPaymentDto.gateway === PaymentGateway.ESEWA) {
-      // eSewa requires tax calculation: baseAmount = totalAmount / 1.13
-      baseAmount = Math.round((amount / 1.13) * 100) / 100;
-      taxAmount = Math.round((baseAmount * 0.13) * 100) / 100;
-      finalAmount = Math.round((baseAmount + taxAmount) * 100) / 100;
-    }
+      // For eSewa: calculate tax (13% VAT in Nepal)
+      // For Stripe: amount is as-is (no tax calculation needed, Stripe handles it)
+      let finalAmount = amount;
+      let baseAmount = amount;
+      let taxAmount = 0;
 
-    // Create payment record
-    const payment = this.paymentRepository.create({
-      organization_id: organizationId,
-      user_id: userId,
-      transaction_id: transactionId,
-      gateway: createPaymentDto.gateway,
-      payment_type: createPaymentDto.payment_type,
-      amount: finalAmount,
-      currency: currency,
-      description: createPaymentDto.description || `Payment for ${createPaymentDto.payment_type}`,
-      status: PaymentStatus.PENDING,
-      metadata: {
-        ...createPaymentDto.metadata,
-        package_id: createPaymentDto.package_id,
-      },
-    });
+      if (createPaymentDto.gateway === PaymentGateway.ESEWA) {
+        // eSewa requires tax calculation: baseAmount = totalAmount / 1.13
+        baseAmount = Math.round((amount / 1.13) * 100) / 100;
+        taxAmount = Math.round(baseAmount * 0.13 * 100) / 100;
+        finalAmount = Math.round((baseAmount + taxAmount) * 100) / 100;
+      }
 
-    await this.paymentRepository.save(payment);
-
-    // Generate payment form based on gateway
-    if (createPaymentDto.gateway === PaymentGateway.ESEWA) {
-      // Generate eSewa payment form
-      const paymentForm = this.esewaService.generatePaymentForm({
-        amount: baseAmount, // Base amount (excluding tax)
-        taxAmount: taxAmount,
-        totalAmount: finalAmount, // Total = baseAmount + taxAmount
-        transactionId: transactionId,
-        productServiceCharge: 0,
-        productDeliveryCharge: 0,
-        productCode: '', // Empty string - will default to merchant ID in esewa service
-        successUrl: this.esewaService.successUrl,
-        failureUrl: this.esewaService.failureUrl,
+      // Create payment record
+      const payment = this.paymentRepository.create({
+        organization_id: organizationId,
+        user_id: userId,
+        transaction_id: transactionId,
+        gateway: createPaymentDto.gateway,
+        payment_type: createPaymentDto.payment_type,
+        amount: finalAmount,
+        currency: currency,
+        description: createPaymentDto.description || `Payment for ${createPaymentDto.payment_type}`,
+        status: PaymentStatus.PENDING,
+        metadata: {
+          ...createPaymentDto.metadata,
+          package_id: createPaymentDto.package_id,
+        },
       });
 
-      return {
-        payment: {
-          id: payment.id,
-          transaction_id: payment.transaction_id,
-          amount: payment.amount,
-          status: payment.status,
-          created_at: payment.created_at,
-        },
-        payment_form: paymentForm,
-      };
-    } else if (createPaymentDto.gateway === PaymentGateway.STRIPE) {
-      // Generate Stripe checkout session
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-      
-      try {
-        const session = await this.stripeService.createCheckoutSession({
-          amount: finalAmount,
-          currency: currency.toLowerCase(),
-          transactionId: transactionId,
-          description: payment.description || `Payment for ${createPaymentDto.payment_type}`,
-          successUrl: `${frontendUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${frontendUrl}/payment/failure`,
-          metadata: {
-            transaction_id: transactionId,
-            payment_type: createPaymentDto.payment_type,
-            package_id: createPaymentDto.package_id?.toString(),
-            organization_id: organizationId.toString(),
-            user_id: userId.toString(),
-          },
-        });
+      await this.paymentRepository.save(payment);
 
-        if (!session.url) {
-          throw new BadRequestException('Stripe session created but no redirect URL available');
-        }
+      // Generate payment form based on gateway
+      if (createPaymentDto.gateway === PaymentGateway.ESEWA) {
+        // Generate eSewa payment form
+        const paymentForm = this.esewaService.generatePaymentForm({
+          amount: baseAmount, // Base amount (excluding tax)
+          taxAmount: taxAmount,
+          totalAmount: finalAmount, // Total = baseAmount + taxAmount
+          transactionId: transactionId,
+          productServiceCharge: 0,
+          productDeliveryCharge: 0,
+          productCode: '', // Empty string - will default to merchant ID in esewa service
+          successUrl: this.esewaService.successUrl,
+          failureUrl: this.esewaService.failureUrl,
+        });
 
         return {
           payment: {
@@ -173,26 +147,61 @@ export class PaymentsService {
             status: payment.status,
             created_at: payment.created_at,
           },
-          payment_form: {
-            formUrl: session.url,
-            formData: {
-              session_id: session.id,
-            },
-          },
+          payment_form: paymentForm,
         };
-      } catch (error) {
-        // Log the error for debugging
-        this.logger.error('Error creating Stripe checkout session:', error);
-        this.logger.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          type: error.constructor.name,
-        });
-        throw error; // Re-throw to let NestJS handle it
+      } else if (createPaymentDto.gateway === PaymentGateway.STRIPE) {
+        // Generate Stripe checkout session
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+
+        try {
+          const session = await this.stripeService.createCheckoutSession({
+            amount: finalAmount,
+            currency: currency.toLowerCase(),
+            transactionId: transactionId,
+            description: payment.description || `Payment for ${createPaymentDto.payment_type}`,
+            successUrl: `${frontendUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${frontendUrl}/payment/failure`,
+            metadata: {
+              transaction_id: transactionId,
+              payment_type: createPaymentDto.payment_type,
+              package_id: createPaymentDto.package_id?.toString(),
+              organization_id: organizationId.toString(),
+              user_id: userId.toString(),
+            },
+          });
+
+          if (!session.url) {
+            throw new BadRequestException('Stripe session created but no redirect URL available');
+          }
+
+          return {
+            payment: {
+              id: payment.id,
+              transaction_id: payment.transaction_id,
+              amount: payment.amount,
+              status: payment.status,
+              created_at: payment.created_at,
+            },
+            payment_form: {
+              formUrl: session.url,
+              formData: {
+                session_id: session.id,
+              },
+            },
+          };
+        } catch (error) {
+          // Log the error for debugging
+          this.logger.error('Error creating Stripe checkout session:', error);
+          this.logger.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            type: error.constructor.name,
+          });
+          throw error; // Re-throw to let NestJS handle it
+        }
+      } else {
+        throw new BadRequestException(`Unsupported payment gateway: ${createPaymentDto.gateway}`);
       }
-    } else {
-      throw new BadRequestException(`Unsupported payment gateway: ${createPaymentDto.gateway}`);
-    }
     } catch (error) {
       this.logger.error('Error in createPayment:', error);
       this.logger.error('Error details:', {
@@ -203,14 +212,16 @@ export class PaymentsService {
         organizationId,
         dto: createPaymentDto,
       });
-      
+
       // Re-throw known exceptions
-      if (error instanceof NotFoundException || 
-          error instanceof ForbiddenException || 
-          error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      
+
       // Wrap unknown errors
       throw new BadRequestException(
         `Failed to create payment: ${error.message || 'Unknown error'}`,
@@ -253,7 +264,7 @@ export class PaymentsService {
 
     if (!payment) {
       throw new NotFoundException(
-        `Payment not found. TransactionId: ${transactionId || 'N/A'}, RefId: ${refId || 'N/A'}, SessionId: ${sessionId || 'N/A'}`
+        `Payment not found. TransactionId: ${transactionId || 'N/A'}, RefId: ${refId || 'N/A'}, SessionId: ${sessionId || 'N/A'}`,
       );
     }
 
@@ -321,12 +332,19 @@ export class PaymentsService {
       // Trigger post-payment actions based on payment type
       let postPaymentError: string | null = null;
       try {
-        this.logger.log(`Triggering post-payment actions for payment ${reloadedPayment.id}, type: ${reloadedPayment.payment_type}`);
+        this.logger.log(
+          `Triggering post-payment actions for payment ${reloadedPayment.id}, type: ${reloadedPayment.payment_type}`,
+        );
         this.logger.log(`Payment metadata: ${JSON.stringify(reloadedPayment.metadata)}`);
         await this.handlePostPaymentActions(reloadedPayment);
-        this.logger.log(`Post-payment actions completed successfully for payment ${reloadedPayment.id}`);
+        this.logger.log(
+          `Post-payment actions completed successfully for payment ${reloadedPayment.id}`,
+        );
       } catch (error) {
-        this.logger.error(`Error handling post-payment actions for payment ${reloadedPayment.id}:`, error);
+        this.logger.error(
+          `Error handling post-payment actions for payment ${reloadedPayment.id}:`,
+          error,
+        );
         this.logger.error(`Error message: ${error.message}`);
         this.logger.error(`Error stack: ${error.stack}`);
         postPaymentError = error.message || 'Unknown error during post-payment actions';
@@ -337,8 +355,8 @@ export class PaymentsService {
 
       return {
         success: true,
-        message: postPaymentError 
-          ? `Payment verified successfully, but post-payment actions failed: ${postPaymentError}` 
+        message: postPaymentError
+          ? `Payment verified successfully, but post-payment actions failed: ${postPaymentError}`
           : 'Payment verified successfully',
         payment: {
           id: payment.id,
@@ -422,33 +440,40 @@ export class PaymentsService {
    * Handle post-payment actions (upgrade package, purchase feature, etc.)
    */
   private async handlePostPaymentActions(payment: Payment): Promise<void> {
-    this.logger.log(`Handling post-payment actions: payment_type=${payment.payment_type}, metadata=${JSON.stringify(payment.metadata)}`);
-    
+    this.logger.log(
+      `Handling post-payment actions: payment_type=${payment.payment_type}, metadata=${JSON.stringify(payment.metadata)}`,
+    );
+
     if (payment.payment_type === PaymentType.PACKAGE_UPGRADE) {
       // Handle package upgrade
       const packageId = payment.metadata?.package_id;
-      this.logger.log(`Package upgrade requested: package_id=${packageId} (type: ${typeof packageId})`);
-      
+      this.logger.log(
+        `Package upgrade requested: package_id=${packageId} (type: ${typeof packageId})`,
+      );
+
       if (!packageId) {
         this.logger.warn(`Package ID not found in payment metadata for payment ${payment.id}`);
         throw new BadRequestException('Package ID is missing from payment metadata');
       }
-      
+
       // Handle both string and number package_id
-      const packageIdNum = typeof packageId === 'number' ? packageId : parseInt(String(packageId), 10);
-      
+      const packageIdNum =
+        typeof packageId === 'number' ? packageId : parseInt(String(packageId), 10);
+
       if (isNaN(packageIdNum)) {
         this.logger.error(`Invalid package_id: ${packageId} (cannot parse to number)`);
         throw new BadRequestException(`Invalid package ID: ${packageId}`);
       }
-      
-      this.logger.log(`Upgrading organization ${payment.organization_id} to package ${packageIdNum}`);
-      
+
+      this.logger.log(
+        `Upgrading organization ${payment.organization_id} to package ${packageIdNum}`,
+      );
+
       try {
         // Get period from payment metadata
         const period = payment.metadata?.period;
         const customMonths = payment.metadata?.custom_months;
-        
+
         const upgradeDto: any = { package_id: packageIdNum };
         if (period) {
           upgradeDto.period = period;
@@ -456,58 +481,67 @@ export class PaymentsService {
         if (customMonths) {
           upgradeDto.custom_months = customMonths;
         }
-        
+
         const result = await this.packagesService.upgradePackage(
           payment.user_id,
           payment.organization_id,
           upgradeDto,
         );
-        this.logger.log(`Package upgraded successfully for organization ${payment.organization_id} to package ${packageIdNum}: ${result.message}`);
-        
-        // Send notifications and emails after successful package upgrade
-        await this.sendPackagePurchaseNotifications(
-          payment,
-          result.package.name,
+        this.logger.log(
+          `Package upgraded successfully for organization ${payment.organization_id} to package ${packageIdNum}: ${result.message}`,
         );
+
+        // Send notifications and emails after successful package upgrade
+        await this.sendPackagePurchaseNotifications(payment, result.package.name);
       } catch (error) {
-        this.logger.error(`Failed to upgrade package for organization ${payment.organization_id}:`, error);
+        this.logger.error(
+          `Failed to upgrade package for organization ${payment.organization_id}:`,
+          error,
+        );
         throw error; // Re-throw to be caught by caller
       }
     } else if (payment.payment_type === PaymentType.ONE_TIME) {
       // Handle feature purchase
       const featureId = payment.metadata?.feature_id;
-      this.logger.log(`Feature purchase requested: feature_id=${featureId} (type: ${typeof featureId})`);
-      
+      this.logger.log(
+        `Feature purchase requested: feature_id=${featureId} (type: ${typeof featureId})`,
+      );
+
       if (!featureId) {
         this.logger.warn(`Feature ID not found in payment metadata for payment ${payment.id}`);
         throw new BadRequestException('Feature ID is missing from payment metadata');
       }
-      
+
       // Handle both string and number feature_id
-      const featureIdNum = typeof featureId === 'number' ? featureId : parseInt(String(featureId), 10);
-      
+      const featureIdNum =
+        typeof featureId === 'number' ? featureId : parseInt(String(featureId), 10);
+
       if (isNaN(featureIdNum)) {
         this.logger.error(`Invalid feature_id: ${featureId} (cannot parse to number)`);
         throw new BadRequestException(`Invalid feature ID: ${featureId}`);
       }
-      
-      this.logger.log(`Purchasing feature ${featureIdNum} for organization ${payment.organization_id}`);
-      
+
+      this.logger.log(
+        `Purchasing feature ${featureIdNum} for organization ${payment.organization_id}`,
+      );
+
       try {
         const result = await this.packagesService.purchaseFeature(
           payment.user_id,
           payment.organization_id,
           { package_feature_id: featureIdNum },
         );
-        this.logger.log(`Feature ${featureIdNum} purchased successfully for organization ${payment.organization_id}: ${result.message}`);
-        
-        // Send notifications and emails after successful feature purchase
-        await this.sendFeaturePurchaseNotifications(
-          payment,
-          result.feature,
+        this.logger.log(
+          `Feature ${featureIdNum} purchased successfully for organization ${payment.organization_id}: ${result.message}`,
         );
+
+        // Send notifications and emails after successful feature purchase
+        await this.sendFeaturePurchaseNotifications(payment, result.feature);
       } catch (error) {
-        this.logger.error(`Failed to purchase feature ${featureIdNum} for organization ${payment.organization_id}:`, error);
+        this.logger.error(
+          `Failed to purchase feature ${featureIdNum} for organization ${payment.organization_id}:`,
+          error,
+        );
         throw error; // Re-throw to be caught by caller
       }
     } else {
@@ -530,14 +564,21 @@ export class PaymentsService {
         relations: ['user', 'organization', 'organization.package'],
       });
 
-      if (!paymentWithRelations || !paymentWithRelations.organization || !paymentWithRelations.user) {
-        this.logger.warn(`Cannot send notifications: missing payment relations for payment ${payment.id}`);
+      if (
+        !paymentWithRelations ||
+        !paymentWithRelations.organization ||
+        !paymentWithRelations.user
+      ) {
+        this.logger.warn(
+          `Cannot send notifications: missing payment relations for payment ${payment.id}`,
+        );
         return;
       }
 
       const organization = paymentWithRelations.organization;
       const purchaser = paymentWithRelations.user;
-      const purchaserName = `${purchaser.first_name || ''} ${purchaser.last_name || ''}`.trim() || purchaser.email;
+      const purchaserName =
+        `${purchaser.first_name || ''} ${purchaser.last_name || ''}`.trim() || purchaser.email;
 
       // Get all active members of the organization
       const members = await this.memberRepository.find({
@@ -549,8 +590,10 @@ export class PaymentsService {
       });
 
       // Get organization owner email
-      const ownerMember = members.find(m => m.role?.is_organization_owner);
-      const owner = ownerMember ? await this.userRepository.findOne({ where: { id: ownerMember.user_id } }) : null;
+      const ownerMember = members.find((m) => m.role?.is_organization_owner);
+      const owner = ownerMember
+        ? await this.userRepository.findOne({ where: { id: ownerMember.user_id } })
+        : null;
 
       // Send notifications to all organization users
       await this.notificationHelper.notifyPackageUpgraded(
@@ -620,7 +663,8 @@ export class PaymentsService {
 
         if (shouldSendEmail) {
           try {
-            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+            const userName =
+              `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
             const isPurchaser = user.id === payment.user_id;
             const emailHtml = this.emailTemplatesService.getPackagePurchaseEmail(
               userName,
@@ -645,7 +689,9 @@ export class PaymentsService {
         }
       }
 
-      this.logger.log(`Package purchase notifications and emails sent for organization ${organization.id}`);
+      this.logger.log(
+        `Package purchase notifications and emails sent for organization ${organization.id}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to send package purchase notifications:`, error);
       // Don't throw - this is a non-critical operation
@@ -655,10 +701,7 @@ export class PaymentsService {
   /**
    * Send notifications and emails to all organization users after feature purchase
    */
-  private async sendFeaturePurchaseNotifications(
-    payment: Payment,
-    orgFeature: any,
-  ): Promise<void> {
+  private async sendFeaturePurchaseNotifications(payment: Payment, orgFeature: any): Promise<void> {
     try {
       // Load payment with relations
       const paymentWithRelations = await this.paymentRepository.findOne({
@@ -666,14 +709,21 @@ export class PaymentsService {
         relations: ['user', 'organization'],
       });
 
-      if (!paymentWithRelations || !paymentWithRelations.organization || !paymentWithRelations.user) {
-        this.logger.warn(`Cannot send notifications: missing payment relations for payment ${payment.id}`);
+      if (
+        !paymentWithRelations ||
+        !paymentWithRelations.organization ||
+        !paymentWithRelations.user
+      ) {
+        this.logger.warn(
+          `Cannot send notifications: missing payment relations for payment ${payment.id}`,
+        );
         return;
       }
 
       const organization = paymentWithRelations.organization;
       const purchaser = paymentWithRelations.user;
-      const purchaserName = `${purchaser.first_name || ''} ${purchaser.last_name || ''}`.trim() || purchaser.email;
+      const purchaserName =
+        `${purchaser.first_name || ''} ${purchaser.last_name || ''}`.trim() || purchaser.email;
 
       // Load feature with relation
       const featureWithDetails = await this.orgFeatureRepository.findOne({
@@ -696,8 +746,10 @@ export class PaymentsService {
       });
 
       // Get organization owner email
-      const ownerMember = members.find(m => m.role?.is_organization_owner);
-      const owner = ownerMember ? await this.userRepository.findOne({ where: { id: ownerMember.user_id } }) : null;
+      const ownerMember = members.find((m) => m.role?.is_organization_owner);
+      const owner = ownerMember
+        ? await this.userRepository.findOne({ where: { id: ownerMember.user_id } })
+        : null;
 
       // Send emails to:
       // 1. Organization email (if exists)
@@ -763,7 +815,8 @@ export class PaymentsService {
 
         if (shouldSendEmail) {
           try {
-            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+            const userName =
+              `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
             const isPurchaser = user.id === payment.user_id;
             const emailHtml = this.emailTemplatesService.getFeaturePurchaseEmail(
               userName,
@@ -790,11 +843,12 @@ export class PaymentsService {
         }
       }
 
-      this.logger.log(`Feature purchase notifications and emails sent for organization ${organization.id}`);
+      this.logger.log(
+        `Feature purchase notifications and emails sent for organization ${organization.id}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to send feature purchase notifications:`, error);
       // Don't throw - this is a non-critical operation
     }
   }
 }
-

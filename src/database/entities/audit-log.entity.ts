@@ -65,4 +65,3 @@ export class AuditLog {
   @Index()
   created_at: Date;
 }
-

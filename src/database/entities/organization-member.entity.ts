@@ -92,4 +92,3 @@ export class OrganizationMember {
   @UpdateDateColumn()
   updated_at: Date;
 }
-

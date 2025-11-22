@@ -48,10 +48,6 @@ export class PackageFeature {
   created_at: Date;
 
   // Relations
-  @OneToMany(
-    () => OrganizationPackageFeature,
-    (orgFeature) => orgFeature.feature,
-  )
+  @OneToMany(() => OrganizationPackageFeature, (orgFeature) => orgFeature.feature)
   organization_features: OrganizationPackageFeature[];
 }
-

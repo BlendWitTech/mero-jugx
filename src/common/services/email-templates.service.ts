@@ -214,7 +214,9 @@ export class EmailTemplatesService {
       <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello,</p>
       <p style="color: #475569; font-size: 16px; line-height: 1.7;"><strong style="color: #1e293b;">${inviterName}</strong> has invited you to join the organization <strong style="color: #2563eb;">${organizationName}</strong>.</p>
       
-      ${isNewUser ? `
+      ${
+        isNewUser
+          ? `
       <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f59e0b; box-shadow: 0 2px 4px rgba(245,158,11,0.1);">
         <div style="display: flex; align-items: start;">
           <div style="background: #f59e0b; padding: 8px; border-radius: 8px; margin-right: 12px; flex-shrink: 0;">
@@ -230,7 +232,9 @@ export class EmailTemplatesService {
           </div>
         </div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
       
       <div style="background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         <div style="display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
@@ -402,7 +406,8 @@ export class EmailTemplatesService {
     },
   ): string {
     // Package info HTML - simplified for better email client compatibility
-    const packageHtml = packageInfo ? `
+    const packageHtml = packageInfo
+      ? `
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; margin: 25px 0; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div style="margin-bottom: 20px;">
           <div style="display: inline-block; background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; margin-bottom: 15px;">
@@ -432,7 +437,8 @@ export class EmailTemplatesService {
           </tr>
         </table>
       </div>
-    ` : '';
+    `
+      : '';
 
     // Build address string
     const addressParts = [
@@ -440,7 +446,7 @@ export class EmailTemplatesService {
       organizationDetails.city,
       organizationDetails.state,
       organizationDetails.postal_code,
-      organizationDetails.country
+      organizationDetails.country,
     ].filter(Boolean);
     const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
 
@@ -466,30 +472,46 @@ export class EmailTemplatesService {
             <td style="padding: 12px 0; font-weight: 600; color: #475569;">Organization Email:</td>
             <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${organizationEmail}</td>
           </tr>
-          ${organizationDetails.phone ? `
+          ${
+            organizationDetails.phone
+              ? `
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #475569;">Phone:</td>
             <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${organizationDetails.phone}</td>
           </tr>
-          ` : ''}
-          ${organizationDetails.website ? `
+          `
+              : ''
+          }
+          ${
+            organizationDetails.website
+              ? `
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #475569;">Website:</td>
             <td style="padding: 12px 0;"><a href="${organizationDetails.website}" style="color: #2563eb; text-decoration: none; font-weight: 500;">${organizationDetails.website}</a></td>
           </tr>
-          ` : ''}
-          ${fullAddress ? `
+          `
+              : ''
+          }
+          ${
+            fullAddress
+              ? `
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #475569; vertical-align: top;">Address:</td>
             <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${fullAddress}</td>
           </tr>
-          ` : ''}
-          ${organizationDetails.description ? `
+          `
+              : ''
+          }
+          ${
+            organizationDetails.description
+              ? `
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #475569; vertical-align: top;">Description:</td>
             <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${organizationDetails.description}</td>
           </tr>
-          ` : ''}
+          `
+              : ''
+          }
         </table>
       </div>
       <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f59e0b; box-shadow: 0 2px 4px rgba(245,158,11,0.1);">
@@ -614,9 +636,10 @@ export class EmailTemplatesService {
       
       <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello ${name},</p>
       <p style="color: #475569; font-size: 16px; line-height: 1.7;">
-        ${isPurchaser 
-          ? `Great news! You have successfully upgraded <strong style="color: #1e293b;">${organizationName}</strong> to the <strong style="color: #2563eb;">${packageName}</strong> package.`
-          : `Your organization <strong style="color: #1e293b;">${organizationName}</strong> has been upgraded to the <strong style="color: #2563eb;">${packageName}</strong> package by <strong>${purchasedBy}</strong>.`
+        ${
+          isPurchaser
+            ? `Great news! You have successfully upgraded <strong style="color: #1e293b;">${organizationName}</strong> to the <strong style="color: #2563eb;">${packageName}</strong> package.`
+            : `Your organization <strong style="color: #1e293b;">${organizationName}</strong> has been upgraded to the <strong style="color: #2563eb;">${packageName}</strong> package by <strong>${purchasedBy}</strong>.`
         }
       </p>
       
@@ -645,12 +668,16 @@ export class EmailTemplatesService {
             <td style="padding: 12px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Organization:</td>
             <td style="padding: 12px 0; color: #1e293b; font-size: 14px; font-weight: 600; text-align: right; border-bottom: 1px solid #e2e8f0;">${organizationName}</td>
           </tr>
-          ${!isPurchaser ? `
+          ${
+            !isPurchaser
+              ? `
           <tr>
             <td style="padding: 12px 0; color: #64748b; font-size: 14px;">Purchased By:</td>
             <td style="padding: 12px 0; color: #1e293b; font-size: 14px; font-weight: 600; text-align: right;">${purchasedBy}</td>
           </tr>
-          ` : ''}
+          `
+              : ''
+          }
         </table>
       </div>
 
@@ -802,9 +829,10 @@ export class EmailTemplatesService {
 
     const currencySymbol = currency === 'NPR' ? 'Rs.' : '$';
     const formattedAmount = `${currencySymbol} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const featureDisplay = featureType === 'user_upgrade' 
-      ? `+${featureValue === null ? 'Unlimited' : featureValue} Users`
-      : `+${featureValue === null ? 'Unlimited' : featureValue} Roles`;
+    const featureDisplay =
+      featureType === 'user_upgrade'
+        ? `+${featureValue === null ? 'Unlimited' : featureValue} Users`
+        : `+${featureValue === null ? 'Unlimited' : featureValue} Roles`;
 
     const content = `
       <div style="text-align: center; margin-bottom: 30px;">
@@ -821,9 +849,10 @@ export class EmailTemplatesService {
       
       <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
       <p style="color: #475569; font-size: 16px; line-height: 1.7;">
-        ${isPurchaser 
-          ? `Great news! You have successfully purchased the <strong style="color: #1e293b;">${featureName}</strong> feature for <strong style="color: #2563eb;">${organizationName}</strong>.`
-          : `Your organization <strong style="color: #1e293b;">${organizationName}</strong> has purchased the <strong style="color: #2563eb;">${featureName}</strong> feature by <strong>${purchasedBy}</strong>.`
+        ${
+          isPurchaser
+            ? `Great news! You have successfully purchased the <strong style="color: #1e293b;">${featureName}</strong> feature for <strong style="color: #2563eb;">${organizationName}</strong>.`
+            : `Your organization <strong style="color: #1e293b;">${organizationName}</strong> has purchased the <strong style="color: #2563eb;">${featureName}</strong> feature by <strong>${purchasedBy}</strong>.`
         }
       </p>
       
@@ -851,12 +880,16 @@ export class EmailTemplatesService {
             <td style="padding: 12px 0; color: #64748b; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Organization:</td>
             <td style="padding: 12px 0; color: #1e293b; font-size: 14px; font-weight: 600; text-align: right; border-bottom: 1px solid #e2e8f0;">${organizationName}</td>
           </tr>
-          ${!isPurchaser ? `
+          ${
+            !isPurchaser
+              ? `
           <tr>
             <td style="padding: 12px 0; color: #64748b; font-size: 14px;">Purchased By:</td>
             <td style="padding: 12px 0; color: #1e293b; font-size: 14px; font-weight: 600; text-align: right;">${purchasedBy}</td>
           </tr>
-          ` : ''}
+          `
+              : ''
+          }
         </table>
       </div>
 
@@ -986,4 +1019,3 @@ export class EmailTemplatesService {
     return this.getBaseTemplate(content, 'New Invitation Created');
   }
 }
-

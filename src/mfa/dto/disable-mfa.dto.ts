@@ -8,4 +8,3 @@ export class DisableMfaDto {
   @Length(6, 8)
   code: string;
 }
-

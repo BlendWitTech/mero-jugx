@@ -35,11 +35,7 @@ export class PaymentsController {
     @CurrentOrganization() organization: any,
     @Body() createPaymentDto: CreatePaymentDto,
   ) {
-    return this.paymentsService.createPayment(
-      user.userId,
-      organization.id,
-      createPaymentDto,
-    );
+    return this.paymentsService.createPayment(user.userId, organization.id, createPaymentDto);
   }
 
   @Post('verify')
@@ -49,10 +45,7 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment verified successfully' })
   @ApiResponse({ status: 400, description: 'Payment verification failed' })
   async verifyPaymentPost(@Body() verificationDto: EsewaVerificationDto) {
-    return this.paymentsService.verifyPayment(
-      verificationDto.transactionId,
-      verificationDto.refId,
-    );
+    return this.paymentsService.verifyPayment(verificationDto.transactionId, verificationDto.refId);
   }
 
   @Get('verify')
@@ -86,24 +79,23 @@ export class PaymentsController {
 
     if (esewaData) {
       // Priority: decoded data > query params
-      transactionId = esewaData.transaction_uuid || 
-                      esewaData.transaction_code || 
-                      esewaData.oid || 
-                      transactionId;
+      transactionId =
+        esewaData.transaction_uuid || esewaData.transaction_code || esewaData.oid || transactionId;
       // eSewa v2 API may return transaction_code instead of ref_id
-      finalRefId = esewaData.ref_id || 
-                   esewaData.reference_id || 
-                   esewaData.transaction_code || // Use transaction_code as ref_id if ref_id is not present
-                   finalRefId;
+      finalRefId =
+        esewaData.ref_id ||
+        esewaData.reference_id ||
+        esewaData.transaction_code || // Use transaction_code as ref_id if ref_id is not present
+        finalRefId;
     }
-    
+
     if (!transactionId && !sessionId) {
       return {
         success: false,
         message: 'Missing transaction ID or session ID',
       };
     }
-    
+
     // For Stripe, use session_id; for eSewa, use ref_id
     return this.paymentsService.verifyPayment(transactionId || '', finalRefId, sessionId);
   }
@@ -111,10 +103,7 @@ export class PaymentsController {
   @Get()
   @ApiOperation({ summary: 'Get all payments for organization' })
   @ApiResponse({ status: 200, description: 'Payments retrieved successfully' })
-  async getPayments(
-    @CurrentUser() user: any,
-    @CurrentOrganization() organization: any,
-  ) {
+  async getPayments(@CurrentUser() user: any, @CurrentOrganization() organization: any) {
     return this.paymentsService.getPayments(organization.id, user.userId);
   }
 
@@ -130,4 +119,3 @@ export class PaymentsController {
     return this.paymentsService.getPayment(paymentId, user.userId, organization.id);
   }
 }
-

@@ -17,4 +17,3 @@ export class CreateInvitationDto {
   @MaxLength(500)
   message?: string;
 }
-

@@ -25,5 +25,3 @@ export class CreateRoleDto {
   @IsInt({ each: true })
   permission_ids?: number[];
 }
-
-

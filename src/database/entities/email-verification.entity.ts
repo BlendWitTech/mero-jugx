@@ -63,4 +63,3 @@ export class EmailVerification {
     return this.verified_at !== null;
   }
 }
-

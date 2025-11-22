@@ -71,4 +71,3 @@ export class OrganizationDocument {
   @DeleteDateColumn()
   deleted_at: Date | null;
 }
-

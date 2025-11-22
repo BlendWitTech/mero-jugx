@@ -54,4 +54,3 @@ export class RoleTemplate {
   @OneToMany(() => RoleTemplatePermission, (rtp) => rtp.role_template)
   template_permissions: RoleTemplatePermission[];
 }
-

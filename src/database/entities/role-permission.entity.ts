@@ -38,4 +38,3 @@ export class RolePermission {
   @CreateDateColumn()
   created_at: Date;
 }
-

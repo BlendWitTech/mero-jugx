@@ -6,9 +6,15 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrganizationDocument, DocumentType } from '../database/entities/organization-document.entity';
+import {
+  OrganizationDocument,
+  DocumentType,
+} from '../database/entities/organization-document.entity';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -52,10 +58,7 @@ export class DocumentsService {
     }
   }
 
-  async getDocuments(
-    userId: string,
-    organizationId: string,
-  ): Promise<OrganizationDocument[]> {
+  async getDocuments(userId: string, organizationId: string): Promise<OrganizationDocument[]> {
     // Verify user is member
     const membership = await this.memberRepository.findOne({
       where: {
@@ -82,9 +85,7 @@ export class DocumentsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view documents',
-        );
+        throw new ForbiddenException('You do not have permission to view documents');
       }
     }
 
@@ -133,9 +134,7 @@ export class DocumentsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view documents',
-        );
+        throw new ForbiddenException('You do not have permission to view documents');
       }
     }
 
@@ -189,9 +188,7 @@ export class DocumentsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to upload documents',
-        );
+        throw new ForbiddenException('You do not have permission to upload documents');
       }
     }
 
@@ -260,9 +257,7 @@ export class DocumentsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to delete documents',
-        );
+        throw new ForbiddenException('You do not have permission to delete documents');
       }
     }
 
@@ -324,9 +319,7 @@ export class DocumentsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view documents',
-        );
+        throw new ForbiddenException('You do not have permission to view documents');
       }
     }
 
@@ -357,4 +350,3 @@ export class DocumentsService {
     };
   }
 }
-

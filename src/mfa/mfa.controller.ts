@@ -9,12 +9,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { MfaService } from './mfa.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MfaSetupGuard } from '../auth/guards/mfa-setup.guard';
@@ -44,7 +39,10 @@ export class MfaController {
   @UseGuards(MfaSetupGuard)
   @ApiOperation({ summary: 'Initialize 2FA setup (get QR code)' })
   @ApiResponse({ status: 200, description: '2FA setup initialized successfully' })
-  @ApiResponse({ status: 403, description: 'Insufficient permissions or MFA not enabled for organization' })
+  @ApiResponse({
+    status: 403,
+    description: 'Insufficient permissions or MFA not enabled for organization',
+  })
   @ApiResponse({ status: 400, description: '2FA already set up' })
   async initializeSetup(@CurrentUser() user: any) {
     return this.mfaService.initializeSetup(user.userId, user.organizationId);
@@ -57,19 +55,18 @@ export class MfaController {
   @ApiResponse({ status: 200, description: '2FA setup completed successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 400, description: 'Invalid verification code' })
-  async verifyAndCompleteSetup(
-    @CurrentUser() user: any,
-    @Body() dto: SetupMfaDto,
-  ) {
+  async verifyAndCompleteSetup(@CurrentUser() user: any, @Body() dto: SetupMfaDto) {
     // Get temp_setup_token from request (set by guard) or from DTO
     const request = (user as any).__request || {};
     const tempSetupToken = request.tempSetupToken || dto.temp_setup_token;
-    
+
     // Validate that we have a token
     if (!tempSetupToken) {
-      throw new BadRequestException('MFA setup token is required. Please provide it via X-MFA-Setup-Token header or temp_setup_token in the request body.');
+      throw new BadRequestException(
+        'MFA setup token is required. Please provide it via X-MFA-Setup-Token header or temp_setup_token in the request body.',
+      );
     }
-    
+
     return this.mfaService.verifyAndCompleteSetup(
       user.userId,
       user.organizationId,
@@ -95,15 +92,8 @@ export class MfaController {
   @ApiResponse({ status: 200, description: 'Backup codes regenerated successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 400, description: 'Invalid verification code or 2FA not enabled' })
-  async regenerateBackupCodes(
-    @CurrentUser() user: any,
-    @Body() dto: VerifyMfaDto,
-  ) {
-    return this.mfaService.regenerateBackupCodes(
-      user.userId,
-      user.organizationId,
-      dto,
-    );
+  async regenerateBackupCodes(@CurrentUser() user: any, @Body() dto: VerifyMfaDto) {
+    return this.mfaService.regenerateBackupCodes(user.userId, user.organizationId, dto);
   }
 
   @Delete('disable')
@@ -113,11 +103,7 @@ export class MfaController {
   @ApiResponse({ status: 200, description: '2FA disabled successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 400, description: 'Invalid verification code or 2FA not enabled' })
-  async disableMfa(
-    @CurrentUser() user: any,
-    @Body() dto: DisableMfaDto,
-  ) {
+  async disableMfa(@CurrentUser() user: any, @Body() dto: DisableMfaDto) {
     return this.mfaService.disableMfa(user.userId, user.organizationId, dto);
   }
 }
-

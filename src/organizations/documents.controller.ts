@@ -18,7 +18,10 @@ import { Permissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../common/decorators/current-organization.decorator';
 import { DocumentsService } from './documents.service';
-import { OrganizationDocument, DocumentType } from '../database/entities/organization-document.entity';
+import {
+  OrganizationDocument,
+  DocumentType,
+} from '../database/entities/organization-document.entity';
 import { Response } from 'express';
 import * as fs from 'fs/promises';
 
@@ -79,7 +82,7 @@ export class DocumentsController {
     );
 
     const fileBuffer = await fs.readFile(fileInfo.filePath);
-    
+
     res.setHeader('Content-Type', fileInfo.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.fileName}"`);
     res.send(fileBuffer);
@@ -148,4 +151,3 @@ export class DocumentsController {
     return this.documentsService.deleteDocument(user.userId, organization.id, documentId);
   }
 }
-

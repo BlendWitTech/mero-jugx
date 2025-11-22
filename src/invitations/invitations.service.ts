@@ -11,10 +11,16 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Invitation, InvitationStatus } from '../database/entities/invitation.entity';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { User, UserStatus } from '../database/entities/user.entity';
 import { Role } from '../database/entities/role.entity';
-import { EmailVerification, EmailVerificationType } from '../database/entities/email-verification.entity';
+import {
+  EmailVerification,
+  EmailVerificationType,
+} from '../database/entities/email-verification.entity';
 import { Notification } from '../database/entities/notification.entity';
 import { Session } from '../database/entities/session.entity';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
@@ -22,7 +28,10 @@ import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { InvitationQueryDto } from './dto/invitation-query.dto';
 import { EmailService } from '../common/services/email.service';
 import { EmailTemplatesService } from '../common/services/email-templates.service';
-import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
+import {
+  NotificationHelperService,
+  NotificationType,
+} from '../notifications/notification-helper.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
@@ -86,9 +95,7 @@ export class InvitationsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to create invitations',
-        );
+        throw new ForbiddenException('You do not have permission to create invitations');
       }
     }
 
@@ -310,9 +317,7 @@ export class InvitationsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view invitations',
-        );
+        throw new ForbiddenException('You do not have permission to view invitations');
       }
     }
 
@@ -486,44 +491,44 @@ export class InvitationsService {
       joined_at: new Date(),
     });
 
-      await this.memberRepository.save(membership);
+    await this.memberRepository.save(membership);
 
-      // Create audit logs (don't fail if audit log fails)
-      try {
-        await this.auditLogsService.createAuditLog(
-          invitation.organization_id,
-          user.id,
-          'invitation.accept',
-          'invitation',
-          invitation.id,
-          {
-            status: InvitationStatus.PENDING,
-          },
-          {
-            status: InvitationStatus.ACCEPTED,
-            accepted_at: new Date(),
-            role_id: invitation.role_id,
-          },
-        );
+    // Create audit logs (don't fail if audit log fails)
+    try {
+      await this.auditLogsService.createAuditLog(
+        invitation.organization_id,
+        user.id,
+        'invitation.accept',
+        'invitation',
+        invitation.id,
+        {
+          status: InvitationStatus.PENDING,
+        },
+        {
+          status: InvitationStatus.ACCEPTED,
+          accepted_at: new Date(),
+          role_id: invitation.role_id,
+        },
+      );
 
-        await this.auditLogsService.createAuditLog(
-          invitation.organization_id,
-          user.id,
-          'user.joined',
-          'user',
-          user.id,
-          null,
-          {
-            organization_id: invitation.organization_id,
-            role_id: invitation.role_id,
-            joined_via: 'invitation',
-          },
-        );
-      } catch (error) {
-        console.error('Failed to create audit logs for invitation acceptance:', error);
-      }
+      await this.auditLogsService.createAuditLog(
+        invitation.organization_id,
+        user.id,
+        'user.joined',
+        'user',
+        user.id,
+        null,
+        {
+          organization_id: invitation.organization_id,
+          role_id: invitation.role_id,
+          joined_via: 'invitation',
+        },
+      );
+    } catch (error) {
+      console.error('Failed to create audit logs for invitation acceptance:', error);
+    }
 
-      // Update invitation status and link user_id
+    // Update invitation status and link user_id
     invitation.status = InvitationStatus.ACCEPTED;
     invitation.accepted_at = new Date();
     invitation.user_id = user.id; // Ensure user_id is set
@@ -594,9 +599,7 @@ export class InvitationsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to cancel invitations',
-        );
+        throw new ForbiddenException('You do not have permission to cancel invitations');
       }
     }
 
@@ -615,7 +618,7 @@ export class InvitationsService {
     // Cannot cancel accepted invitations - must revoke access instead
     if (invitation.status === InvitationStatus.ACCEPTED) {
       throw new BadRequestException(
-        'Cannot cancel an accepted invitation. Please revoke the user\'s access instead.',
+        "Cannot cancel an accepted invitation. Please revoke the user's access instead.",
       );
     }
 
@@ -749,7 +752,11 @@ export class InvitationsService {
       return 1; // Highest level
     }
     // Admin role can be identified by slug 'admin' or by being a default/system role with admin-like permissions
-    if (role.slug === 'admin' || (role.is_default && role.slug === 'admin') || (role.is_system_role && role.slug === 'admin')) {
+    if (
+      role.slug === 'admin' ||
+      (role.is_default && role.slug === 'admin') ||
+      (role.is_system_role && role.slug === 'admin')
+    ) {
       return 2; // Second level
     }
     // For other roles, use creation order or a default level
@@ -764,7 +771,7 @@ export class InvitationsService {
     inviterRole: Role,
   ): Promise<OrganizationMember[]> {
     const inviterRoleLevel = this.getRoleHierarchyLevel(inviterRole);
-    
+
     // Get all roles in the organization
     const allRoles = await this.roleRepository.find({
       where: [
@@ -898,4 +905,3 @@ export class InvitationsService {
     }
   }
 }
-

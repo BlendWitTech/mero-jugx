@@ -1,18 +1,5 @@
-import {
-  Controller,
-  Get,
-  Put,
-  Body,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, Put, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -35,10 +22,7 @@ export class OrganizationsController {
   @ApiResponse({ status: 200, description: 'Organization retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   async getCurrentOrganization(@CurrentUser() user: any) {
-    return this.organizationsService.getCurrentOrganization(
-      user.userId,
-      user.organizationId,
-    );
+    return this.organizationsService.getCurrentOrganization(user.userId, user.organizationId);
   }
 
   @Get()
@@ -55,15 +39,8 @@ export class OrganizationsController {
   @ApiResponse({ status: 200, description: 'Organization updated successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 409, description: 'Name or email already exists' })
-  async updateOrganization(
-    @CurrentUser() user: any,
-    @Body() dto: UpdateOrganizationDto,
-  ) {
-    return this.organizationsService.updateOrganization(
-      user.userId,
-      user.organizationId,
-      dto,
-    );
+  async updateOrganization(@CurrentUser() user: any, @Body() dto: UpdateOrganizationDto) {
+    return this.organizationsService.updateOrganization(user.userId, user.organizationId, dto);
   }
 
   @Put('me/settings')
@@ -89,10 +66,7 @@ export class OrganizationsController {
   @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   async getOrganizationStatistics(@CurrentUser() user: any) {
-    return this.organizationsService.getOrganizationStatistics(
-      user.userId,
-      user.organizationId,
-    );
+    return this.organizationsService.getOrganizationStatistics(user.userId, user.organizationId);
   }
 
   @Put('switch')
@@ -100,14 +74,7 @@ export class OrganizationsController {
   @ApiOperation({ summary: 'Switch to another organization' })
   @ApiResponse({ status: 200, description: 'Organization switched successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
-  async switchOrganization(
-    @CurrentUser() user: any,
-    @Body() dto: SwitchOrganizationDto,
-  ) {
-    return this.organizationsService.switchOrganization(
-      user.userId,
-      dto.organization_id,
-    );
+  async switchOrganization(@CurrentUser() user: any, @Body() dto: SwitchOrganizationDto) {
+    return this.organizationsService.switchOrganization(user.userId, dto.organization_id);
   }
 }
-

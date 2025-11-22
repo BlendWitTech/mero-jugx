@@ -19,4 +19,3 @@ export class EsewaVerificationDto {
   @IsNotEmpty()
   transactionId: string;
 }
-

@@ -33,4 +33,3 @@ export class UpdateUserAdminDto {
   @IsEnum(UserStatus)
   status?: UserStatus;
 }
-

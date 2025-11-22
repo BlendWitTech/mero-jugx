@@ -11,13 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -66,10 +60,7 @@ export class RolesController {
   @ApiResponse({ status: 200, description: 'Role retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Role not found' })
-  async getRoleById(
-    @CurrentUser() user: any,
-    @Param('id', ParseIntPipe) roleId: number,
-  ) {
+  async getRoleById(@CurrentUser() user: any, @Param('id', ParseIntPipe) roleId: number) {
     return this.rolesService.getRoleById(user.userId, user.organizationId, roleId);
   }
 
@@ -80,10 +71,7 @@ export class RolesController {
   @ApiResponse({ status: 201, description: 'Role created successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 409, description: 'Role slug already exists' })
-  async createRole(
-    @CurrentUser() user: any,
-    @Body() dto: CreateRoleDto,
-  ) {
+  async createRole(@CurrentUser() user: any, @Body() dto: CreateRoleDto) {
     return this.rolesService.createRole(user.userId, user.organizationId, dto);
   }
 
@@ -113,12 +101,7 @@ export class RolesController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Role not found' })
   @ApiResponse({ status: 400, description: 'Cannot delete system role or role assigned to users' })
-  async deleteRole(
-    @CurrentUser() user: any,
-    @Param('id', ParseIntPipe) roleId: number,
-  ) {
+  async deleteRole(@CurrentUser() user: any, @Param('id', ParseIntPipe) roleId: number) {
     return this.rolesService.deleteRole(user.userId, user.organizationId, roleId);
   }
 }
-
-

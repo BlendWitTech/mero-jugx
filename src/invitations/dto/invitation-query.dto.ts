@@ -29,4 +29,3 @@ export class InvitationQueryDto {
   @Max(100)
   limit?: number = 10;
 }
-

@@ -13,7 +13,10 @@ import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
 import { User } from '../database/entities/user.entity';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { SetupMfaDto } from './dto/setup-mfa.dto';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
 import { DisableMfaDto } from './dto/disable-mfa.dto';
@@ -31,7 +34,10 @@ export class MfaService {
     private redisService: RedisService,
   ) {}
 
-  async initializeSetup(userId: string, organizationId: string): Promise<{
+  async initializeSetup(
+    userId: string,
+    organizationId: string,
+  ): Promise<{
     secret: string;
     qr_code_url: string;
     otp_url: string;
@@ -81,14 +87,11 @@ export class MfaService {
 
     // Generate secret with shortened label to prevent QR code "Data too long" error
     // Use organization name (max 20 chars) and user email (max 30 chars) to keep URL short
-    const orgName = organization.name.length > 20 
-      ? organization.name.substring(0, 20) 
-      : organization.name;
-    const userEmail = user.email.length > 30 
-      ? user.email.substring(0, 30) 
-      : user.email;
+    const orgName =
+      organization.name.length > 20 ? organization.name.substring(0, 20) : organization.name;
+    const userEmail = user.email.length > 30 ? user.email.substring(0, 30) : user.email;
     const label = `${orgName}:${userEmail}`;
-    
+
     const secret = speakeasy.generateSecret({
       name: label,
       issuer: this.configService.get<string>('APP_NAME', 'Mero Jugx'),
@@ -142,15 +145,17 @@ export class MfaService {
     // Check both possible Redis keys (from initializeSetup and from login)
     let setupDataStr = await this.redisService.get(`mfa:setup:${tempSetupToken}`);
     let tokenKey = `mfa:setup:${tempSetupToken}`;
-    
+
     // If not found, check the login token key
     if (!setupDataStr) {
       setupDataStr = await this.redisService.get(`mfa:setup:temp:${tempSetupToken}`);
       tokenKey = `mfa:setup:temp:${tempSetupToken}`;
     }
-    
+
     if (!setupDataStr) {
-      throw new BadRequestException('Invalid or expired setup token. Please login again to get a new token.');
+      throw new BadRequestException(
+        'Invalid or expired setup token. Please login again to get a new token.',
+      );
     }
 
     const setupData = JSON.parse(setupDataStr);
@@ -192,21 +197,23 @@ export class MfaService {
     // This ensures the QR code was generated for the correct user
     // Handle both 'email' (from login token) and 'user_email' (from initializeSetup)
     const storedEmail = setupData.user_email || setupData.email;
-    
+
     // MANDATORY: Email must be stored and must match exactly
     if (!storedEmail) {
-      throw new ForbiddenException('Security validation failed: Email information missing. Please login again to generate a new QR code.');
+      throw new ForbiddenException(
+        'Security validation failed: Email information missing. Please login again to generate a new QR code.',
+      );
     }
-    
+
     // MANDATORY: Email must match exactly (case-insensitive comparison)
     if (user.email.toLowerCase() !== storedEmail.toLowerCase()) {
       throw new ForbiddenException(
         `Security validation failed: Email mismatch. ` +
-        `The QR code was generated for "${storedEmail}" but you are logged in as "${user.email}". ` +
-        `Please logout and login again with the correct email address to set up MFA.`
+          `The QR code was generated for "${storedEmail}" but you are logged in as "${user.email}". ` +
+          `Please logout and login again with the correct email address to set up MFA.`,
       );
     }
-    
+
     // Additional validation: Ensure the email in the OTP URL label matches
     // Extract email from the label if available (format: "orgName:userEmail")
     // This is a secondary check to ensure consistency
@@ -215,8 +222,8 @@ export class MfaService {
       if (labelEmail && labelEmail.toLowerCase() !== user.email.toLowerCase()) {
         throw new ForbiddenException(
           `Security validation failed: QR code label email mismatch. ` +
-          `The QR code contains email "${labelEmail}" but your account email is "${user.email}". ` +
-          `Please logout and login again with the correct email address.`
+            `The QR code contains email "${labelEmail}" but your account email is "${user.email}". ` +
+            `Please logout and login again with the correct email address.`,
         );
       }
     }
@@ -236,7 +243,9 @@ export class MfaService {
     });
 
     if (!verified) {
-      throw new BadRequestException('Invalid verification code. Please make sure you scanned the QR code with the same email address used in this application.');
+      throw new BadRequestException(
+        'Invalid verification code. Please make sure you scanned the QR code with the same email address used in this application.',
+      );
     }
 
     // Save MFA setup
@@ -249,7 +258,7 @@ export class MfaService {
 
     // Delete temporary setup token (from initializeSetup or login)
     await this.redisService.del(tokenKey);
-    
+
     // Also delete the other token key if it exists (cleanup)
     if (tokenKey === `mfa:setup:${tempSetupToken}`) {
       await this.redisService.del(`mfa:setup:temp:${tempSetupToken}`);
@@ -269,11 +278,7 @@ export class MfaService {
     };
   }
 
-  async verifyCode(
-    userId: string,
-    code: string,
-    organizationId?: string,
-  ): Promise<boolean> {
+  async verifyCode(userId: string, code: string, organizationId?: string): Promise<boolean> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
@@ -305,7 +310,10 @@ export class MfaService {
     return verified;
   }
 
-  async getBackupCodes(userId: string, organizationId: string): Promise<{
+  async getBackupCodes(
+    userId: string,
+    organizationId: string,
+  ): Promise<{
     backup_codes: string[];
     message: string;
   }> {
@@ -482,4 +490,3 @@ export class MfaService {
     return codes;
   }
 }
-

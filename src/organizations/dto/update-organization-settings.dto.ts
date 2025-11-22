@@ -7,4 +7,3 @@ export class UpdateOrganizationSettingsDto {
   @IsBoolean()
   mfa_enabled?: boolean;
 }
-

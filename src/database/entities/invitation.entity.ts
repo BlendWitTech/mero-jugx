@@ -104,4 +104,3 @@ export class Invitation {
     return new Date() > this.expires_at && this.status === InvitationStatus.PENDING;
   }
 }
-

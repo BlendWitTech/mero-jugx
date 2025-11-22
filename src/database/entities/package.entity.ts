@@ -53,4 +53,3 @@ export class Package {
   @OneToMany(() => Organization, (organization) => organization.package)
   organizations: Organization[];
 }
-

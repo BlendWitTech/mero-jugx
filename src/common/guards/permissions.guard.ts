@@ -1,14 +1,12 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrganizationMember, OrganizationMemberStatus } from '../../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../../database/entities/organization-member.entity';
 import { Role } from '../../database/entities/role.entity';
 
 @Injectable()
@@ -22,10 +20,10 @@ export class PermissionsGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
-      PERMISSIONS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     // If no permissions required, allow access
     if (!requiredPermissions || requiredPermissions.length === 0) {
@@ -69,9 +67,7 @@ export class PermissionsGuard implements CanActivate {
     }
 
     // Extract permission slugs
-    const userPermissions = roleWithPermissions.role_permissions.map(
-      (rp) => rp.permission.slug,
-    );
+    const userPermissions = roleWithPermissions.role_permissions.map((rp) => rp.permission.slug);
 
     // Check if user has all required permissions
     const hasAllPermissions = requiredPermissions.every((permission) =>
@@ -87,4 +83,3 @@ export class PermissionsGuard implements CanActivate {
     return true;
   }
 }
-

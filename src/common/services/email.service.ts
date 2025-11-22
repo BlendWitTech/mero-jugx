@@ -30,14 +30,17 @@ export class EmailService {
   ) {
     const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
     // Check both direct env var and nested config
-    const resendApiKey = process.env.RESEND_API_KEY || this.configService.get<string>('email.resendApiKey') || '';
-    
+    const resendApiKey =
+      process.env.RESEND_API_KEY || this.configService.get<string>('email.resendApiKey') || '';
+
     if (isDevelopment) {
       console.log(`[EmailService] Development mode detected`);
       console.log(`[EmailService] Resend package available: ${!!Resend}`);
-      console.log(`[EmailService] RESEND_API_KEY found: ${!!resendApiKey} (length: ${resendApiKey.length})`);
+      console.log(
+        `[EmailService] RESEND_API_KEY found: ${!!resendApiKey} (length: ${resendApiKey.length})`,
+      );
     }
-    
+
     // In development, use Resend if API key is provided and package is installed
     if (isDevelopment && resendApiKey && Resend) {
       try {
@@ -48,9 +51,13 @@ export class EmailService {
         console.warn('Failed to initialize Resend, falling back to SMTP or console logging', error);
       }
     } else if (isDevelopment && resendApiKey && !Resend) {
-      console.warn('⚠️  RESEND_API_KEY is set but resend package is not installed. Run: npm install resend');
+      console.warn(
+        '⚠️  RESEND_API_KEY is set but resend package is not installed. Run: npm install resend',
+      );
     } else if (isDevelopment && !resendApiKey) {
-      console.warn('⚠️  RESEND_API_KEY is not set. Emails will be logged to console in development mode.');
+      console.warn(
+        '⚠️  RESEND_API_KEY is not set. Emails will be logged to console in development mode.',
+      );
       console.warn('⚠️  Please add RESEND_API_KEY to your .env file and restart the server.');
     }
 
@@ -77,22 +84,25 @@ export class EmailService {
           },
         });
       } else if (isDevelopment) {
-        console.warn('Neither Resend nor SMTP configured. Email sending will be logged to console in development mode.');
+        console.warn(
+          'Neither Resend nor SMTP configured. Email sending will be logged to console in development mode.',
+        );
       } else {
-        throw new Error('Email service configuration is required in production (RESEND_API_KEY or SMTP)');
+        throw new Error(
+          'Email service configuration is required in production (RESEND_API_KEY or SMTP)',
+        );
       }
     }
   }
 
-  async sendEmail(
-    to: string,
-    subject: string,
-    html: string,
-    text?: string,
-  ): Promise<void> {
+  async sendEmail(to: string, subject: string, html: string, text?: string): Promise<void> {
     const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
-    const fromName = this.configService.get<string>('email.fromName') || this.configService.get<string>('SMTP_FROM_NAME', 'System');
-    const fromEmail = this.configService.get<string>('email.from') || this.configService.get<string>('SMTP_FROM', 'noreply@example.com');
+    const fromName =
+      this.configService.get<string>('email.fromName') ||
+      this.configService.get<string>('SMTP_FROM_NAME', 'System');
+    const fromEmail =
+      this.configService.get<string>('email.from') ||
+      this.configService.get<string>('SMTP_FROM', 'noreply@example.com');
     const from = `"${fromName}" <${fromEmail}>`;
     const plainText = text || html.replace(/<[^>]*>/g, '');
 
@@ -106,15 +116,17 @@ export class EmailService {
         // For development/testing, Resend allows using onboarding.resend.dev domain
         // In production, you must use a verified domain
         let resendFromEmail = fromEmail;
-        
+
         // If the fromEmail is not a valid domain or is a placeholder, use Resend's test domain
-        if (!resendFromEmail || 
-            resendFromEmail === 'noreply@example.com' || 
-            resendFromEmail === 'noreply@mero-jugx.com' ||
-            !resendFromEmail.includes('@')) {
+        if (
+          !resendFromEmail ||
+          resendFromEmail === 'noreply@example.com' ||
+          resendFromEmail === 'noreply@mero-jugx.com' ||
+          !resendFromEmail.includes('@')
+        ) {
           resendFromEmail = 'onboarding@resend.dev'; // Resend's test domain for development
         }
-        
+
         const result = await this.resend.emails.send({
           from: `${fromName} <${resendFromEmail}>`,
           to: [to],
@@ -138,14 +150,20 @@ export class EmailService {
         if (error.response) {
           console.error('   Response data:', error.response.data);
           console.error('   Response status:', error.response.status);
-          
+
           // Check for domain verification error
           if (error.response.data?.message?.includes('verify a domain')) {
             console.error('\n⚠️  DOMAIN VERIFICATION REQUIRED:');
-            console.error('   Resend requires a verified domain to send emails to recipients other than your own.');
-            console.error('   Current limitation: Using onboarding@resend.dev only allows sending to your own email.');
+            console.error(
+              '   Resend requires a verified domain to send emails to recipients other than your own.',
+            );
+            console.error(
+              '   Current limitation: Using onboarding@resend.dev only allows sending to your own email.',
+            );
             console.error('   Solution: Verify a domain at https://resend.com/domains');
-            console.error('   Then update SMTP_FROM in your .env file to use your verified domain.');
+            console.error(
+              '   Then update SMTP_FROM in your .env file to use your verified domain.',
+            );
           }
         }
         // Email already logged above, don't log again
@@ -167,7 +185,7 @@ export class EmailService {
           text: plainText,
           html,
         });
-        
+
         if (isDevelopment) {
           console.log(`✅ Email sent successfully via SMTP to: ${to}`);
         }
@@ -203,7 +221,7 @@ export class EmailService {
   ): void {
     const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
     const timestamp = new Date().toISOString();
-    
+
     console.log('\n' + '🎯'.repeat(40));
     console.log('🎯 INVITATION EMAIL - ACCEPTANCE LINK');
     console.log('🎯'.repeat(40));
@@ -219,7 +237,9 @@ export class EmailService {
     console.log('💡 To accept this invitation:');
     console.log('   1. Copy the URL above');
     console.log('   2. Open it in your browser');
-    console.log(`   3. ${isNewUser ? 'Sign up for a new account' : 'Log in with your existing account'}`);
+    console.log(
+      `   3. ${isNewUser ? 'Sign up for a new account' : 'Log in with your existing account'}`,
+    );
     console.log('🎯'.repeat(40) + '\n');
 
     // In development mode, open a new window with invitation details
@@ -271,7 +291,7 @@ Timestamp: ${timestamp}
   ): void {
     const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
     const timestamp = new Date().toISOString();
-    
+
     console.log('\n' + '🏢'.repeat(40));
     console.log('🏢 ORGANIZATION CREATION EMAIL - VERIFICATION LINK');
     console.log('🏢'.repeat(40));
@@ -342,7 +362,7 @@ ${packageInfoText}
     const emoji = type === 'email' ? '✉️' : '🔐';
     const title = type === 'email' ? 'EMAIL VERIFICATION' : 'PASSWORD RESET';
     const action = type === 'email' ? 'verify your email' : 'reset your password';
-    
+
     console.log('\n' + emoji.repeat(40));
     console.log(`${emoji} ${title} - ${type === 'email' ? 'VERIFICATION' : 'RESET'} LINK`);
     console.log(emoji.repeat(40));
@@ -379,14 +399,7 @@ Timestamp: ${timestamp}
    3. Follow the instructions to ${action}
 ${emoji.repeat(40)}
       `.trim();
-      this.openEmailInNewWindow(
-        title,
-        email,
-        `${title} - ${name}`,
-        content,
-        content,
-        timestamp,
-      );
+      this.openEmailInNewWindow(title, email, `${title} - ${name}`, content, content, timestamp);
     }
   }
 
@@ -399,7 +412,7 @@ ${emoji.repeat(40)}
   ): void {
     const timestamp = new Date().toISOString();
     const isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
-    
+
     // Log to console
     console.log('\n' + '='.repeat(80));
     console.log('📧 EMAIL LOG');
@@ -459,7 +472,7 @@ ${html}
 
       // Determine the platform and open appropriate window
       const platform = process.platform;
-      
+
       if (platform === 'win32') {
         // Windows: Open new cmd window with email content
         const cmd = `start "Email Details - ${subject}" cmd /k "type "${tempFile}" && echo. && echo Press any key to close... && pause >nul && del "${tempFile}"`;
@@ -468,20 +481,26 @@ ${html}
           const psCmd = `start powershell -NoExit -Command "Get-Content '${tempFile}'; Write-Host ''; Write-Host 'Press any key to close...'; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); Remove-Item '${tempFile}'"`;
           execAsync(psCmd).catch(() => {
             // If both fail, just delete the temp file
-            try { fs.unlinkSync(tempFile); } catch {}
+            try {
+              fs.unlinkSync(tempFile);
+            } catch {}
           });
         });
       } else if (platform === 'darwin') {
         // macOS: Open new terminal window
         const cmd = `osascript -e 'tell application "Terminal" to do script "cat \\"${tempFile}\\" && echo && echo Press Enter to close... && read && rm \\"${tempFile}\\""'`;
         execAsync(cmd).catch(() => {
-          try { fs.unlinkSync(tempFile); } catch {}
+          try {
+            fs.unlinkSync(tempFile);
+          } catch {}
         });
       } else {
         // Linux: Open new terminal window
         const cmd = `xterm -e "cat '${tempFile}' && echo && echo Press Enter to close... && read && rm '${tempFile}'" &`;
         execAsync(cmd).catch(() => {
-          try { fs.unlinkSync(tempFile); } catch {}
+          try {
+            fs.unlinkSync(tempFile);
+          } catch {}
         });
       }
     } catch (error) {
@@ -493,10 +512,10 @@ ${html}
   async sendVerificationEmail(email: string, token: string, name: string): Promise<void> {
     const appUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const verificationUrl = `${appUrl}/verify-email?token=${token}`;
-    
+
     // Log verification details prominently before sending email
     this.logVerificationDetails(email, name, verificationUrl, token, 'email');
-    
+
     const html = this.templatesService.getVerificationEmail(name, token);
     await this.sendEmail(email, 'Verify Your Email', html);
   }
@@ -504,10 +523,10 @@ ${html}
   async sendPasswordResetEmail(email: string, token: string, name: string): Promise<void> {
     const appUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
-    
+
     // Log password reset details prominently before sending email
     this.logVerificationDetails(email, name, resetUrl, token, 'password');
-    
+
     const html = this.templatesService.getPasswordResetEmail(name, token);
     await this.sendEmail(email, 'Reset Your Password', html);
   }
@@ -523,17 +542,24 @@ ${html}
     const invitationUrl = isNewUser
       ? `${appUrl}/accept-invitation?token=${token}`
       : `${appUrl}/invitations?token=${token}`;
-    
+
     const html = this.templatesService.getInvitationEmail(
       inviterName,
       organizationName,
       token,
       isNewUser,
     );
-    
+
     // Log invitation details prominently before sending email
-    this.logInvitationDetails(email, inviterName, organizationName, invitationUrl, token, isNewUser);
-    
+    this.logInvitationDetails(
+      email,
+      inviterName,
+      organizationName,
+      invitationUrl,
+      token,
+      isNewUser,
+    );
+
     await this.sendEmail(email, `Invitation to join ${organizationName}`, html);
   }
 
@@ -547,11 +573,7 @@ ${html}
     await this.sendEmail(email, 'Access Revoked', html);
   }
 
-  async sendMfaEnabledEmail(
-    email: string,
-    name: string,
-    organizationName: string,
-  ): Promise<void> {
+  async sendMfaEnabledEmail(email: string, name: string, organizationName: string): Promise<void> {
     const html = this.templatesService.getMfaEnabledEmail(name, organizationName);
     await this.sendEmail(email, '2FA/MFA Enabled', html);
   }
@@ -603,7 +625,7 @@ ${html}
       verificationUrl,
       packageInfo,
     );
-    
+
     const html = this.templatesService.getOrganizationCreatedEmail(
       organizationName,
       organizationEmail,
@@ -616,4 +638,3 @@ ${html}
     await this.sendEmail(organizationEmail, `Organization Created: ${organizationName}`, html);
   }
 }
-

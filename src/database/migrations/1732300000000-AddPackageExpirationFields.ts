@@ -52,4 +52,3 @@ export class AddPackageExpirationFields1732300000000 implements MigrationInterfa
     `);
   }
 }
-

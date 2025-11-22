@@ -15,7 +15,13 @@ import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, Organization, User, OrganizationMember, OrganizationPackageFeature]),
+    TypeOrmModule.forFeature([
+      Payment,
+      Organization,
+      User,
+      OrganizationMember,
+      OrganizationPackageFeature,
+    ]),
     forwardRef(() => PackagesModule),
     NotificationsModule,
     CommonModule,
@@ -25,4 +31,3 @@ import { CommonModule } from '../common/common.module';
   exports: [PaymentsService, EsewaService, StripeService],
 })
 export class PaymentsModule {}
-

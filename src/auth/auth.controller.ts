@@ -43,10 +43,7 @@ export class AuthController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(
-    @Body() loginDto: LoginDto,
-    @Query('organization_id') organizationId?: string,
-  ) {
+  async login(@Body() loginDto: LoginDto, @Query('organization_id') organizationId?: string) {
     try {
       // If organization_id not provided, return user's organizations for selection
       if (!organizationId) {
@@ -116,11 +113,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout user' })
   @ApiResponse({ status: 200, description: 'Logged out successfully' })
-  async logout(
-    @CurrentUser() user: any,
-    @Body('token') token: string,
-  ) {
+  async logout(@CurrentUser() user: any, @Body('token') token: string) {
     return this.authService.logout(user.userId, token);
   }
 }
-

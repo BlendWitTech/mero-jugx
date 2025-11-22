@@ -7,4 +7,3 @@ export class SwitchOrganizationDto {
   @IsNotEmpty()
   organization_id: string;
 }
-

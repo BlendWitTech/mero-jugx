@@ -8,11 +8,8 @@ import { OrganizationMember } from '../database/entities/organization-member.ent
 import { Role } from '../database/entities/role.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([OrganizationMember, Role]),
-  ],
+  imports: [TypeOrmModule.forFeature([OrganizationMember, Role])],
   providers: [PermissionsGuard, EmailService, EmailTemplatesService, RedisService],
   exports: [PermissionsGuard, EmailService, EmailTemplatesService, RedisService],
 })
 export class CommonModule {}
-

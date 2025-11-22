@@ -34,4 +34,3 @@ import { User } from '../database/entities/user.entity';
   exports: [PackagesService],
 })
 export class PackagesModule {}
-

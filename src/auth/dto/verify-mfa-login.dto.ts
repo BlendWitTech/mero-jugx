@@ -14,4 +14,3 @@ export class VerifyMfaLoginDto {
   @Length(6, 8)
   code: string;
 }
-

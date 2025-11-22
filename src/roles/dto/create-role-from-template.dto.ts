@@ -16,4 +16,3 @@ export class CreateRoleFromTemplateDto {
   @IsNumber({}, { each: true })
   custom_permission_ids?: number[];
 }
-

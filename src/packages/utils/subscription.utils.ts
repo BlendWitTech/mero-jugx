@@ -54,7 +54,7 @@ export function calculateSubscription(
 
   // Calculate total price (base price * months)
   const originalPrice = basePrice * months;
-  
+
   // Apply discount
   const discountAmount = (originalPrice * discountPercent) / 100;
   const discountedPrice = originalPrice - discountAmount;
@@ -107,7 +107,7 @@ export function calculateProratedCredit(
   // Credit = (remaining days / total days) * package price
   // For simplicity, we'll use monthly proration
   const monthlyPrice = currentPackagePrice;
-  const creditAmount = (remainingMonths * monthlyPrice);
+  const creditAmount = remainingMonths * monthlyPrice;
   const creditPercentage = (remainingDays / 30) * 100; // Percentage of month remaining
 
   return {
@@ -138,10 +138,10 @@ export function calculateUpgradePrice(
 ): UpgradePriceCalculation {
   // Calculate new package subscription price
   const newSubscription = calculateSubscription(newPackagePrice, newPeriod, newCustomMonths);
-  
+
   // Calculate prorated credit from current package
   const proratedCredit = calculateProratedCredit(currentPackagePrice, currentExpirationDate);
-  
+
   // Apply credit to new package price
   const creditAmount = proratedCredit?.creditAmount || 0;
   const finalPrice = Math.max(0, newSubscription.discountedPrice - creditAmount);
@@ -153,4 +153,3 @@ export function calculateUpgradePrice(
     proratedCredit,
   };
 }
-

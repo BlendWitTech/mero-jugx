@@ -11,4 +11,3 @@ export class VerifyMfaDto {
   @ApiPropertyOptional({ description: 'Organization ID (required for login flow)' })
   organization_id?: string;
 }
-

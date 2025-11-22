@@ -76,24 +76,25 @@ chmod +x scripts/setup.sh
 
 ### Step 3: Configure Environment Variables
 
-If you don't have a `.env` file, create one in the project root. See the complete environment variable template below or check `docs/ENVIRONMENT-SETUP.md` for detailed configuration.
+Create a `.env` file in the project root. For complete environment variable configuration:
 
-**Required Environment Variables:**
+- **[Environment Setup Guide](./docs/ENVIRONMENT-SETUP.md)** - Detailed environment configuration
+- **[Environment Template](./docs/ENV-TEMPLATE.md)** - Complete `.env` template with all variables
+
+**Quick Start - Minimum Required Variables:**
 
 ```env
-# Database Configuration
-# Note: If using Docker (docker-compose.yml), use port 5433
-# If using local PostgreSQL, use port 5432 (default)
+# Database
 DB_HOST=localhost
 DB_PORT=5433
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=mero_jugx
 
-# JWT Configuration
-JWT_SECRET=your-secret-key-here-change-in-production
+# JWT
+JWT_SECRET=your-secret-key-here
 JWT_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=your-refresh-secret-key-here
+JWT_REFRESH_SECRET=your-refresh-secret
 JWT_REFRESH_EXPIRES_IN=7d
 
 # Application
@@ -101,117 +102,29 @@ PORT=3000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3001
 
-# Email Configuration
-# Option 1: Resend (Recommended)
-RESEND_API_KEY=your-resend-api-key-here
+# Email (Resend or SMTP)
+RESEND_API_KEY=your-resend-api-key
 
-# Option 2: SMTP (Alternative)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-
-# eSewa Payment Gateway Configuration
-# For Development (Test Credentials)
-# eSewa RC (Release Candidate) environment: https://rc-epay.esewa.com.np
-# Documentation: https://developer.esewa.com.np/pages/Epay
-# Test Credentials: https://developer.esewa.com.np/pages/Test-credentials
-# Default UAT secret key for Epay-v2: 8gBm/:&EnhH.1/q
+# Payment Gateways (see docs for test credentials)
 ESEWA_TEST_MERCHANT_ID=EPAYTEST
 ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q
-ESEWA_TEST_API_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form
-ESEWA_TEST_VERIFY_URL=https://rc.esewa.com.np/api/epay/transaction/status
-
-# Mock Mode (for development when eSewa UAT is not accessible)
-# Set to 'true' to use local mock payment page instead of redirecting to eSewa
-ESEWA_USE_MOCK_MODE=false
-
-# For Production (Live Credentials)
-ESEWA_MERCHANT_ID=your-production-merchant-id
-ESEWA_SECRET_KEY=your-production-secret-key
-ESEWA_API_URL=https://epay.esewa.com.np/api/epay/main/v2/form
-ESEWA_VERIFY_URL=https://esewa.com.np/api/epay/transaction/status
-
-# Stripe Payment Gateway Configuration
-# For Development (Test Mode)
-# Get test keys from: https://dashboard.stripe.com/test/apikeys
-STRIPE_TEST_PUBLISHABLE_KEY=pk_test_your_test_publishable_key_here
-STRIPE_TEST_SECRET_KEY=sk_test_your_test_secret_key_here
-
-# For Production (Live Mode)
-# Get live keys from: https://dashboard.stripe.com/apikeys
-STRIPE_PUBLISHABLE_KEY=pk_live_your_live_publishable_key_here
-STRIPE_SECRET_KEY=sk_live_your_live_secret_key_here
-
-# Webhook Secret (for verifying webhook signatures)
-# Get from: https://dashboard.stripe.com/webhooks
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
-
-# Currency Configuration (Optional)
-NPR_TO_USD_RATE=0.0075
-DEFAULT_CURRENCY=USD
-NEPAL_COUNTRY_CODE=NP
+STRIPE_TEST_SECRET_KEY=sk_test_...
 ```
 
-> **Note:** See `docs/ENVIRONMENT-SETUP.md` for detailed configuration and `docs/ENV-TEMPLATE.md` for a complete environment variable template with all required keys for eSewa and Stripe.
+> **📖 For complete configuration**, see [Environment Setup Guide](./docs/ENVIRONMENT-SETUP.md) and [Environment Template](./docs/ENV-TEMPLATE.md).
 
-### eSewa Payment Gateway Setup
+### Payment Gateway Setup
 
-The application includes eSewa payment gateway integration. The system automatically uses:
-- **Test credentials** when `NODE_ENV=development`
-- **Production credentials** when `NODE_ENV=production`
+The application supports eSewa and Stripe payment gateways. For detailed setup instructions:
 
-**For Development:**
-- Use test credentials from [eSewa Developer Portal](https://developer.esewa.com.np/)
-- Test Merchant ID: `EPAYTEST` (default)
-- Test credentials are used automatically in development mode
-- **RC Environment:** `https://rc-epay.esewa.com.np` is used for testing
-- **Important:** The RC environment may return 405 errors if:
-  - Valid test merchant credentials are not configured
-  - Merchant account is not set up in the RC environment
-  - The endpoint requires different authentication
-- **Solution:** Use Mock Mode (see below) or contact eSewa support for RC environment access and valid test credentials
+- **[Payment Testing Guide](./docs/PAYMENT-TESTING-GUIDE.md)** - Complete payment gateway setup and testing guide
+- **[Environment Setup](./docs/ENVIRONMENT-SETUP.md)** - Payment gateway configuration
 
-**Mock Mode (Recommended for Development - Use This if Getting 405 Errors or Token Authentication):**
-- If eSewa RC environment is not accessible, returns 405 errors, or requires token authentication, **enable mock mode**:
-  - Add `ESEWA_USE_MOCK_MODE=true` to your `.env` file
-  - Restart your backend server
-  - This will use a local mock payment page instead of redirecting to eSewa
-  - Payments will be simulated locally for testing
-  - Mock mode only works in development (`NODE_ENV=development`)
-- Mock mode allows you to test the complete payment flow without needing eSewa access
-- **This is the recommended approach for development**, especially if you encounter:
-  - 405 Method Not Allowed errors
-  - Token authentication requirements (`set_token_message` errors)
-  - Connection issues with RC environment
-
-**For Production:**
-- Register as a merchant with eSewa
-- Obtain your production Merchant ID and Secret Key
-- Update the production environment variables in your `.env` file
-- Ensure `NODE_ENV=production` is set
-
-**Payment Flow:**
-1. User initiates payment via `/payment` page
-2. System creates payment record and generates eSewa payment form
-3. User is redirected to eSewa for payment
-4. After payment, eSewa redirects to success/failure URLs
-5. System verifies payment with eSewa API
-6. Payment status is updated in the database
-
-**Payment Routes:**
-- `/payment` - Create and initiate payment
-- `/payment/success` - Payment success callback (handles verification)
-- `/payment/failure` - Payment failure page
-
-**Currency Display:**
-- The system automatically detects user region and displays:
-  - **Nepal**: NPR as primary currency, USD as secondary
-  - **Other Regions**: USD as primary currency, NPR as secondary
-- Exchange rate is configurable via `NPR_TO_USD_RATE` environment variable
-- Users can manually select their region on the payment page
-- **eSewa payments**: Processed in NPR (amounts converted from USD automatically)
-- **Stripe payments**: Processed in USD (no conversion needed)
+**Quick Notes:**
+- **eSewa**: Uses test credentials in development, production credentials in production
+- **Stripe**: Uses test keys in development, live keys in production
+- **Mock Mode**: Enable `ESEWA_USE_MOCK_MODE=true` for local testing without eSewa access
+- See [Payment Testing Guide](./docs/PAYMENT-TESTING-GUIDE.md) for complete details
 
 ### Step 4: Start Development Servers
 
@@ -391,16 +304,11 @@ mero-jugx/
 - **[Organization User Guide](./docs/ORGANIZATION-USER-GUIDE.md)** - Complete guide for using the platform
 
 ### For Developers
-See the `docs/` folder and root directory for detailed documentation:
-
-- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Complete developer guide (setup, Git workflow, testing, API routes, project structure)
-- **[Git Branching Strategy](./.git-branching-strategy.md)** - Git workflow and branching strategy (main → version-control → develop)
-- **[Production Cleanup](./PRODUCTION-CLEANUP.md)** - Comprehensive production deployment checklist
-- **[ENVIRONMENT-SETUP.md](./docs/ENVIRONMENT-SETUP.md)** - Complete environment variable reference
-- **[API-DOCUMENTATION.md](./docs/API-DOCUMENTATION.md)** - API endpoints and usage
-- **[DEPLOYMENT-GUIDE.md](./docs/DEPLOYMENT-GUIDE.md)** - Production deployment instructions
-- **[MIGRATION-GUIDE.md](./docs/MIGRATION-GUIDE.md)** - Database migration guide
-- **[PAYMENT-TESTING-GUIDE.md](./docs/PAYMENT-TESTING-GUIDE.md)** - Payment gateway testing guide
+- **[Developer Guide](./DEVELOPER_GUIDE.md)** - Complete developer guide (setup, project structure, API routes, database, testing)
+- **[GitHub Workflow](./GITHUB.md)** - Git workflow, branching strategy, PR process, and collaboration guide
+- **[API Documentation](./docs/API-DOCUMENTATION.md)** - Complete API reference with endpoints and examples
+- **[System Architecture](./docs/01-system-architecture.md)** - System design and architecture overview
+- **[Database Schema](./docs/02-database-schema.md)** - Database structure and relationships
 - See [docs/README.md](./docs/README.md) for complete documentation index
 
 ### ⚠️ Important: Database Migration Sync
@@ -426,77 +334,18 @@ See `docs/DATABASE-SYNC.md` for details.
 
 ## 🐛 Troubleshooting
 
-### Database Connection Issues
+For detailed troubleshooting guides, see:
 
-**Common Error: `ECONNREFUSED` on port 5433**
+- **[Developer Guide - Troubleshooting](./DEVELOPER_GUIDE.md#troubleshooting)** - Common development issues and solutions
+- **[Database Connection Fix](./docs/DATABASE-CONNECTION-FIX.md)** - Database connection troubleshooting
+- **[Database Sync](./docs/DATABASE-SYNC.md)** - Database synchronization issues
 
-This means PostgreSQL is not accessible. Follow these steps:
+**Quick Common Issues:**
 
-1. **If using Docker (Recommended):**
-   ```bash
-   # Start Docker containers
-   docker-compose up -d
-   
-   # Check if containers are running
-   docker-compose ps
-   ```
-   - Docker maps PostgreSQL to port **5433** on your host
-   - Use `DB_PORT=5433` in your `.env` file
-
-2. **If using local PostgreSQL:**
-   - Check PostgreSQL is running:
-     - Windows: Check Services (services.msc) for PostgreSQL service
-     - Linux/Mac: `sudo systemctl status postgresql` or `brew services list`
-   - Use `DB_PORT=5432` in your `.env` file (default PostgreSQL port)
-
-3. **Verify database credentials in `.env`:**
-   - Ensure these variables are correct:
-     - `DB_HOST=localhost`
-     - `DB_PORT=5433` (Docker) or `5432` (local)
-     - `DB_USER=postgres`
-     - `DB_PASSWORD=postgres`
-     - `DB_NAME=mero_jugx`
-   - **Note:** Variable names are `DB_USER` and `DB_NAME`, not `DB_USERNAME` and `DB_DATABASE`
-
-4. **Create database manually if needed:**
-   ```sql
-   CREATE DATABASE mero_jugx;
-   ```
-
-5. **Test database connection:**
-   ```bash
-   # Using Docker
-   docker exec -it mero-jugx-postgres psql -U postgres -d mero_jugx
-   
-   # Using local PostgreSQL
-   psql -U postgres -d mero_jugx
-   ```
-
-### Port Already in Use
-
-If ports 3000 or 3001 are already in use:
-
-**Windows:**
-```bash
-# Find process using port 3000
-netstat -ano | findstr :3000
-
-# Kill process (replace PID with actual process ID)
-taskkill /PID <PID> /F
-```
-
-**Linux/Mac:**
-```bash
-# Find and kill process using port 3000
-lsof -ti:3000 | xargs kill -9
-```
-
-### Docker Issues
-
-- Ensure Docker Desktop is running
-- Check Docker containers: `docker-compose ps`
-- Restart containers: `docker-compose restart`
-- View logs: `docker-compose logs`
+- **Database Connection**: See [Database Connection Fix Guide](./docs/DATABASE-CONNECTION-FIX.md)
+- **Port Already in Use**: See [Developer Guide](./DEVELOPER_GUIDE.md#troubleshooting)
+- **Migration Errors**: See [Migration Guide](./docs/MIGRATION-GUIDE.md)
+- **General Development Issues**: See [Developer Guide - Troubleshooting](./DEVELOPER_GUIDE.md#troubleshooting)
 
 ---
 
@@ -505,29 +354,19 @@ lsof -ti:3000 | xargs kill -9
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for detailed contribution guidelines.
 
 **Quick Start:**
-1. Read [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) for setup
-2. Follow [Git Branching Strategy](./.git-branching-strategy.md)
+1. Read [Developer Guide](./DEVELOPER_GUIDE.md) for setup
+2. Follow [GitHub Workflow](./GITHUB.md) for Git branching strategy and workflow
 3. Create a feature branch from `develop`
 4. Make your changes
 5. Run `npm run migration:validate` before committing
 6. Test your changes
 7. Submit a pull request to `develop` or `version-control`
 
-**Branch Strategy:**
-- `main` - Production (protected, maintainers only)
-- `version-control` - Release branch (where we push for production)
-- `develop` - Development integration
-- `feature/*` - Feature branches
-- `bugfix/*` - Bug fix branches
-- `hotfix/*` - Critical production fixes
+> **📖 For complete Git workflow details**, see [GITHUB.md](./GITHUB.md) - includes branching strategy, daily workflow, PR process, and all collaboration guidelines.
 
 ---
 
 ## 📄 License
-
-UNLICENSED - Private project
-
-## License
 
 UNLICENSED - Private project
 

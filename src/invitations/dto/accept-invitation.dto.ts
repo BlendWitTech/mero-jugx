@@ -29,4 +29,3 @@ export class AcceptInvitationDto {
   @MaxLength(50)
   phone?: string;
 }
-

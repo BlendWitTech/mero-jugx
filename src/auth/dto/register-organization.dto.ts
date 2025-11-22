@@ -53,7 +53,10 @@ export class RegisterOrganizationDto {
   description?: string;
 
   // Owner details (if new user)
-  @ApiProperty({ description: 'Owner email (must be unique if new user)', example: 'owner@acme.com' })
+  @ApiProperty({
+    description: 'Owner email (must be unique if new user)',
+    example: 'owner@acme.com',
+  })
   @IsEmail()
   owner_email: string;
 
@@ -90,4 +93,3 @@ export class RegisterOrganizationDto {
   @IsOptional()
   is_existing_user?: boolean;
 }
-

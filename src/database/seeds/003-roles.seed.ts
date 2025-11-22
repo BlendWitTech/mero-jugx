@@ -100,4 +100,3 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
     console.log('- Admin role already exists');
   }
 }
-

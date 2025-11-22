@@ -47,4 +47,3 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
     }
   }
 }
-

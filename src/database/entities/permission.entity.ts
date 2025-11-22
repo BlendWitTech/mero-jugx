@@ -35,4 +35,3 @@ export class Permission {
   @OneToMany(() => RolePermission, (rolePermission) => rolePermission.permission)
   role_permissions: RolePermission[];
 }
-

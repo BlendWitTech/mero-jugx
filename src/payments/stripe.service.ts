@@ -25,7 +25,7 @@ export class StripeService {
 
   constructor(private configService: ConfigService) {
     this.isDevelopment = process.env.NODE_ENV !== 'production';
-    
+
     const stripeConfig = this.configService.get('stripe');
     const secretKey = this.isDevelopment
       ? stripeConfig?.testSecretKey || ''
@@ -33,18 +33,24 @@ export class StripeService {
 
     if (!secretKey) {
       this.logger.warn('⚠️  Stripe secret key is not configured. Stripe payments will fail.');
-      this.logger.warn('   Set STRIPE_TEST_SECRET_KEY for development or STRIPE_SECRET_KEY for production');
-      this.logger.warn(`   Current config: ${JSON.stringify({ 
-        hasTestKey: !!stripeConfig?.testSecretKey, 
-        hasProdKey: !!stripeConfig?.secretKey,
-        isDevelopment: this.isDevelopment 
-      })}`);
+      this.logger.warn(
+        '   Set STRIPE_TEST_SECRET_KEY for development or STRIPE_SECRET_KEY for production',
+      );
+      this.logger.warn(
+        `   Current config: ${JSON.stringify({
+          hasTestKey: !!stripeConfig?.testSecretKey,
+          hasProdKey: !!stripeConfig?.secretKey,
+          isDevelopment: this.isDevelopment,
+        })}`,
+      );
     } else {
       try {
         this.stripe = new Stripe(secretKey.trim(), {
           apiVersion: '2025-11-17.clover',
         });
-        this.logger.log(`💳 Stripe initialized (${this.isDevelopment ? 'Test' : 'Production'} mode)`);
+        this.logger.log(
+          `💳 Stripe initialized (${this.isDevelopment ? 'Test' : 'Production'} mode)`,
+        );
       } catch (error) {
         this.logger.error('❌ Failed to initialize Stripe:', error);
         this.stripe = null;
@@ -58,7 +64,9 @@ export class StripeService {
    */
   async createCheckoutSession(params: StripePaymentInitParams): Promise<StripePaymentSession> {
     if (!this.stripe) {
-      throw new BadRequestException('Stripe is not configured. Please set STRIPE_TEST_SECRET_KEY or STRIPE_SECRET_KEY');
+      throw new BadRequestException(
+        'Stripe is not configured. Please set STRIPE_TEST_SECRET_KEY or STRIPE_SECRET_KEY',
+      );
     }
 
     try {
@@ -76,8 +84,11 @@ export class StripeService {
       // For USD: amount is in dollars, convert to cents (multiply by 100)
       const amountInSmallestUnit = Math.round(params.amount * 100);
 
-      if (amountInSmallestUnit < 50) { // Stripe minimum is $0.50 or equivalent
-        throw new BadRequestException(`Amount too small. Minimum amount is 0.50 ${params.currency.toUpperCase()}`);
+      if (amountInSmallestUnit < 50) {
+        // Stripe minimum is $0.50 or equivalent
+        throw new BadRequestException(
+          `Amount too small. Minimum amount is 0.50 ${params.currency.toUpperCase()}`,
+        );
       }
 
       // Stripe expects currency in lowercase
@@ -89,8 +100,12 @@ export class StripeService {
         this.logger.warn(`Currency ${currency} may not be supported by Stripe. Using anyway.`);
       }
 
-      this.logger.debug(`Creating Stripe checkout session: ${amountInSmallestUnit} ${currency} (${params.amount} ${currency.toUpperCase()})`);
-      this.logger.debug(`Transaction ID: ${params.transactionId}, Description: ${params.description}`);
+      this.logger.debug(
+        `Creating Stripe checkout session: ${amountInSmallestUnit} ${currency} (${params.amount} ${currency.toUpperCase()})`,
+      );
+      this.logger.debug(
+        `Transaction ID: ${params.transactionId}, Description: ${params.description}`,
+      );
 
       const session = await this.stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -128,12 +143,12 @@ export class StripeService {
       };
     } catch (error: any) {
       this.logger.error(`Stripe checkout session creation failed:`, error);
-      
+
       // Provide more specific error messages based on error type
       if (error instanceof BadRequestException) {
         throw error;
       }
-      
+
       // Handle Stripe-specific errors
       if (error.type) {
         switch (error.type) {
@@ -158,13 +173,15 @@ export class StripeService {
               'Failed to connect to Stripe. Please check your internet connection and try again.',
             );
           default:
-            this.logger.error(`Unknown Stripe error type: ${error.type}, message: ${error.message}`);
+            this.logger.error(
+              `Unknown Stripe error type: ${error.type}, message: ${error.message}`,
+            );
             throw new BadRequestException(
               `Stripe error: ${error.message || 'An unexpected error occurred'}`,
             );
         }
       }
-      
+
       // Generic error handling
       const errorMessage = error.message || 'Unknown error occurred';
       this.logger.error(`Unexpected error creating Stripe session: ${errorMessage}`, error.stack);
@@ -223,7 +240,7 @@ export class StripeService {
   }> {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      
+
       if (session.payment_status === 'paid') {
         return {
           transactionId: session.client_reference_id || undefined,
@@ -238,4 +255,3 @@ export class StripeService {
     };
   }
 }
-

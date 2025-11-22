@@ -63,4 +63,3 @@ import { CommonModule } from './common/common.module';
   providers: [AppService],
 })
 export class AppModule {}
-

@@ -1,19 +1,5 @@
-import {
-  Controller,
-  Put,
-  Body,
-  Param,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { Controller, Put, Body, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -42,13 +28,6 @@ export class UserRolesController {
     @Param('id') targetUserId: string,
     @Body() dto: AssignRoleDto,
   ) {
-    return this.rolesService.assignRoleToUser(
-      user.userId,
-      user.organizationId,
-      targetUserId,
-      dto,
-    );
+    return this.rolesService.assignRoleToUser(user.userId, user.organizationId, targetUserId, dto);
   }
 }
-
-

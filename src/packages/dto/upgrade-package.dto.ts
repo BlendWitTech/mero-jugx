@@ -14,7 +14,7 @@ export class UpgradePackageDto {
   @IsNotEmpty()
   package_id: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Subscription period',
     enum: SubscriptionPeriod,
     required: false,
@@ -24,7 +24,7 @@ export class UpgradePackageDto {
   @IsOptional()
   period?: SubscriptionPeriod;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Custom period in months (required if period is custom)',
     minimum: 1,
     required: false,
@@ -34,4 +34,3 @@ export class UpgradePackageDto {
   @IsOptional()
   custom_months?: number;
 }
-

@@ -14,10 +14,16 @@ import * as crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import { User, UserStatus } from '../database/entities/user.entity';
 import { Organization, OrganizationStatus } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 import { Package } from '../database/entities/package.entity';
-import { EmailVerification, EmailVerificationType } from '../database/entities/email-verification.entity';
+import {
+  EmailVerification,
+  EmailVerificationType,
+} from '../database/entities/email-verification.entity';
 import { Session } from '../database/entities/session.entity';
 import { EmailService } from '../common/services/email.service';
 import { RedisService } from '../common/services/redis.service';
@@ -93,7 +99,7 @@ export class AuthService {
       // Example: Owner1 (abcd@gmail.com) can create Org1 with email abcd@gmail.com ✅
       //          But Owner2 (abcd@gmail.com) CANNOT create Org2 with email abcd@gmail.com ❌
       //          (because abcd@gmail.com is already Org1's email)
-      
+
       // Check if organization email already exists (must be unique across all organizations)
       const existingOrgByEmail = await this.organizationRepository.findOne({
         where: { email: dto.email },
@@ -102,8 +108,8 @@ export class AuthService {
       if (existingOrgByEmail) {
         throw new ConflictException(
           'This email address is already used as an organization email for another organization. ' +
-          'Organization emails must be unique across all organizations. ' +
-          'Even if this email matches your owner email, you must use a different email address for this organization.'
+            'Organization emails must be unique across all organizations. ' +
+            'Even if this email matches your owner email, you must use a different email address for this organization.',
         );
       }
 
@@ -155,15 +161,15 @@ export class AuthService {
 
         // Check if owner already has an organization where the organization email equals the owner email
         const hasOrgWithOwnerEmail = ownerOrganizations.some(
-          (membership) => membership.organization.email === dto.owner_email
+          (membership) => membership.organization.email === dto.owner_email,
         );
 
         // If the new organization email equals owner email AND owner already has an org with that email, reject
         if (dto.email === dto.owner_email && hasOrgWithOwnerEmail) {
           throw new ConflictException(
             `You already have an organization with email "${dto.owner_email}". ` +
-            `An email address can only be used as an organization email for one organization. ` +
-            `Please use a different email address for this organization.`
+              `An email address can only be used as an organization email for one organization. ` +
+              `Please use a different email address for this organization.`,
           );
         }
 
@@ -204,7 +210,9 @@ export class AuthService {
 
         // Validate required fields for new user
         if (!dto.owner_password || !dto.owner_first_name || !dto.owner_last_name) {
-          throw new BadRequestException('Password, first name, and last name are required for new users');
+          throw new BadRequestException(
+            'Password, first name, and last name are required for new users',
+          );
         }
 
         // Create new user
@@ -313,7 +321,8 @@ export class AuthService {
       };
 
       // Get owner's full name
-      const ownerFullName = `${ownerUser.first_name} ${ownerUser.last_name}`.trim() || ownerUser.email;
+      const ownerFullName =
+        `${ownerUser.first_name} ${ownerUser.last_name}`.trim() || ownerUser.email;
 
       // Send organization creation notification email to organization email
       const orgVerificationUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001')}/verify-email?token=${orgVerificationToken}`;
@@ -337,7 +346,8 @@ export class AuthService {
       await queryRunner.commitTransaction();
 
       return {
-        message: 'Organization registered successfully. Please check your email to verify both your personal and organization email addresses.',
+        message:
+          'Organization registered successfully. Please check your email to verify both your personal and organization email addresses.',
         organization_id: savedOrganization.id,
         user_id: ownerUser.id,
       };
@@ -358,7 +368,9 @@ export class AuthService {
 
     // Email verification check - MANDATORY (no development bypass)
     if (!user.email_verified) {
-      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification email.');
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in. Check your inbox for the verification email.',
+      );
     }
 
     // Get user's organizations
@@ -401,7 +413,9 @@ export class AuthService {
 
     // Email verification check - MANDATORY (no development bypass)
     if (!user.email_verified) {
-      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification email.');
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in. Check your inbox for the verification email.',
+      );
     }
 
     // Get user's membership in the organization
@@ -425,7 +439,9 @@ export class AuthService {
 
     // Organization email verification check - MANDATORY
     if (!membership.organization.email_verified) {
-      throw new UnauthorizedException('Organization email address must be verified before you can access this organization. Please check the organization email inbox for the verification email.');
+      throw new UnauthorizedException(
+        'Organization email address must be verified before you can access this organization. Please check the organization email inbox for the verification email.',
+      );
     }
 
     // Check if organization has MFA enabled
@@ -440,7 +456,6 @@ export class AuthService {
       if (!freshUser) {
         throw new UnauthorizedException('User not found');
       }
-
 
       if (!freshUser.mfa_enabled || !freshUser.mfa_setup_completed_at) {
         // Generate temporary token for MFA setup (similar to MFA verification)
@@ -461,7 +476,6 @@ export class AuthService {
           JSON.stringify(tempSetupTokenData),
           1800, // 30 minutes
         );
-
 
         // Return flag that MFA setup is required with temporary token
         return {
@@ -528,7 +542,9 @@ export class AuthService {
       refresh_token: await bcrypt.hash(refreshToken, 10),
       expires_at: new Date(
         Date.now() +
-          parseInt(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace('d', '')) *
+          parseInt(
+            this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace('d', ''),
+          ) *
             24 *
             60 *
             60 *
@@ -557,7 +573,7 @@ export class AuthService {
   async verifyMfaAndLogin(dto: VerifyMfaLoginDto): Promise<any> {
     // Get temporary token data from Redis
     const tempTokenDataStr = await this.redisService.get(`mfa:temp:${dto.temp_token}`);
-    
+
     if (!tempTokenDataStr) {
       throw new UnauthorizedException('Invalid or expired temporary token');
     }
@@ -652,7 +668,9 @@ export class AuthService {
       refresh_token: await bcrypt.hash(refreshToken, 10),
       expires_at: new Date(
         Date.now() +
-          parseInt(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace('d', '')) *
+          parseInt(
+            this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace('d', ''),
+          ) *
             24 *
             60 *
             60 *
@@ -711,7 +729,9 @@ export class AuthService {
         }
       }
       // If verified_at exists but email is not verified, something went wrong
-      throw new BadRequestException('Verification token has already been used, but email verification status is inconsistent. Please contact support.');
+      throw new BadRequestException(
+        'Verification token has already been used, but email verification status is inconsistent. Please contact support.',
+      );
     }
 
     // Mark as verified

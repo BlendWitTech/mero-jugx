@@ -59,4 +59,3 @@ export class OrganizationPackageFeature {
   @UpdateDateColumn()
   updated_at: Date;
 }
-

@@ -22,7 +22,7 @@ export class CreatePaymentDto {
 
   @ApiProperty({
     description: 'Payment amount',
-    example: 1000.00,
+    example: 1000.0,
     minimum: 0.01,
   })
   @Type(() => Number)
@@ -72,4 +72,3 @@ export class CreatePaymentDto {
   @IsOptional()
   metadata?: Record<string, any>;
 }
-

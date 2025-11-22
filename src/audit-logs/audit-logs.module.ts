@@ -9,13 +9,9 @@ import { User } from '../database/entities/user.entity';
 import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([AuditLog, OrganizationMember, Role, User]),
-    CommonModule,
-  ],
+  imports: [TypeOrmModule.forFeature([AuditLog, OrganizationMember, Role, User]), CommonModule],
   controllers: [AuditLogsController],
   providers: [AuditLogsService],
   exports: [AuditLogsService],
 })
 export class AuditLogsModule {}
-

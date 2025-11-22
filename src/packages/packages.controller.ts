@@ -11,13 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { PackagesService } from './packages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -84,10 +78,7 @@ export class OrganizationPackagesController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 400, description: 'Cannot downgrade due to current usage' })
   @ApiResponse({ status: 409, description: 'Already on this package' })
-  async upgradePackage(
-    @CurrentUser() user: any,
-    @Body() dto: UpgradePackageDto,
-  ) {
+  async upgradePackage(@CurrentUser() user: any, @Body() dto: UpgradePackageDto) {
     return this.packagesService.upgradePackage(user.userId, user.organizationId, dto);
   }
 
@@ -98,10 +89,7 @@ export class OrganizationPackagesController {
   @ApiResponse({ status: 201, description: 'Feature purchased successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 409, description: 'Feature already active' })
-  async purchaseFeature(
-    @CurrentUser() user: any,
-    @Body() dto: PurchaseFeatureDto,
-  ) {
+  async purchaseFeature(@CurrentUser() user: any, @Body() dto: PurchaseFeatureDto) {
     return this.packagesService.purchaseFeature(user.userId, user.organizationId, dto);
   }
 
@@ -114,10 +102,7 @@ export class OrganizationPackagesController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 400, description: 'Cannot cancel due to current usage' })
   @ApiResponse({ status: 404, description: 'Feature not found' })
-  async cancelFeature(
-    @CurrentUser() user: any,
-    @Param('id', ParseIntPipe) featureId: number,
-  ) {
+  async cancelFeature(@CurrentUser() user: any, @Param('id', ParseIntPipe) featureId: number) {
     return this.packagesService.cancelFeature(user.userId, user.organizationId, featureId);
   }
 
@@ -127,10 +112,7 @@ export class OrganizationPackagesController {
   @ApiOperation({ summary: 'Toggle package auto-renewal' })
   @ApiResponse({ status: 200, description: 'Auto-renewal toggled successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async toggleAutoRenew(
-    @CurrentUser() user: any,
-    @Body() body: { enabled: boolean },
-  ) {
+  async toggleAutoRenew(@CurrentUser() user: any, @Body() body: { enabled: boolean }) {
     return this.packagesService.toggleAutoRenew(user.userId, user.organizationId, body.enabled);
   }
 
@@ -140,11 +122,7 @@ export class OrganizationPackagesController {
   @ApiOperation({ summary: 'Calculate upgrade price with prorated credit' })
   @ApiResponse({ status: 200, description: 'Upgrade price calculated successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async calculateUpgradePrice(
-    @CurrentUser() user: any,
-    @Body() dto: UpgradePackageDto,
-  ) {
+  async calculateUpgradePrice(@CurrentUser() user: any, @Body() dto: UpgradePackageDto) {
     return this.packagesService.calculateUpgradePrice(user.userId, user.organizationId, dto);
   }
 }
-

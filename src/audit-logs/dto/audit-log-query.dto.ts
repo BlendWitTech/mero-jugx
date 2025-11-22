@@ -72,9 +72,10 @@ export class AuditLogQueryDto {
   @IsDateString()
   to_date?: string;
 
-  @ApiPropertyOptional({ description: 'Search query (searches in action, entity_type, user name/email)' })
+  @ApiPropertyOptional({
+    description: 'Search query (searches in action, entity_type, user name/email)',
+  })
   @IsOptional()
   @IsString()
   search?: string;
 }
-

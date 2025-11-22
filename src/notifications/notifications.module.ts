@@ -19,4 +19,3 @@ import { CommonModule } from '../common/common.module';
   exports: [NotificationsService, NotificationHelperService],
 })
 export class NotificationsModule {}
-

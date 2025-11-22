@@ -8,7 +8,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import * as crypto from 'crypto';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { User } from '../database/entities/user.entity';
 import { Package } from '../database/entities/package.entity';
 import { Role } from '../database/entities/role.entity';
@@ -117,9 +120,7 @@ export class OrganizationsService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to update organization settings',
-        );
+        throw new ForbiddenException('You do not have permission to update organization settings');
       }
     }
 
@@ -205,9 +206,7 @@ export class OrganizationsService {
     }
 
     if (!membership.role.is_organization_owner) {
-      throw new ForbiddenException(
-        'Only organization owner can update organization settings',
-      );
+      throw new ForbiddenException('Only organization owner can update organization settings');
     }
 
     const organization = await this.organizationRepository.findOne({
@@ -313,7 +312,7 @@ export class OrganizationsService {
     }
 
     // Create audit log for other settings updates
-    if (Object.keys(dto).some(key => key !== 'mfa_enabled')) {
+    if (Object.keys(dto).some((key) => key !== 'mfa_enabled')) {
       await this.auditLogsService.createAuditLog(
         organizationId,
         userId,
@@ -326,7 +325,8 @@ export class OrganizationsService {
     }
 
     // Return organization with MFA setup info if needed
-    const result: Organization & { requires_mfa_setup?: boolean; temp_setup_token?: string } = organization;
+    const result: Organization & { requires_mfa_setup?: boolean; temp_setup_token?: string } =
+      organization;
     if (requiresMfaSetup && tempSetupToken) {
       result.requires_mfa_setup = true;
       result.temp_setup_token = tempSetupToken;
@@ -335,10 +335,7 @@ export class OrganizationsService {
     return result;
   }
 
-  async getOrganizationStatistics(
-    userId: string,
-    organizationId: string,
-  ): Promise<any> {
+  async getOrganizationStatistics(userId: string, organizationId: string): Promise<any> {
     // Verify user is member
     const membership = await this.memberRepository.findOne({
       where: {
@@ -429,9 +426,7 @@ export class OrganizationsService {
     });
 
     if (!membership) {
-      throw new ForbiddenException(
-        'You are not a member of this organization',
-      );
+      throw new ForbiddenException('You are not a member of this organization');
     }
 
     return {
@@ -447,4 +442,3 @@ export class OrganizationsService {
       .replace(/(^-|-$)/g, '');
   }
 }
-

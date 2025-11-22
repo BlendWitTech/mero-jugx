@@ -42,15 +42,8 @@ export class InvitationsController {
   @ApiResponse({ status: 201, description: 'Invitation created successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 409, description: 'User already member or invitation exists' })
-  async createInvitation(
-    @CurrentUser() user: any,
-    @Body() dto: CreateInvitationDto,
-  ) {
-    return this.invitationsService.createInvitation(
-      user.userId,
-      user.organizationId,
-      dto,
-    );
+  async createInvitation(@CurrentUser() user: any, @Body() dto: CreateInvitationDto) {
+    return this.invitationsService.createInvitation(user.userId, user.organizationId, dto);
   }
 
   @Get()
@@ -59,15 +52,8 @@ export class InvitationsController {
   @ApiOperation({ summary: 'List invitations' })
   @ApiResponse({ status: 200, description: 'Invitations retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async getInvitations(
-    @CurrentUser() user: any,
-    @Query() query: InvitationQueryDto,
-  ) {
-    return this.invitationsService.getInvitations(
-      user.userId,
-      user.organizationId,
-      query,
-    );
+  async getInvitations(@CurrentUser() user: any, @Query() query: InvitationQueryDto) {
+    return this.invitationsService.getInvitations(user.userId, user.organizationId, query);
   }
 
   @Get('token/:token')
@@ -90,10 +76,7 @@ export class InvitationsController {
   @ApiResponse({ status: 400, description: 'Invalid invitation or missing required fields' })
   @ApiResponse({ status: 404, description: 'Invitation not found' })
   @ApiResponse({ status: 409, description: 'User already member' })
-  async acceptInvitation(
-    @Param('token') token: string,
-    @Body() dto: AcceptInvitationDto,
-  ) {
+  async acceptInvitation(@Param('token') token: string, @Body() dto: AcceptInvitationDto) {
     return this.invitationsService.acceptInvitation(token, dto);
   }
 
@@ -107,15 +90,7 @@ export class InvitationsController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Invitation not found' })
   @ApiResponse({ status: 400, description: 'Only pending invitations can be cancelled' })
-  async cancelInvitation(
-    @CurrentUser() user: any,
-    @Param('id') invitationId: string,
-  ) {
-    return this.invitationsService.cancelInvitation(
-      user.userId,
-      user.organizationId,
-      invitationId,
-    );
+  async cancelInvitation(@CurrentUser() user: any, @Param('id') invitationId: string) {
+    return this.invitationsService.cancelInvitation(user.userId, user.organizationId, invitationId);
   }
 }
-

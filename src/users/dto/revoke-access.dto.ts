@@ -23,4 +23,3 @@ export class RevokeAccessDto {
   @IsOptional()
   reason?: string;
 }
-

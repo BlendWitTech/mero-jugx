@@ -133,13 +133,9 @@ export class Organization {
   @OneToMany(() => Invitation, (invitation) => invitation.organization)
   invitations: Invitation[];
 
-  @OneToMany(
-    () => OrganizationPackageFeature,
-    (feature) => feature.organization,
-  )
+  @OneToMany(() => OrganizationPackageFeature, (feature) => feature.organization)
   package_features: OrganizationPackageFeature[];
 
   @OneToMany(() => OrganizationDocument, (doc) => doc.organization)
   documents: OrganizationDocument[];
 }
-

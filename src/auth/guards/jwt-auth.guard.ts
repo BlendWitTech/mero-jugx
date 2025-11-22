@@ -20,7 +20,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     const request = context.switchToHttp().getRequest();
-    
+
     // Skip JWT validation for MFA setup endpoints - they use temp_setup_token instead
     // This allows MfaSetupGuard to handle authentication
     if (request.url?.includes('/mfa/setup')) {
@@ -36,4 +36,3 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 }
-

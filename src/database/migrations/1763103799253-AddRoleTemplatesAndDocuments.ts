@@ -63,7 +63,7 @@ export class AddRoleTemplatesAndDocuments1763103799253 implements MigrationInter
         SELECT 1 FROM pg_type WHERE typname = 'organization_documents_document_type_enum'
       )
     `);
-    
+
     if (!enumExists[0].exists) {
       await queryRunner.query(`
         CREATE TYPE "public"."organization_documents_document_type_enum" AS ENUM('contract', 'license', 'certificate', 'invoice', 'other')
@@ -153,14 +153,14 @@ export class AddRoleTemplatesAndDocuments1763103799253 implements MigrationInter
     await queryRunner.query(`DROP TABLE IF EXISTS "organization_documents"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "role_template_permissions"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "role_templates"`);
-    
+
     // Drop enum type if it exists
     const enumExists = await queryRunner.query(`
       SELECT EXISTS (
         SELECT 1 FROM pg_type WHERE typname = 'organization_documents_document_type_enum'
       )
     `);
-    
+
     if (enumExists[0].exists) {
       await queryRunner.query(`DROP TYPE "public"."organization_documents_document_type_enum"`);
     }
@@ -174,4 +174,3 @@ export class AddRoleTemplatesAndDocuments1763103799253 implements MigrationInter
     `);
   }
 }
-

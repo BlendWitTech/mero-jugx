@@ -18,4 +18,3 @@ export class StripeVerificationDto {
   @IsString()
   transactionId?: string;
 }
-

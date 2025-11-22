@@ -8,7 +8,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User, UserStatus } from '../database/entities/user.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 import { Session } from '../database/entities/session.entity';
 import { AuditLog } from '../database/entities/audit-log.entity';
@@ -18,7 +21,10 @@ import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 import { UserQueryDto } from './dto/user-query.dto';
 import { RevokeAccessDto } from './dto/revoke-access.dto';
 import { EmailService } from '../common/services/email.service';
-import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
+import {
+  NotificationHelperService,
+  NotificationType,
+} from '../notifications/notification-helper.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationPreferenceScope } from '../database/entities/notification-preference.entity';
 
@@ -134,9 +140,7 @@ export class UsersService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view users',
-        );
+        throw new ForbiddenException('You do not have permission to view users');
       }
     }
 
@@ -186,11 +190,13 @@ export class UsersService {
     const users = members.map((member) => ({
       ...member.user,
       fullName: `${member.user.first_name} ${member.user.last_name}`,
-      role: member.role ? {
-        id: member.role.id,
-        name: member.role.name,
-        slug: member.role.slug,
-      } : null,
+      role: member.role
+        ? {
+            id: member.role.id,
+            name: member.role.name,
+            slug: member.role.slug,
+          }
+        : null,
       membership_status: member.status,
       joined_at: member.joined_at,
     }));
@@ -204,11 +210,7 @@ export class UsersService {
     };
   }
 
-  async getUserById(
-    userId: string,
-    organizationId: string,
-    targetUserId: string,
-  ): Promise<User> {
+  async getUserById(userId: string, organizationId: string, targetUserId: string): Promise<User> {
     // Verify requesting user is member of organization
     const membership = await this.memberRepository.findOne({
       where: {
@@ -238,9 +240,7 @@ export class UsersService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view users',
-        );
+        throw new ForbiddenException('You do not have permission to view users');
       }
     }
 
@@ -296,9 +296,7 @@ export class UsersService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to edit users',
-        );
+        throw new ForbiddenException('You do not have permission to edit users');
       }
     }
 
@@ -322,7 +320,9 @@ export class UsersService {
 
     // Organization Owner cannot be edited by anyone except themselves
     if (targetMembership.role.is_organization_owner && targetUserId !== userId) {
-      throw new BadRequestException('Organization Owner cannot be edited by any other user. Only the Organization Owner can edit their own profile.');
+      throw new BadRequestException(
+        'Organization Owner cannot be edited by any other user. Only the Organization Owner can edit their own profile.',
+      );
     }
 
     // Check role hierarchy - requesting user must have a higher role (lower level number) to edit
@@ -399,7 +399,9 @@ export class UsersService {
           relations: ['role', 'user'],
         });
 
-        const seniorMembers = owners.filter((m) => m.role.is_organization_owner || userId !== m.user_id);
+        const seniorMembers = owners.filter(
+          (m) => m.role.is_organization_owner || userId !== m.user_id,
+        );
 
         const notifications = seniorMembers.map((member) =>
           this.notificationRepository.create({
@@ -436,7 +438,11 @@ export class UsersService {
       return 1; // Highest level
     }
     // Admin role can be identified by slug 'admin' or by being a default/system role with admin-like permissions
-    if (role.slug === 'admin' || (role.is_default && role.slug === 'admin') || (role.is_system_role && role.slug === 'admin')) {
+    if (
+      role.slug === 'admin' ||
+      (role.is_default && role.slug === 'admin') ||
+      (role.is_system_role && role.slug === 'admin')
+    ) {
       return 2; // Second level
     }
     // For other roles, use creation order or a default level
@@ -484,9 +490,7 @@ export class UsersService {
         );
 
         if (!hasPermission) {
-          throw new ForbiddenException(
-            'You do not have permission to revoke user access',
-          );
+          throw new ForbiddenException('You do not have permission to revoke user access');
         }
       }
 
@@ -516,7 +520,9 @@ export class UsersService {
       // Organization Owner can only revoke themselves (which is blocked above)
       // No one else can revoke Organization Owner
       if (targetMembership.role.is_organization_owner) {
-        throw new BadRequestException('Organization Owner access cannot be revoked by any other user. Only the Organization Owner can manage their own access.');
+        throw new BadRequestException(
+          'Organization Owner access cannot be revoked by any other user. Only the Organization Owner can manage their own access.',
+        );
       }
 
       // Check role hierarchy - requesting user must have a higher role (lower level number)
@@ -551,9 +557,7 @@ export class UsersService {
         });
 
         if (!transferToMembership) {
-          throw new NotFoundException(
-            'Transfer recipient not found in this organization',
-          );
+          throw new NotFoundException('Transfer recipient not found in this organization');
         }
 
         // Verify same role (transfer recipient must have same role as revoked user)
@@ -623,7 +627,7 @@ export class UsersService {
       const requestingUser = await this.userRepository.findOne({
         where: { id: userId },
       });
-      const requestingUserName = requestingUser 
+      const requestingUserName = requestingUser
         ? `${requestingUser.first_name} ${requestingUser.last_name}`
         : 'Administrator';
 
@@ -662,7 +666,11 @@ export class UsersService {
         );
         // Check if user has email notifications enabled for access revoked events
         const accessRevokedPref = userPreferences.preferences?.access_revoked;
-        if (accessRevokedPref !== undefined && typeof accessRevokedPref === 'object' && 'email' in accessRevokedPref) {
+        if (
+          accessRevokedPref !== undefined &&
+          typeof accessRevokedPref === 'object' &&
+          'email' in accessRevokedPref
+        ) {
           shouldSendEmail = accessRevokedPref.email !== false;
         } else {
           // Default to email_enabled setting
@@ -733,4 +741,3 @@ export class UsersService {
     }
   }
 }
-

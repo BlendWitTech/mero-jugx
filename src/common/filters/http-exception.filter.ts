@@ -1,10 +1,4 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch(HttpException)
@@ -26,10 +20,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'string'
           ? exceptionResponse
           : (exceptionResponse as any).message || exception.message,
-      details:
-        typeof exceptionResponse === 'object'
-          ? (exceptionResponse as any).error
-          : null,
+      details: typeof exceptionResponse === 'object' ? (exceptionResponse as any).error : null,
     };
 
     // Preserve custom error codes and flags (like MFA_SETUP_REQUIRED)
@@ -51,4 +42,3 @@ export class HttpExceptionFilter implements ExceptionFilter {
     response.status(status).json(errorResponse);
   }
 }
-

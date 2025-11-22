@@ -36,5 +36,3 @@ import { CommonModule } from '../common/common.module';
   exports: [RolesService, RoleTemplatesService],
 })
 export class RolesModule {}
-
-

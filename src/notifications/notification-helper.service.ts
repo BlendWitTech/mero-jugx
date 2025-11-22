@@ -2,8 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from '../database/entities/notification.entity';
-import { NotificationPreference, NotificationPreferenceScope } from '../database/entities/notification-preference.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  NotificationPreference,
+  NotificationPreferenceScope,
+} from '../database/entities/notification-preference.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 
 export enum NotificationType {
@@ -84,12 +90,12 @@ export class NotificationHelperService {
   /**
    * Check if user has notification preferences enabled for a specific type
    * Important notifications always return true for in-app, but emails still respect preferences
-   * 
+   *
    * Notification Preferences Structure:
    * - Personal scope with organization_id = null: Global preferences (applies to all organizations)
    * - Personal scope with organization_id = set: Per-organization preferences (current implementation)
    * - Organization scope with organization_id = set: Organization-level settings (only for Organization Owners)
-   * 
+   *
    * Current behavior: Preferences are checked per-organization (organization_id is always set)
    * This allows users to have different notification settings for each organization they belong to.
    */
@@ -135,7 +141,7 @@ export class NotificationHelperService {
       if (preference.preferences) {
         const typeKey = this.getPreferenceKeyForType(type);
         const typePreference = preference.preferences[typeKey];
-        
+
         if (typePreference) {
           if (channel === 'email' && typePreference.email === false) {
             return false;
@@ -191,8 +197,13 @@ export class NotificationHelperService {
     metadata?: Record<string, any>,
   ): Promise<Notification | null> {
     // Check if in-app notifications are enabled
-    const shouldSendInApp = await this.shouldSendNotification(userId, organizationId, type, 'in_app');
-    
+    const shouldSendInApp = await this.shouldSendNotification(
+      userId,
+      organizationId,
+      type,
+      'in_app',
+    );
+
     if (!shouldSendInApp) {
       // Don't create notification if in-app is disabled
       return null;
@@ -458,10 +469,7 @@ export class NotificationHelperService {
   /**
    * Notify about package expired
    */
-  async notifyPackageExpired(
-    organizationId: string,
-    packageName: string,
-  ): Promise<Notification[]> {
+  async notifyPackageExpired(organizationId: string, packageName: string): Promise<Notification[]> {
     const members = await this.memberRepository.find({
       where: {
         organization_id: organizationId,
@@ -654,9 +662,7 @@ export class NotificationHelperService {
       if (member.role.is_organization_owner) {
         return true; // Owners have all permissions
       }
-      return member.role.role_permissions?.some(
-        (rp) => rp.permission.slug === permissionSlug,
-      );
+      return member.role.role_permissions?.some((rp) => rp.permission.slug === permissionSlug);
     });
 
     const notifications: Notification[] = [];
@@ -678,4 +684,3 @@ export class NotificationHelperService {
     return notifications;
   }
 }
-

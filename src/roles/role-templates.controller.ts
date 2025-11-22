@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-  UseGuards,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -28,31 +20,32 @@ export class RoleTemplatesController {
   @Get()
   @Permissions('roles.view')
   @ApiOperation({ summary: 'Get role templates for organization package' })
-  @ApiResponse({ status: 200, description: 'Role templates retrieved successfully', type: [RoleTemplate] })
+  @ApiResponse({
+    status: 200,
+    description: 'Role templates retrieved successfully',
+    type: [RoleTemplate],
+  })
   async getRoleTemplates(
     @CurrentUser() user: any,
     @CurrentOrganization() organization: any,
   ): Promise<RoleTemplate[]> {
-    return this.roleTemplatesService.getRoleTemplates(
-      user.userId,
-      organization.id,
-    );
+    return this.roleTemplatesService.getRoleTemplates(user.userId, organization.id);
   }
 
   @Get(':id')
   @Permissions('roles.view')
   @ApiOperation({ summary: 'Get role template by ID' })
-  @ApiResponse({ status: 200, description: 'Role template retrieved successfully', type: RoleTemplate })
+  @ApiResponse({
+    status: 200,
+    description: 'Role template retrieved successfully',
+    type: RoleTemplate,
+  })
   async getRoleTemplateById(
     @CurrentUser() user: any,
     @CurrentOrganization() organization: any,
     @Param('id', ParseIntPipe) templateId: number,
   ): Promise<RoleTemplate> {
-    return this.roleTemplatesService.getRoleTemplateById(
-      user.userId,
-      organization.id,
-      templateId,
-    );
+    return this.roleTemplatesService.getRoleTemplateById(user.userId, organization.id, templateId);
   }
 
   @Post('create-role')
@@ -64,11 +57,6 @@ export class RoleTemplatesController {
     @CurrentOrganization() organization: any,
     @Body() dto: CreateRoleFromTemplateDto,
   ): Promise<Role> {
-    return this.roleTemplatesService.createRoleFromTemplate(
-      user.userId,
-      organization.id,
-      dto,
-    );
+    return this.roleTemplatesService.createRoleFromTemplate(user.userId, organization.id, dto);
   }
 }
-

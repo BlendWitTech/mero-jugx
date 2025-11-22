@@ -13,14 +13,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      User,
-      OrganizationMember,
-      Role,
-      Session,
-      AuditLog,
-      Notification,
-    ]),
+    TypeOrmModule.forFeature([User, OrganizationMember, Role, Session, AuditLog, Notification]),
     CommonModule,
     NotificationsModule,
   ],
@@ -29,4 +22,3 @@ import { NotificationsModule } from '../notifications/notifications.module';
   exports: [UsersService],
 })
 export class UsersModule {}
-

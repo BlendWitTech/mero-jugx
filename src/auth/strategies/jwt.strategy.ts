@@ -5,7 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserStatus } from '../../database/entities/user.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../../database/entities/organization-member.entity';
 
 export interface JwtPayload {
   sub: string; // user id
@@ -43,7 +46,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Email verification check - MANDATORY (no development bypass)
     if (!user.email_verified) {
-      throw new UnauthorizedException('Email address must be verified before accessing protected routes. Please check your inbox for the verification email.');
+      throw new UnauthorizedException(
+        'Email address must be verified before accessing protected routes. Please check your inbox for the verification email.',
+      );
     }
 
     // Verify user is still a member of the organization
@@ -62,7 +67,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Organization email verification check - MANDATORY
     if (!membership.organization.email_verified) {
-      throw new UnauthorizedException('Organization email address must be verified before accessing this organization. Please check the organization email inbox for the verification email.');
+      throw new UnauthorizedException(
+        'Organization email address must be verified before accessing this organization. Please check the organization email inbox for the verification email.',
+      );
     }
 
     // Check if organization has MFA enabled and user hasn't set it up
@@ -90,4 +97,3 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     };
   }
 }
-

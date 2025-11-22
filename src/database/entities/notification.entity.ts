@@ -60,4 +60,3 @@ export class Notification {
     return this.read_at !== null;
   }
 }
-

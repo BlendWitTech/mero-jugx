@@ -18,7 +18,7 @@ async function resetDatabase() {
     console.log(`   Database: ${process.env.DB_NAME || 'mero_jugx'}`);
     console.log(`   User: ${process.env.DB_USER || 'postgres'}`);
     console.log('');
-    
+
     await AppDataSource.initialize();
     console.log('✅ Database connected.\n');
 
@@ -97,7 +97,7 @@ async function resetDatabase() {
     console.log('\n📋 Running migrations to recreate database structure...');
     const migrations = await AppDataSource.runMigrations();
     if (migrations.length > 0) {
-      migrations.forEach(migration => {
+      migrations.forEach((migration) => {
         console.log(`  ✓ Applied migration: ${migration.name}`);
       });
     } else {
@@ -116,14 +116,16 @@ async function resetDatabase() {
     console.log('\n✅ Database reset completed successfully!');
   } catch (error: any) {
     console.error('\n❌ Error resetting database:', error?.message || error);
-    
+
     // Provide helpful error messages for common issues
     if (error?.code === 'ECONNREFUSED') {
       console.error('\n💡 Connection Refused - Possible issues:');
       console.error('   1. PostgreSQL is not running');
       console.error('   2. Wrong port number (check DB_PORT in .env)');
       console.error('   3. Docker containers not started (run: docker-compose up -d)');
-      console.error(`   4. Trying to connect to: ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5433'}`);
+      console.error(
+        `   4. Trying to connect to: ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5433'}`,
+      );
     } else if (error?.code === 'ENOTFOUND') {
       console.error('\n💡 Host Not Found - Check DB_HOST in .env file');
     } else if (error?.code === '28P01' || error?.message?.includes('password')) {
@@ -132,7 +134,7 @@ async function resetDatabase() {
       console.error('\n💡 Database Not Found - Create the database first:');
       console.error('   CREATE DATABASE mero_jugx;');
     }
-    
+
     console.error('');
     process.exit(1);
   } finally {
@@ -143,4 +145,3 @@ async function resetDatabase() {
 }
 
 resetDatabase();
-

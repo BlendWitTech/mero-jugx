@@ -72,4 +72,3 @@ export class UpdateOrganizationDto {
   @MaxLength(100)
   industry?: string;
 }
-

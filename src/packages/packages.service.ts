@@ -9,9 +9,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Package } from '../database/entities/package.entity';
 import { PackageFeature, PackageFeatureType } from '../database/entities/package-feature.entity';
-import { OrganizationPackageFeature, OrganizationPackageFeatureStatus } from '../database/entities/organization-package-feature.entity';
+import {
+  OrganizationPackageFeature,
+  OrganizationPackageFeatureStatus,
+} from '../database/entities/organization-package-feature.entity';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
 import { UpgradePackageDto, SubscriptionPeriod } from './dto/upgrade-package.dto';
 import { PurchaseFeatureDto } from './dto/purchase-feature.dto';
@@ -50,7 +56,7 @@ export class PackagesService {
       });
 
       if (organization?.has_upgraded_from_freemium) {
-        return packages.filter(pkg => pkg.slug !== 'freemium');
+        return packages.filter((pkg) => pkg.slug !== 'freemium');
       }
     }
 
@@ -72,7 +78,11 @@ export class PackagesService {
   async getCurrentPackage(
     userId: string,
     organizationId: string,
-  ): Promise<{ package: Package; current_limits: { users: number; roles: number }; active_features: OrganizationPackageFeature[] }> {
+  ): Promise<{
+    package: Package;
+    current_limits: { users: number; roles: number };
+    active_features: OrganizationPackageFeature[];
+  }> {
     // Verify user is member
     const membership = await this.memberRepository.findOne({
       where: {
@@ -156,9 +166,7 @@ export class PackagesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to upgrade packages',
-        );
+        throw new ForbiddenException('You do not have permission to upgrade packages');
       }
     }
 
@@ -182,24 +190,31 @@ export class PackagesService {
     }
 
     // Check if already on this package (handle both string and number types)
-    const currentPackageId = typeof organization.package_id === 'string' 
-      ? parseInt(organization.package_id, 10) 
-      : organization.package_id;
+    const currentPackageId =
+      typeof organization.package_id === 'string'
+        ? parseInt(organization.package_id, 10)
+        : organization.package_id;
     if (currentPackageId === dto.package_id) {
       throw new ConflictException('Organization is already on this package');
     }
 
     // Prevent purchasing freemium if they've upgraded before
     if (newPackage.slug === 'freemium' && organization.has_upgraded_from_freemium) {
-      throw new BadRequestException('Freemium package is not available for purchase. It will be automatically selected when your current package expires.');
+      throw new BadRequestException(
+        'Freemium package is not available for purchase. It will be automatically selected when your current package expires.',
+      );
     }
 
     // Check if this is a downgrade (lower sort_order = lower tier)
     const isDowngrade = organization.package.sort_order > newPackage.sort_order;
     const isUpgrade = organization.package.sort_order < newPackage.sort_order;
-    
+
     // Prevent downgrades if package hasn't expired
-    if (isDowngrade && organization.package_expires_at && organization.package_expires_at > new Date()) {
+    if (
+      isDowngrade &&
+      organization.package_expires_at &&
+      organization.package_expires_at > new Date()
+    ) {
       throw new BadRequestException(
         'Cannot downgrade package until current subscription expires. You can only upgrade to a higher tier package.',
       );
@@ -218,12 +233,16 @@ export class PackagesService {
     let subscriptionCalc: ReturnType<typeof calculateSubscription> | null = null;
     let proratedCredit = 0;
     let upgradePriceCalc: ReturnType<typeof calculateUpgradePrice> | null = null;
-    
+
     if (newPackage.slug !== 'freemium' && newPackage.price > 0) {
       const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
-      
+
       // If upgrading mid-subscription, calculate prorated credit
-      if (isUpgrade && organization.package_expires_at && organization.package_expires_at > new Date()) {
+      if (
+        isUpgrade &&
+        organization.package_expires_at &&
+        organization.package_expires_at > new Date()
+      ) {
         upgradePriceCalc = calculateUpgradePrice(
           organization.package.price || 0,
           newPackage.price,
@@ -232,44 +251,43 @@ export class PackagesService {
           dto.custom_months,
         );
         proratedCredit = upgradePriceCalc.creditAmount;
-        
+
         // Calculate new subscription period
         subscriptionCalc = calculateSubscription(newPackage.price, period, dto.custom_months);
-        
+
         // Extend expiration from current expiration date (not from now)
         expirationDate = new Date(organization.package_expires_at);
         expirationDate.setMonth(expirationDate.getMonth() + subscriptionCalc.months);
       } else {
         // New subscription or downgrade after expiration
-        subscriptionCalc = calculateSubscription(
-          newPackage.price,
-          period,
-          dto.custom_months,
-        );
+        subscriptionCalc = calculateSubscription(newPackage.price, period, dto.custom_months);
         expirationDate = subscriptionCalc.expirationDate;
       }
     }
 
     // Mark as upgraded from freemium if upgrading from freemium
-    const hasUpgradedFromFreemium = organization.package.slug === 'freemium' || organization.has_upgraded_from_freemium;
+    const hasUpgradedFromFreemium =
+      organization.package.slug === 'freemium' || organization.has_upgraded_from_freemium;
 
     // Update organization package using a transaction to ensure atomicity
     const oldPackageId = organization.package_id;
-    
+
     // Use update() method which directly updates the database, avoiding entity caching issues
     await this.organizationRepository.update(
       { id: organizationId },
-      { 
-        package_id: dto.package_id, 
-        user_limit: newLimits.users, 
+      {
+        package_id: dto.package_id,
+        user_limit: newLimits.users,
         role_limit: newLimits.roles,
         package_expires_at: expirationDate,
         has_upgraded_from_freemium: hasUpgradedFromFreemium,
-      }
+      },
     );
 
     // Log the upgrade for debugging
-    console.log(`Package upgraded for organization ${organizationId}: ${oldPackageId} -> ${dto.package_id}`);
+    console.log(
+      `Package upgraded for organization ${organizationId}: ${oldPackageId} -> ${dto.package_id}`,
+    );
     console.log(`New limits: ${newLimits.users} users, ${newLimits.roles} roles`);
 
     // Reload organization with package relation using query builder to bypass cache
@@ -285,14 +303,18 @@ export class PackagesService {
 
     // Verify the package was actually updated
     if (updatedOrganization.package_id !== dto.package_id) {
-      console.error(`Package upgrade verification failed: Expected ${dto.package_id}, got ${updatedOrganization.package_id}`);
+      console.error(
+        `Package upgrade verification failed: Expected ${dto.package_id}, got ${updatedOrganization.package_id}`,
+      );
       // Log the actual database state for debugging
       const rawCheck = await this.dataSource.query(
         'SELECT package_id, user_limit, role_limit FROM organizations WHERE id = $1',
-        [organizationId]
+        [organizationId],
       );
       console.error(`Raw database check:`, rawCheck);
-      throw new BadRequestException(`Package upgrade failed - package ID mismatch. Expected ${dto.package_id}, got ${updatedOrganization.package_id}`);
+      throw new BadRequestException(
+        `Package upgrade failed - package ID mismatch. Expected ${dto.package_id}, got ${updatedOrganization.package_id}`,
+      );
     }
 
     // Ensure package relation is loaded
@@ -300,11 +322,13 @@ export class PackagesService {
       updatedOrganization.package = newPackage;
     }
 
-    console.log(`Package upgrade verified successfully: ${updatedOrganization.package.name} (ID: ${updatedOrganization.package.id})`);
+    console.log(
+      `Package upgrade verified successfully: ${updatedOrganization.package.name} (ID: ${updatedOrganization.package.id})`,
+    );
 
     // Create audit log
     const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
-    
+
     await this.auditLogsService.createAuditLog(
       organizationId,
       userId,
@@ -382,9 +406,7 @@ export class PackagesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to purchase features',
-        );
+        throw new ForbiddenException('You do not have permission to purchase features');
       }
     }
 
@@ -486,9 +508,7 @@ export class PackagesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to cancel features',
-        );
+        throw new ForbiddenException('You do not have permission to cancel features');
       }
     }
 
@@ -618,16 +638,21 @@ export class PackagesService {
 
     // Check if this is a downgrade
     const isDowngrade = organization.package.sort_order > newPackage.sort_order;
-    
+
     // Prevent downgrades if package hasn't expired
-    if (isDowngrade && organization.package_expires_at && organization.package_expires_at > new Date()) {
+    if (
+      isDowngrade &&
+      organization.package_expires_at &&
+      organization.package_expires_at > new Date()
+    ) {
       return {
         new_package_price: 0,
         prorated_credit: 0,
         final_price: 0,
         remaining_days: null,
         can_upgrade: false,
-        reason: 'Cannot downgrade package until current subscription expires. You can only upgrade to a higher tier package.',
+        reason:
+          'Cannot downgrade package until current subscription expires. You can only upgrade to a higher tier package.',
       };
     }
 
@@ -685,9 +710,7 @@ export class PackagesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to manage package settings',
-        );
+        throw new ForbiddenException('You do not have permission to manage package settings');
       }
     }
 
@@ -832,4 +855,3 @@ export class PackagesService {
     }
   }
 }
-

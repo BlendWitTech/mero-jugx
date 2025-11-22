@@ -58,4 +58,3 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return await this.exists(`blacklist:${token}`);
   }
 }
-

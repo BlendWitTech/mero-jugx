@@ -37,4 +37,3 @@ export class NotificationQueryDto {
   @IsOptional()
   organization_id?: string;
 }
-

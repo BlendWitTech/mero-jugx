@@ -32,5 +32,3 @@ export class UpdateRoleDto {
   @IsInt({ each: true })
   permission_ids?: number[];
 }
-
-

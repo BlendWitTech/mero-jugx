@@ -7,10 +7,11 @@ export enum NotificationPreferenceScope {
 }
 
 export class NotificationPreferenceDto {
-  @ApiPropertyOptional({ 
-    description: 'Scope of preferences: personal (user settings) or organization (org-level settings, only for Organization Owner)', 
+  @ApiPropertyOptional({
+    description:
+      'Scope of preferences: personal (user settings) or organization (org-level settings, only for Organization Owner)',
     enum: NotificationPreferenceScope,
-    default: NotificationPreferenceScope.PERSONAL 
+    default: NotificationPreferenceScope.PERSONAL,
   })
   @IsOptional()
   @IsEnum(NotificationPreferenceScope)
@@ -31,4 +32,3 @@ export class NotificationPreferenceDto {
   @IsObject()
   preferences?: Record<string, { email: boolean; in_app: boolean }>;
 }
-

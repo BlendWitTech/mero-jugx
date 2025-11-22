@@ -12,7 +12,10 @@ import { Role } from '../database/entities/role.entity';
 import { Permission } from '../database/entities/permission.entity';
 import { RolePermission } from '../database/entities/role-permission.entity';
 import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization-member.entity';
 import { CreateRoleFromTemplateDto } from './dto/create-role-from-template.dto';
 
 @Injectable()
@@ -34,10 +37,7 @@ export class RoleTemplatesService {
     private memberRepository: Repository<OrganizationMember>,
   ) {}
 
-  async getRoleTemplates(
-    userId: string,
-    organizationId: string,
-  ): Promise<RoleTemplate[]> {
+  async getRoleTemplates(userId: string, organizationId: string): Promise<RoleTemplate[]> {
     // Verify user is member of organization
     const membership = await this.memberRepository.findOne({
       where: {
@@ -64,9 +64,7 @@ export class RoleTemplatesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to view role templates',
-        );
+        throw new ForbiddenException('You do not have permission to view role templates');
       }
     }
 
@@ -178,9 +176,7 @@ export class RoleTemplatesService {
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(
-          'You do not have permission to create roles',
-        );
+        throw new ForbiddenException('You do not have permission to create roles');
       }
     }
 
@@ -263,19 +259,14 @@ export class RoleTemplatesService {
     // If custom_permission_ids is provided, use it completely (full customization)
     // Otherwise, use template permissions + additional permissions
     let allPermissionIds: number[];
-    
+
     if (dto.custom_permission_ids && dto.custom_permission_ids.length > 0) {
       // Organization wants full control - use only their custom permissions
       allPermissionIds = dto.custom_permission_ids;
     } else {
       // Use template permissions as base and add additional permissions if provided
-      const templatePermissionIds = template.template_permissions.map(
-        (tp) => tp.permission_id,
-      );
-      allPermissionIds = [
-        ...templatePermissionIds,
-        ...(dto.additional_permission_ids || []),
-      ];
+      const templatePermissionIds = template.template_permissions.map((tp) => tp.permission_id);
+      allPermissionIds = [...templatePermissionIds, ...(dto.additional_permission_ids || [])];
     }
 
     // Remove duplicates
@@ -307,4 +298,3 @@ export class RoleTemplatesService {
     });
   }
 }
-

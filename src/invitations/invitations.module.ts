@@ -35,4 +35,3 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
   exports: [InvitationsService],
 })
 export class InvitationsModule {}
-

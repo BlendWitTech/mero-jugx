@@ -35,28 +35,30 @@ export class EsewaService {
   constructor(private configService: ConfigService) {
     this.isDevelopment = this.configService.get<string>('NODE_ENV') === 'development';
     const esewaConfig = this.configService.get('esewa');
-    
+
     // Check if mock mode is enabled
     this.useMockMode = esewaConfig?.useMockMode || false;
-    
+
     // Use test credentials for development, production credentials for production
     this.merchantId = this.isDevelopment
       ? esewaConfig?.testMerchantId || 'EPAYTEST'
       : esewaConfig?.merchantId || '';
-    
+
     // Get secret key and trim any whitespace
     const rawSecretKey = this.isDevelopment
       ? esewaConfig?.testSecretKey || '8gBm/:&EnhH.1/q'
       : esewaConfig?.secretKey || '';
-    
+
     this.secretKey = rawSecretKey.trim();
-    
+
     if (!this.secretKey) {
       this.logger.warn('⚠️  eSewa secret key is not configured. Payment signatures will fail.');
     } else {
-      this.logger.debug(`🔑 eSewa Secret Key configured (length: ${this.secretKey.length}, starts with: ${this.secretKey.substring(0, 5)})`);
+      this.logger.debug(
+        `🔑 eSewa Secret Key configured (length: ${this.secretKey.length}, starts with: ${this.secretKey.substring(0, 5)})`,
+      );
     }
-    
+
     // eSewa API URLs
     // In mock mode, we'll use a local mock endpoint
     if (this.useMockMode && this.isDevelopment) {
@@ -70,11 +72,11 @@ export class EsewaService {
       this.apiUrl = this.isDevelopment
         ? esewaConfig?.testApiUrl || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
         : esewaConfig?.apiUrl || 'https://epay.esewa.com.np/api/epay/main/v2/form';
-      
+
       // Log the URL being used for debugging
       this.logger.log(`🔗 eSewa API URL: ${this.apiUrl}`);
     }
-    
+
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
     this.successUrl = `${frontendUrl}/payment/success`;
     this.failureUrl = `${frontendUrl}/payment/failure`;
@@ -94,17 +96,17 @@ export class EsewaService {
     // Format: total_amount=value,transaction_uuid=value,product_code=value
     // Values must match exactly what's sent in the form
     const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
-    
+
     // Generate HMAC SHA256 signature
     // Secret key should be used as-is (no encoding needed for HMAC)
     const hmac = crypto.createHmac('sha256', this.secretKey);
     hmac.update(message, 'utf8'); // Explicitly specify UTF-8 encoding
     const signature = hmac.digest('base64');
-    
+
     this.logger.debug(`eSewa Signature Message: ${message}`);
     this.logger.debug(`eSewa Secret Key (first 5 chars): ${this.secretKey.substring(0, 5)}...`);
     this.logger.debug(`eSewa Signature: ${signature}`);
-    
+
     return signature;
   }
 
@@ -135,12 +137,17 @@ export class EsewaService {
     const roundedTotalAmount = Math.round(totalAmount * 100) / 100;
 
     // Calculate total with charges
-    const calculatedTotal = roundedAmount + roundedTaxAmount + roundedServiceCharge + roundedDeliveryCharge;
+    const calculatedTotal =
+      roundedAmount + roundedTaxAmount + roundedServiceCharge + roundedDeliveryCharge;
 
     // Allow small floating point differences (0.01 NPR)
     if (Math.abs(calculatedTotal - roundedTotalAmount) > 0.01) {
-      this.logger.error(`Amount mismatch: calculated=${calculatedTotal}, provided=${roundedTotalAmount}, amount=${roundedAmount}, tax=${roundedTaxAmount}`);
-      throw new BadRequestException(`Total amount mismatch: calculated ${calculatedTotal.toFixed(2)} but provided ${roundedTotalAmount.toFixed(2)}`);
+      this.logger.error(
+        `Amount mismatch: calculated=${calculatedTotal}, provided=${roundedTotalAmount}, amount=${roundedAmount}, tax=${roundedTaxAmount}`,
+      );
+      throw new BadRequestException(
+        `Total amount mismatch: calculated ${calculatedTotal.toFixed(2)} but provided ${roundedTotalAmount.toFixed(2)}`,
+      );
     }
 
     // Prepare form data as per eSewa v2 API documentation
@@ -150,7 +157,7 @@ export class EsewaService {
       tax_amount: roundedTaxAmount.toFixed(2), // Tax amount
       total_amount: roundedTotalAmount.toFixed(2), // Total amount including tax
       transaction_uuid: transactionId, // Transaction UUID
-      product_code: (productCode && productCode.trim() !== '') ? productCode : this.merchantId, // Product code (merchant ID)
+      product_code: productCode && productCode.trim() !== '' ? productCode : this.merchantId, // Product code (merchant ID)
       product_service_charge: roundedServiceCharge.toFixed(2), // Product service charge
       product_delivery_charge: roundedDeliveryCharge.toFixed(2), // Product delivery charge
       success_url: this.successUrl, // Success URL
@@ -167,9 +174,11 @@ export class EsewaService {
       formData.product_code, // Must match exactly (should be EPAYTEST)
     );
     formData.signature = signature;
-    
+
     // Log for debugging - verify values match
-    this.logger.debug(`Signature generated with values: total_amount=${formData.total_amount}, transaction_uuid=${formData.transaction_uuid}, product_code=${formData.product_code}`);
+    this.logger.debug(
+      `Signature generated with values: total_amount=${formData.total_amount}, transaction_uuid=${formData.transaction_uuid}, product_code=${formData.product_code}`,
+    );
 
     this.logger.debug(`eSewa Payment Form Data: ${JSON.stringify(formData)}`);
     this.logger.debug(`eSewa Payment Form URL: ${this.apiUrl}`);
@@ -196,7 +205,7 @@ export class EsewaService {
       const verificationUrl = this.isDevelopment
         ? esewaConfig?.testVerifyUrl || 'https://rc.esewa.com.np/api/epay/transaction/status'
         : esewaConfig?.verifyUrl || 'https://esewa.com.np/api/epay/transaction/status';
-      
+
       this.logger.debug(`🔗 eSewa Verification URL: ${verificationUrl}`);
 
       // v2 API uses: product_code, total_amount, transaction_uuid
@@ -249,7 +258,7 @@ export class EsewaService {
       }
     } catch (error: any) {
       this.logger.error(`eSewa verification error: ${error.message}`, error.stack);
-      
+
       // Handle specific error cases
       if (error.response?.data?.error_message) {
         return {
@@ -257,7 +266,7 @@ export class EsewaService {
           message: error.response.data.error_message,
         };
       }
-      
+
       throw new BadRequestException(`Payment verification failed: ${error.message}`);
     }
   }
@@ -286,4 +295,3 @@ export class EsewaService {
     return Math.round(total * 100) / 100;
   }
 }
-

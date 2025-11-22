@@ -83,16 +83,18 @@ export default () => ({
     // Source: https://developer.esewa.com.np/pages/Test-credentials
     testSecretKey: process.env.ESEWA_TEST_SECRET_KEY || '8gBm/:&EnhH.1/q',
     // RC environment URLs for testing (v2 API format)
-    testApiUrl: process.env.ESEWA_TEST_API_URL || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',
-    testVerifyUrl: process.env.ESEWA_TEST_VERIFY_URL || 'https://rc.esewa.com.np/api/epay/transaction/status',
-    
+    testApiUrl:
+      process.env.ESEWA_TEST_API_URL || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',
+    testVerifyUrl:
+      process.env.ESEWA_TEST_VERIFY_URL || 'https://rc.esewa.com.np/api/epay/transaction/status',
+
     // Production credentials
     merchantId: process.env.ESEWA_MERCHANT_ID || '',
     secretKey: process.env.ESEWA_SECRET_KEY || '',
     // Production URLs (v2 API format)
     apiUrl: process.env.ESEWA_API_URL || 'https://epay.esewa.com.np/api/epay/main/v2/form',
     verifyUrl: process.env.ESEWA_VERIFY_URL || 'https://esewa.com.np/api/epay/transaction/status',
-    
+
     // Mock mode for development (bypasses actual eSewa redirect)
     useMockMode: process.env.ESEWA_USE_MOCK_MODE === 'true' || false,
   },
@@ -103,11 +105,11 @@ export default () => ({
     // Use Stripe test mode keys from https://dashboard.stripe.com/test/apikeys
     testPublishableKey: process.env.STRIPE_TEST_PUBLISHABLE_KEY || '',
     testSecretKey: process.env.STRIPE_TEST_SECRET_KEY || '',
-    
+
     // Production credentials
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     secretKey: process.env.STRIPE_SECRET_KEY || '',
-    
+
     // Webhook secret for verifying webhook signatures
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   },
@@ -122,4 +124,3 @@ export default () => ({
     nepalCountryCode: process.env.NEPAL_COUNTRY_CODE || 'NP',
   },
 });
-

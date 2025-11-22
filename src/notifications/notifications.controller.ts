@@ -10,13 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -36,15 +30,8 @@ export class NotificationsController {
   @ApiOperation({ summary: 'List user notifications' })
   @ApiResponse({ status: 200, description: 'Notifications retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
-  async getNotifications(
-    @CurrentUser() user: any,
-    @Query() query: NotificationQueryDto,
-  ) {
-    return this.notificationsService.getNotifications(
-      user.userId,
-      user.organizationId,
-      query,
-    );
+  async getNotifications(@CurrentUser() user: any, @Query() query: NotificationQueryDto) {
+    return this.notificationsService.getNotifications(user.userId, user.organizationId, query);
   }
 
   @Get('unread-count')
@@ -52,10 +39,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Unread count retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   async getUnreadCount(@CurrentUser() user: any) {
-    return this.notificationsService.getUnreadCount(
-      user.userId,
-      user.organizationId || null,
-    );
+    return this.notificationsService.getUnreadCount(user.userId, user.organizationId || null);
   }
 
   @Get(':id')
@@ -64,10 +48,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Notification retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   @ApiResponse({ status: 404, description: 'Notification not found' })
-  async getNotificationById(
-    @CurrentUser() user: any,
-    @Param('id') notificationId: string,
-  ) {
+  async getNotificationById(@CurrentUser() user: any, @Param('id') notificationId: string) {
     return this.notificationsService.getNotificationById(
       user.userId,
       user.organizationId,
@@ -101,10 +82,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'All notifications marked as read' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   async markAllAsRead(@CurrentUser() user: any) {
-    return this.notificationsService.markAllAsRead(
-      user.userId,
-      user.organizationId,
-    );
+    return this.notificationsService.markAllAsRead(user.userId, user.organizationId);
   }
 
   @Delete(':id')
@@ -114,10 +92,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'Notification deleted successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   @ApiResponse({ status: 404, description: 'Notification not found' })
-  async deleteNotification(
-    @CurrentUser() user: any,
-    @Param('id') notificationId: string,
-  ) {
+  async deleteNotification(@CurrentUser() user: any, @Param('id') notificationId: string) {
     return this.notificationsService.deleteNotification(
       user.userId,
       user.organizationId,
@@ -129,10 +104,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get notification preferences' })
   @ApiResponse({ status: 200, description: 'Preferences retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
-  async getNotificationPreferences(
-    @CurrentUser() user: any,
-    @Query('scope') scope?: string,
-  ) {
+  async getNotificationPreferences(@CurrentUser() user: any, @Query('scope') scope?: string) {
     return this.notificationsService.getNotificationPreferences(
       user.userId,
       user.organizationId || null, // Ensure null instead of undefined
@@ -156,4 +128,3 @@ export class NotificationsController {
     );
   }
 }
-
