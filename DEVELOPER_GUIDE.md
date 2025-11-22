@@ -591,20 +591,27 @@ The database connection is configured in:
 ### Repository Structure
 
 ```
-main (production-ready code)
-├── develop (integration branch)
-    ├── feature/feature-name
-    ├── bugfix/bug-name
-    ├── hotfix/hotfix-name
+main (Production - Protected)
+  └── version-control (Release Branch)
+        └── develop (Development Integration)
+              ├── feature/feature-name
+              ├── bugfix/bug-name
+              └── hotfix/hotfix-name
 ```
 
 ### Branch Types
 
-1. **main** - Production branch (protected)
-2. **develop** - Development integration branch
-3. **feature/** - New features
-4. **bugfix/** - Bug fixes
-5. **hotfix/** - Critical production fixes
+1. **main** - Production branch (protected, maintainers only)
+2. **version-control** - Release branch (where we push for production)
+3. **develop** - Development integration branch
+4. **feature/** - New features
+5. **bugfix/** - Bug fixes
+6. **hotfix/** - Critical production fixes
+
+**Important**: We push to `version-control` branch, not directly to `main`. The `main` branch is protected and only accessible by maintainers.
+
+See [.git-branching-strategy.md](./.git-branching-strategy.md) for complete details.
+See [.git-workflow-quick-reference.md](./.git-workflow-quick-reference.md) for quick daily commands.
 
 ### Creating Branches
 
