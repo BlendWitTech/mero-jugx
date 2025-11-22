@@ -21,6 +21,7 @@ import PaymentPage from './pages/payment/PaymentPage';
 import PaymentSuccessPage from './pages/payment/PaymentSuccessPage';
 import PaymentFailurePage from './pages/payment/PaymentFailurePage';
 import MockEsewaPage from './pages/payment/MockEsewaPage';
+import DocumentationPage from './pages/documentation/DocumentationPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
@@ -71,6 +72,7 @@ function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="documentation" element={<DocumentationPage />} />
         <Route path="payment" element={<PaymentPage />} />
       </Route>
 

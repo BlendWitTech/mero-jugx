@@ -21,6 +21,7 @@ import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { InvitationQueryDto } from './dto/invitation-query.dto';
 import { EmailService } from '../common/services/email.service';
+import { EmailTemplatesService } from '../common/services/email-templates.service';
 import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -45,6 +46,7 @@ export class InvitationsService {
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
     private emailService: EmailService,
+    private emailTemplatesService: EmailTemplatesService,
     private notificationHelper: NotificationHelperService,
     private notificationsService: NotificationsService,
     private auditLogsService: AuditLogsService,
@@ -872,22 +874,17 @@ export class InvitationsService {
           });
 
           if (organization && organization.email) {
+            const emailHtml = this.emailTemplatesService.getOrganizationInvitationNotificationEmail(
+              inviterName,
+              invitedEmail,
+              organizationName,
+              organization.email,
+              invitationId,
+            );
             await this.emailService.sendEmail(
               organization.email,
-              `New Invitation: ${invitedEmail}`,
-              `
-                <h2>New Invitation Created</h2>
-                <p><strong>${inviterName}</strong> has invited <strong>${invitedEmail}</strong> to join <strong>${organizationName}</strong>.</p>
-                <p>You can view and manage invitations in your dashboard.</p>
-                <p><a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}/invitations">View Invitations</a></p>
-              `,
-              `
-                New Invitation Created
-
-                ${inviterName} has invited ${invitedEmail} to join ${organizationName}.
-
-                You can view and manage invitations in your dashboard.
-              `,
+              `New Invitation: ${invitedEmail} - ${organizationName}`,
+              emailHtml,
             );
           }
         } catch (error) {

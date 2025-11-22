@@ -11,6 +11,7 @@ import { Payment, PaymentStatus, PaymentGateway, PaymentType } from '../database
 import { Organization } from '../database/entities/organization.entity';
 import { User } from '../database/entities/user.entity';
 import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { OrganizationPackageFeature } from '../database/entities/organization-package-feature.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EsewaService } from './esewa.service';
 import { StripeService } from './stripe.service';
@@ -33,6 +34,8 @@ export class PaymentsService {
     private userRepository: Repository<User>,
     @InjectRepository(OrganizationMember)
     private memberRepository: Repository<OrganizationMember>,
+    @InjectRepository(OrganizationPackageFeature)
+    private orgFeatureRepository: Repository<OrganizationPackageFeature>,
     private esewaService: EsewaService,
     private stripeService: StripeService,
     private packagesService: PackagesService,
@@ -442,10 +445,22 @@ export class PaymentsService {
       this.logger.log(`Upgrading organization ${payment.organization_id} to package ${packageIdNum}`);
       
       try {
+        // Get period from payment metadata
+        const period = payment.metadata?.period;
+        const customMonths = payment.metadata?.custom_months;
+        
+        const upgradeDto: any = { package_id: packageIdNum };
+        if (period) {
+          upgradeDto.period = period;
+        }
+        if (customMonths) {
+          upgradeDto.custom_months = customMonths;
+        }
+        
         const result = await this.packagesService.upgradePackage(
           payment.user_id,
           payment.organization_id,
-          { package_id: packageIdNum },
+          upgradeDto,
         );
         this.logger.log(`Package upgraded successfully for organization ${payment.organization_id} to package ${packageIdNum}: ${result.message}`);
         
@@ -485,6 +500,12 @@ export class PaymentsService {
           { package_feature_id: featureIdNum },
         );
         this.logger.log(`Feature ${featureIdNum} purchased successfully for organization ${payment.organization_id}: ${result.message}`);
+        
+        // Send notifications and emails after successful feature purchase
+        await this.sendFeaturePurchaseNotifications(
+          payment,
+          result.feature,
+        );
       } catch (error) {
         this.logger.error(`Failed to purchase feature ${featureIdNum} for organization ${payment.organization_id}:`, error);
         throw error; // Re-throw to be caught by caller
@@ -627,6 +648,151 @@ export class PaymentsService {
       this.logger.log(`Package purchase notifications and emails sent for organization ${organization.id}`);
     } catch (error) {
       this.logger.error(`Failed to send package purchase notifications:`, error);
+      // Don't throw - this is a non-critical operation
+    }
+  }
+
+  /**
+   * Send notifications and emails to all organization users after feature purchase
+   */
+  private async sendFeaturePurchaseNotifications(
+    payment: Payment,
+    orgFeature: any,
+  ): Promise<void> {
+    try {
+      // Load payment with relations
+      const paymentWithRelations = await this.paymentRepository.findOne({
+        where: { id: payment.id },
+        relations: ['user', 'organization'],
+      });
+
+      if (!paymentWithRelations || !paymentWithRelations.organization || !paymentWithRelations.user) {
+        this.logger.warn(`Cannot send notifications: missing payment relations for payment ${payment.id}`);
+        return;
+      }
+
+      const organization = paymentWithRelations.organization;
+      const purchaser = paymentWithRelations.user;
+      const purchaserName = `${purchaser.first_name || ''} ${purchaser.last_name || ''}`.trim() || purchaser.email;
+
+      // Load feature with relation
+      const featureWithDetails = await this.orgFeatureRepository.findOne({
+        where: { id: orgFeature.id },
+        relations: ['feature'],
+      });
+
+      // Get feature details
+      const featureName = featureWithDetails?.feature?.name || 'Feature';
+      const featureType = featureWithDetails?.feature?.type || 'user_upgrade';
+      const featureValue = featureWithDetails?.feature?.value || null;
+
+      // Get all active members of the organization
+      const members = await this.memberRepository.find({
+        where: {
+          organization_id: organization.id,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+        relations: ['user', 'role'],
+      });
+
+      // Get organization owner email
+      const ownerMember = members.find(m => m.role?.is_organization_owner);
+      const owner = ownerMember ? await this.userRepository.findOne({ where: { id: ownerMember.user_id } }) : null;
+
+      // Send emails to:
+      // 1. Organization email (if exists)
+      // 2. Organization owner email
+      // 3. Purchaser email
+      // All emails respect user preferences per organization
+
+      const emailRecipients = new Set<string>();
+
+      // Add organization email
+      if (organization.email) {
+        emailRecipients.add(organization.email);
+      }
+
+      // Add owner email
+      if (owner && owner.email) {
+        emailRecipients.add(owner.email);
+      }
+
+      // Add purchaser email
+      if (purchaser.email) {
+        emailRecipients.add(purchaser.email);
+      }
+
+      // Send emails to each recipient, checking preferences per organization
+      for (const email of emailRecipients) {
+        // Find the user for this email
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (!user) {
+          // If no user found (e.g., organization email), send anyway
+          if (email === organization.email) {
+            try {
+              const emailHtml = this.emailTemplatesService.getFeaturePurchaseEmail(
+                organization.name,
+                organization.name,
+                featureName,
+                featureType,
+                featureValue,
+                payment.amount,
+                payment.currency,
+                purchaserName,
+                false,
+              );
+              await this.emailService.sendEmail(
+                email,
+                `Feature Purchased: ${organization.name} - ${featureName}`,
+                emailHtml,
+              );
+            } catch (error) {
+              this.logger.error(`Failed to send email to organization email ${email}:`, error);
+            }
+          }
+          continue;
+        }
+
+        // Check if email should be sent for this user in this organization
+        // Use PACKAGE_UPGRADED type for feature purchases (or create a new type if needed)
+        const shouldSendEmail = await this.notificationHelper.shouldSendEmail(
+          user.id,
+          organization.id,
+          NotificationType.PACKAGE_UPGRADED, // Using same notification type for now
+        );
+
+        if (shouldSendEmail) {
+          try {
+            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+            const isPurchaser = user.id === payment.user_id;
+            const emailHtml = this.emailTemplatesService.getFeaturePurchaseEmail(
+              userName,
+              organization.name,
+              featureName,
+              featureType,
+              featureValue,
+              payment.amount,
+              payment.currency,
+              purchaserName,
+              isPurchaser,
+            );
+            await this.emailService.sendEmail(
+              email,
+              `Feature Purchased: ${organization.name} - ${featureName}`,
+              emailHtml,
+            );
+            this.logger.log(`Feature purchase email sent to ${email}`);
+          } catch (error) {
+            this.logger.error(`Failed to send email to ${email}:`, error);
+          }
+        } else {
+          this.logger.log(`Email not sent to ${email} due to user preferences`);
+        }
+      }
+
+      this.logger.log(`Feature purchase notifications and emails sent for organization ${organization.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to send feature purchase notifications:`, error);
       // Don't throw - this is a non-critical operation
     }
   }

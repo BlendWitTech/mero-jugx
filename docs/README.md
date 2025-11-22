@@ -4,6 +4,17 @@ This directory contains comprehensive project documentation for Mero Jugx.
 
 ## Available Documentation
 
+### For Organizations (User Guides)
+- **[Organization User Guide](./ORGANIZATION-USER-GUIDE.md)** - Complete guide for organizations using the platform
+  - Getting started
+  - User management
+  - Role management
+  - Packages & subscriptions
+  - Payment & billing
+  - Notifications
+  - Settings
+  - Best practices
+
 ### Core Documentation
 - **[01. System Architecture](./01-system-architecture.md)** - Overview of the system design, components, and architecture patterns
 - **[02. Database Schema](./02-database-schema.md)** - Complete database structure, entities, relationships, and indexes
@@ -12,15 +23,30 @@ This directory contains comprehensive project documentation for Mero Jugx.
 - **[05. Development Plan](./05-development-plan.md)** - Development phases, roadmap, and future enhancements
 - **[06. Technology Stack](./06-technology-stack.md)** - Complete list of technologies, libraries, and tools used
 
-### Guides
+### Developer Guides
 - **[API Documentation](./API-DOCUMENTATION.md)** - Complete API reference with endpoints, requests, and responses
+- **[Developer Guide](../DEVELOPER_GUIDE.md)** - Complete developer setup and workflow guide
+- **[Git Branching Strategy](../.git-branching-strategy.md)** - Git workflow and branching strategy
+- **[Production Cleanup](../PRODUCTION-CLEANUP.md)** - Production deployment checklist
+
+### Setup & Deployment
 - **[Deployment Guide](./DEPLOYMENT-GUIDE.md)** - Step-by-step production deployment instructions
 - **[Environment Setup](./ENVIRONMENT-SETUP.md)** - Development environment setup guide
-- **[Login Access Guide](./LOGIN-ACCESS-GUIDE.md)** - User access and login procedures
 - **[Production Checklist](./PRODUCTION-CHECKLIST.md)** - Pre-deployment checklist for production
+- **[Email Setup](./EMAIL-SETUP.md)** - Email service configuration guide
 
-### Overview
+### Testing & Troubleshooting
+- **[Payment Testing Guide](./PAYMENT-TESTING-GUIDE.md)** - Guide for testing payment integrations
+- **[Login Access Guide](./LOGIN-ACCESS-GUIDE.md)** - User access and login procedures
+- **[Database Connection Fix](./DATABASE-CONNECTION-FIX.md)** - Database connection troubleshooting
+- **[Database Sync](./DATABASE-SYNC.md)** - Database synchronization guide
+- **[Migration Guide](./MIGRATION-GUIDE.md)** - Database migration guide
+- **[Audit Logs Guide](./AUDIT-LOGS-GUIDE.md)** - Understanding and using audit logs
+
+### Overview & Planning
 - **[Project Summary](./PROJECT-SUMMARY.md)** - High-level project overview, features, and status
+- **[Project Analysis](./PROJECT-ANALYSIS-AND-RECOMMENDATIONS.md)** - Project analysis and recommendations
+- **[Strategic Plan](./STRATEGIC-PLAN.md)** - Strategic planning and roadmap
 
 ## Quick Links
 

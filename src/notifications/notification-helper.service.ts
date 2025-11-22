@@ -18,6 +18,8 @@ export enum NotificationType {
   INVITATION_EXPIRED = 'invitation.expired',
   ORGANIZATION_UPDATED = 'organization.updated',
   PACKAGE_UPGRADED = 'package.upgraded',
+  PACKAGE_EXPIRING_SOON = 'package.expiring_soon',
+  PACKAGE_EXPIRED = 'package.expired',
   MFA_ENABLED = 'mfa.enabled',
   MFA_DISABLED = 'mfa.disabled',
   SECURITY_ALERT = 'security.alert',
@@ -50,6 +52,8 @@ export class NotificationHelperService {
     NotificationType.MFA_DISABLED,
     NotificationType.USER_REMOVED,
     NotificationType.PACKAGE_UPGRADED,
+    NotificationType.PACKAGE_EXPIRING_SOON,
+    NotificationType.PACKAGE_EXPIRED,
   ];
 
   /**
@@ -80,6 +84,14 @@ export class NotificationHelperService {
   /**
    * Check if user has notification preferences enabled for a specific type
    * Important notifications always return true for in-app, but emails still respect preferences
+   * 
+   * Notification Preferences Structure:
+   * - Personal scope with organization_id = null: Global preferences (applies to all organizations)
+   * - Personal scope with organization_id = set: Per-organization preferences (current implementation)
+   * - Organization scope with organization_id = set: Organization-level settings (only for Organization Owners)
+   * 
+   * Current behavior: Preferences are checked per-organization (organization_id is always set)
+   * This allows users to have different notification settings for each organization they belong to.
    */
   private async shouldSendNotification(
     userId: string,
@@ -96,10 +108,12 @@ export class NotificationHelperService {
 
     try {
       // Get user's personal preferences for this organization
+      // If organizationId is null, this would check for global preferences
+      // Currently, preferences are per-organization (organization_id is always set)
       const preference = await this.preferenceRepository.findOne({
         where: {
           user_id: userId,
-          organization_id: organizationId,
+          organization_id: organizationId, // Per-organization preferences
           scope: NotificationPreferenceScope.PERSONAL,
         },
       });
@@ -391,6 +405,84 @@ export class NotificationHelperService {
         {
           package_name: packageName,
           purchased_by: purchasedByUserId || null,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about package expiring soon (1 week before)
+   */
+  async notifyPackageExpiringSoon(
+    organizationId: string,
+    packageName: string,
+    daysRemaining: number,
+  ): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.PACKAGE_EXPIRING_SOON,
+        'Package Expiring Soon',
+        `Your ${packageName} package will expire in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Please renew to continue using premium features.`,
+        {
+          route: '/packages',
+        },
+        {
+          package_name: packageName,
+          days_remaining: daysRemaining,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about package expired
+   */
+  async notifyPackageExpired(
+    organizationId: string,
+    packageName: string,
+  ): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.PACKAGE_EXPIRED,
+        'Package Expired',
+        `Your ${packageName} package has expired. Your organization has been reverted to the Freemium package.`,
+        {
+          route: '/packages',
+        },
+        {
+          package_name: packageName,
         },
       );
       if (notification) {

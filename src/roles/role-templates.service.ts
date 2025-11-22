@@ -201,17 +201,19 @@ export class RoleTemplatesService {
       );
     }
 
-    // Check role limit
-    const currentRolesCount = await this.roleRepository.count({
+    // Check role limit - only count custom roles (exclude default roles: owner and admin)
+    // Default roles (is_default = true or organization_id = null) don't count against the limit
+    const currentCustomRolesCount = await this.roleRepository.count({
       where: {
         organization_id: organizationId,
         is_active: true,
+        is_default: false, // Exclude default roles
       },
     });
 
-    if (currentRolesCount >= organization.role_limit) {
+    if (organization.role_limit !== -1 && currentCustomRolesCount >= organization.role_limit) {
       throw new BadRequestException(
-        'Organization role limit reached. Please upgrade your package.',
+        `Organization role limit reached. You can create up to ${organization.role_limit} custom roles (excluding default roles: Organization Owner and Admin). Please upgrade your package to create more roles.`,
       );
     }
 
@@ -257,16 +259,24 @@ export class RoleTemplatesService {
 
     const savedRole = await this.roleRepository.save(role);
 
-    // Get permission IDs from template
-    const templatePermissionIds = template.template_permissions.map(
-      (tp) => tp.permission_id,
-    );
-
-    // Combine with additional permissions if provided
-    const allPermissionIds = [
-      ...templatePermissionIds,
-      ...(dto.additional_permission_ids || []),
-    ];
+    // Get permission IDs for the role
+    // If custom_permission_ids is provided, use it completely (full customization)
+    // Otherwise, use template permissions + additional permissions
+    let allPermissionIds: number[];
+    
+    if (dto.custom_permission_ids && dto.custom_permission_ids.length > 0) {
+      // Organization wants full control - use only their custom permissions
+      allPermissionIds = dto.custom_permission_ids;
+    } else {
+      // Use template permissions as base and add additional permissions if provided
+      const templatePermissionIds = template.template_permissions.map(
+        (tp) => tp.permission_id,
+      );
+      allPermissionIds = [
+        ...templatePermissionIds,
+        ...(dto.additional_permission_ids || []),
+      ];
+    }
 
     // Remove duplicates
     const uniquePermissionIds = [...new Set(allPermissionIds)];

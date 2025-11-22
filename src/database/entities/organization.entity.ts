@@ -104,6 +104,16 @@ export class Organization {
   })
   status: OrganizationStatus;
 
+  @Column({ type: 'timestamp', nullable: true })
+  @Index()
+  package_expires_at: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  package_auto_renew: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  has_upgraded_from_freemium: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 

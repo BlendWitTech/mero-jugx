@@ -37,8 +37,8 @@ export class PackagesController {
   @Permissions('packages.view')
   @ApiOperation({ summary: 'List all available packages' })
   @ApiResponse({ status: 200, description: 'Packages retrieved successfully' })
-  async getPackages() {
-    return this.packagesService.getPackages();
+  async getPackages(@CurrentUser() user: any) {
+    return this.packagesService.getPackages(user.organizationId);
   }
 
   @Get('features')
@@ -119,6 +119,32 @@ export class OrganizationPackagesController {
     @Param('id', ParseIntPipe) featureId: number,
   ) {
     return this.packagesService.cancelFeature(user.userId, user.organizationId, featureId);
+  }
+
+  @Put('me/package/auto-renew')
+  @HttpCode(HttpStatus.OK)
+  @Permissions('packages.upgrade')
+  @ApiOperation({ summary: 'Toggle package auto-renewal' })
+  @ApiResponse({ status: 200, description: 'Auto-renewal toggled successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async toggleAutoRenew(
+    @CurrentUser() user: any,
+    @Body() body: { enabled: boolean },
+  ) {
+    return this.packagesService.toggleAutoRenew(user.userId, user.organizationId, body.enabled);
+  }
+
+  @Post('me/package/calculate-upgrade-price')
+  @HttpCode(HttpStatus.OK)
+  @Permissions('packages.view')
+  @ApiOperation({ summary: 'Calculate upgrade price with prorated credit' })
+  @ApiResponse({ status: 200, description: 'Upgrade price calculated successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async calculateUpgradePrice(
+    @CurrentUser() user: any,
+    @Body() dto: UpgradePackageDto,
+  ) {
+    return this.packagesService.calculateUpgradePrice(user.userId, user.organizationId, dto);
   }
 }
 

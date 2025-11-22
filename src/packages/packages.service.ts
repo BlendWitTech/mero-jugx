@@ -13,8 +13,10 @@ import { OrganizationPackageFeature, OrganizationPackageFeatureStatus } from '..
 import { Organization } from '../database/entities/organization.entity';
 import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
-import { UpgradePackageDto } from './dto/upgrade-package.dto';
+import { UpgradePackageDto, SubscriptionPeriod } from './dto/upgrade-package.dto';
 import { PurchaseFeatureDto } from './dto/purchase-feature.dto';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { calculateSubscription, calculateUpgradePrice } from './utils/subscription.utils';
 
 @Injectable()
 export class PackagesService {
@@ -32,13 +34,25 @@ export class PackagesService {
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     private dataSource: DataSource,
+    private auditLogsService: AuditLogsService,
   ) {}
 
-  async getPackages(): Promise<Package[]> {
+  async getPackages(organizationId?: string): Promise<Package[]> {
     const packages = await this.packageRepository.find({
       where: { is_active: true },
       order: { sort_order: 'ASC', created_at: 'ASC' },
     });
+
+    // If organizationId is provided, filter out freemium if they've upgraded before
+    if (organizationId) {
+      const organization = await this.organizationRepository.findOne({
+        where: { id: organizationId },
+      });
+
+      if (organization?.has_upgraded_from_freemium) {
+        return packages.filter(pkg => pkg.slug !== 'freemium');
+      }
+    }
 
     return packages;
   }
@@ -106,6 +120,8 @@ export class PackagesService {
         roles: organization.role_limit,
       },
       active_features: activeFeatures,
+      package_expires_at: organization.package_expires_at,
+      package_auto_renew: organization.package_auto_renew,
     };
   }
 
@@ -173,13 +189,69 @@ export class PackagesService {
       throw new ConflictException('Organization is already on this package');
     }
 
+    // Prevent purchasing freemium if they've upgraded before
+    if (newPackage.slug === 'freemium' && organization.has_upgraded_from_freemium) {
+      throw new BadRequestException('Freemium package is not available for purchase. It will be automatically selected when your current package expires.');
+    }
+
+    // Check if this is a downgrade (lower sort_order = lower tier)
+    const isDowngrade = organization.package.sort_order > newPackage.sort_order;
+    const isUpgrade = organization.package.sort_order < newPackage.sort_order;
+    
+    // Prevent downgrades if package hasn't expired
+    if (isDowngrade && organization.package_expires_at && organization.package_expires_at > new Date()) {
+      throw new BadRequestException(
+        'Cannot downgrade package until current subscription expires. You can only upgrade to a higher tier package.',
+      );
+    }
+
     // Calculate new limits
     const newLimits = await this.calculateLimits(organizationId, newPackage.id);
 
-    // Validate downgrade (if applicable)
-    if (organization.package.sort_order > newPackage.sort_order) {
+    // Validate downgrade (if applicable and expired)
+    if (isDowngrade) {
       await this.validateDowngrade(organizationId, newLimits);
     }
+
+    // Calculate expiration date and pricing based on subscription period
+    let expirationDate: Date | null = null;
+    let subscriptionCalc: ReturnType<typeof calculateSubscription> | null = null;
+    let proratedCredit = 0;
+    let upgradePriceCalc: ReturnType<typeof calculateUpgradePrice> | null = null;
+    
+    if (newPackage.slug !== 'freemium' && newPackage.price > 0) {
+      const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
+      
+      // If upgrading mid-subscription, calculate prorated credit
+      if (isUpgrade && organization.package_expires_at && organization.package_expires_at > new Date()) {
+        upgradePriceCalc = calculateUpgradePrice(
+          organization.package.price || 0,
+          newPackage.price,
+          organization.package_expires_at,
+          period,
+          dto.custom_months,
+        );
+        proratedCredit = upgradePriceCalc.creditAmount;
+        
+        // Calculate new subscription period
+        subscriptionCalc = calculateSubscription(newPackage.price, period, dto.custom_months);
+        
+        // Extend expiration from current expiration date (not from now)
+        expirationDate = new Date(organization.package_expires_at);
+        expirationDate.setMonth(expirationDate.getMonth() + subscriptionCalc.months);
+      } else {
+        // New subscription or downgrade after expiration
+        subscriptionCalc = calculateSubscription(
+          newPackage.price,
+          period,
+          dto.custom_months,
+        );
+        expirationDate = subscriptionCalc.expirationDate;
+      }
+    }
+
+    // Mark as upgraded from freemium if upgrading from freemium
+    const hasUpgradedFromFreemium = organization.package.slug === 'freemium' || organization.has_upgraded_from_freemium;
 
     // Update organization package using a transaction to ensure atomicity
     const oldPackageId = organization.package_id;
@@ -190,7 +262,9 @@ export class PackagesService {
       { 
         package_id: dto.package_id, 
         user_limit: newLimits.users, 
-        role_limit: newLimits.roles 
+        role_limit: newLimits.roles,
+        package_expires_at: expirationDate,
+        has_upgraded_from_freemium: hasUpgradedFromFreemium,
       }
     );
 
@@ -228,10 +302,43 @@ export class PackagesService {
 
     console.log(`Package upgrade verified successfully: ${updatedOrganization.package.name} (ID: ${updatedOrganization.package.id})`);
 
+    // Create audit log
+    const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
+    
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'package.upgrade',
+      'package',
+      dto.package_id.toString(),
+      {
+        package_id: oldPackageId,
+        package_name: organization.package?.name || 'Unknown',
+        user_limit: organization.user_limit,
+        role_limit: organization.role_limit,
+        package_expires_at: organization.package_expires_at,
+      },
+      {
+        package_id: dto.package_id,
+        package_name: updatedOrganization.package.name,
+        user_limit: newLimits.users,
+        role_limit: newLimits.roles,
+        package_expires_at: expirationDate,
+        has_upgraded_from_freemium: hasUpgradedFromFreemium,
+        subscription_period: period,
+        subscription_months: subscriptionCalc?.months,
+        subscription_discount_percent: subscriptionCalc?.discountPercent,
+        subscription_original_price: subscriptionCalc?.originalPrice,
+        subscription_discounted_price: subscriptionCalc?.discountedPrice,
+      },
+    );
+
     return {
       message: 'Package upgraded successfully',
       package: updatedOrganization.package,
       new_limits: newLimits,
+      prorated_credit: proratedCredit,
+      final_price: upgradePriceCalc?.finalPrice || subscriptionCalc?.discountedPrice || 0,
     };
   }
 
@@ -325,6 +432,23 @@ export class PackagesService {
     // Update organization limits based on feature
     await this.updateOrganizationLimits(organizationId);
 
+    // Create audit log
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'package.feature.purchase',
+      'package_feature',
+      savedFeature.id.toString(),
+      null,
+      {
+        feature_id: dto.package_feature_id,
+        feature_name: feature.name,
+        feature_type: feature.type,
+        feature_value: feature.value,
+        feature_price: feature.price,
+      },
+    );
+
     return {
       message: 'Feature purchased successfully',
       feature: savedFeature,
@@ -409,21 +533,199 @@ export class PackagesService {
       );
     }
 
-    // Check role limit
-    const activeRoles = await this.roleRepository.count({
+    // Check role limit - only count custom roles (exclude default roles: owner and admin)
+    // Default roles (is_default = true or organization_id = null) don't count against the limit
+    const activeCustomRoles = await this.roleRepository.count({
       where: {
         organization_id: organizationId,
         is_active: true,
+        is_default: false, // Exclude default roles
       },
     });
 
-    if (activeRoles > organization.role_limit) {
+    if (organization.role_limit !== -1 && activeCustomRoles > organization.role_limit) {
       throw new BadRequestException(
-        `Cannot cancel feature: Current role count (${activeRoles}) exceeds new limit (${organization.role_limit}). Please remove roles first.`,
+        `Cannot cancel feature: Current custom role count (${activeCustomRoles}) exceeds new limit (${organization.role_limit}). Default roles (Organization Owner and Admin) are not counted. Please remove custom roles first.`,
       );
     }
 
+    // Create audit log
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'package.feature.cancel',
+      'package_feature',
+      orgFeature.id.toString(),
+      {
+        feature_id: orgFeature.feature_id,
+        feature_name: orgFeature.feature?.name || 'Unknown',
+        status: OrganizationPackageFeatureStatus.ACTIVE,
+      },
+      {
+        feature_id: orgFeature.feature_id,
+        feature_name: orgFeature.feature?.name || 'Unknown',
+        status: OrganizationPackageFeatureStatus.CANCELLED,
+        cancelled_at: orgFeature.cancelled_at,
+      },
+    );
+
     return { message: 'Feature cancelled successfully' };
+  }
+
+  async calculateUpgradePrice(
+    userId: string,
+    organizationId: string,
+    dto: UpgradePackageDto,
+  ): Promise<{
+    new_package_price: number;
+    prorated_credit: number;
+    final_price: number;
+    remaining_days: number | null;
+    can_upgrade: boolean;
+    reason?: string;
+  }> {
+    // Verify user is member
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    // Get current organization
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+      relations: ['package'],
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // Get new package
+    const newPackage = await this.packageRepository.findOne({
+      where: { id: dto.package_id, is_active: true },
+    });
+
+    if (!newPackage) {
+      throw new NotFoundException('Package not found');
+    }
+
+    // Check if this is a downgrade
+    const isDowngrade = organization.package.sort_order > newPackage.sort_order;
+    
+    // Prevent downgrades if package hasn't expired
+    if (isDowngrade && organization.package_expires_at && organization.package_expires_at > new Date()) {
+      return {
+        new_package_price: 0,
+        prorated_credit: 0,
+        final_price: 0,
+        remaining_days: null,
+        can_upgrade: false,
+        reason: 'Cannot downgrade package until current subscription expires. You can only upgrade to a higher tier package.',
+      };
+    }
+
+    // Calculate upgrade price
+    const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
+    const upgradePriceCalc = calculateUpgradePrice(
+      organization.package.price || 0,
+      newPackage.price,
+      organization.package_expires_at,
+      period,
+      dto.custom_months,
+    );
+
+    const remainingDays = upgradePriceCalc.proratedCredit
+      ? upgradePriceCalc.proratedCredit.remainingDays
+      : null;
+
+    return {
+      new_package_price: upgradePriceCalc.newPackagePrice,
+      prorated_credit: upgradePriceCalc.creditAmount,
+      final_price: upgradePriceCalc.finalPrice,
+      remaining_days: remainingDays,
+      can_upgrade: true,
+    };
+  }
+
+  async toggleAutoRenew(
+    userId: string,
+    organizationId: string,
+    enabled: boolean,
+  ): Promise<{ message: string; auto_renew: boolean }> {
+    // Verify user is member and has permission (packages.upgrade)
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role'],
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    // Check permission (packages.upgrade)
+    if (!membership.role.is_organization_owner) {
+      const roleWithPermissions = await this.roleRepository.findOne({
+        where: { id: membership.role_id },
+        relations: ['role_permissions', 'role_permissions.permission'],
+      });
+
+      const hasPermission = roleWithPermissions?.role_permissions?.some(
+        (rp) => rp.permission.slug === 'packages.upgrade',
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException(
+          'You do not have permission to manage package settings',
+        );
+      }
+    }
+
+    // Get organization
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // Store old value for audit log
+    const oldAutoRenew = organization.package_auto_renew;
+
+    // Update auto-renewal setting
+    organization.package_auto_renew = enabled;
+    await this.organizationRepository.save(organization);
+
+    // Create audit log
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'package.auto_renew.toggle',
+      'organization',
+      organizationId,
+      {
+        package_auto_renew: oldAutoRenew,
+      },
+      {
+        package_auto_renew: enabled,
+      },
+    );
+
+    return {
+      message: enabled ? 'Auto-renewal enabled' : 'Auto-renewal disabled',
+      auto_renew: enabled,
+    };
   }
 
   private async calculateLimits(
@@ -513,17 +815,19 @@ export class PackagesService {
       );
     }
 
-    // Check current role count
-    const currentRoles = await this.roleRepository.count({
+    // Check current role count - only count custom roles (exclude default roles: owner and admin)
+    // Default roles (is_default = true or organization_id = null) don't count against the limit
+    const currentCustomRoles = await this.roleRepository.count({
       where: {
         organization_id: organizationId,
         is_active: true,
+        is_default: false, // Exclude default roles
       },
     });
 
-    if (newLimits.roles !== -1 && currentRoles > newLimits.roles) {
+    if (newLimits.roles !== -1 && currentCustomRoles > newLimits.roles) {
       throw new BadRequestException(
-        `Cannot downgrade: Current role count (${currentRoles}) exceeds new limit (${newLimits.roles}). Please remove roles first.`,
+        `Cannot downgrade: Current custom role count (${currentCustomRoles}) exceeds new limit (${newLimits.roles}). Default roles (Organization Owner and Admin) are not counted. Please remove custom roles first.`,
       );
     }
   }

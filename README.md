@@ -386,18 +386,22 @@ mero-jugx/
 
 ## 📚 Documentation
 
-See the `docs/` folder for detailed documentation:
+### For Organizations (Users)
+- **Documentation Viewer** - Access comprehensive guides from the dashboard sidebar
+- **[Organization User Guide](./docs/ORGANIZATION-USER-GUIDE.md)** - Complete guide for using the platform
 
-- **DEVELOPER_GUIDE.md** - Complete developer guide (Git workflow, testing, etc.)
-- **ENVIRONMENT-SETUP.md** - Complete environment variable reference
-- **DATABASE-SYNC.md** - How to keep migrations in sync with entity changes
-- **MIGRATION-GUIDE.md** - Detailed migration guide and best practices
-- **API-DOCUMENTATION.md** - API endpoints and usage
-- **DEPLOYMENT-GUIDE.md** - Production deployment instructions
-- **PRODUCTION-CHECKLIST.md** - Pre-deployment checklist
-- **LOGIN-ACCESS-GUIDE.md** - User login and access guide
-- **EMAIL-SETUP.md** - Email configuration guide
-- **PAYMENT-TESTING-GUIDE.md** - Complete payment gateway testing guide
+### For Developers
+See the `docs/` folder and root directory for detailed documentation:
+
+- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - Complete developer guide (setup, Git workflow, testing, API routes, project structure)
+- **[Git Branching Strategy](./.git-branching-strategy.md)** - Git workflow and branching strategy (main → version-control → develop)
+- **[Production Cleanup](./PRODUCTION-CLEANUP.md)** - Comprehensive production deployment checklist
+- **[ENVIRONMENT-SETUP.md](./docs/ENVIRONMENT-SETUP.md)** - Complete environment variable reference
+- **[API-DOCUMENTATION.md](./docs/API-DOCUMENTATION.md)** - API endpoints and usage
+- **[DEPLOYMENT-GUIDE.md](./docs/DEPLOYMENT-GUIDE.md)** - Production deployment instructions
+- **[MIGRATION-GUIDE.md](./docs/MIGRATION-GUIDE.md)** - Database migration guide
+- **[PAYMENT-TESTING-GUIDE.md](./docs/PAYMENT-TESTING-GUIDE.md)** - Payment gateway testing guide
+- See [docs/README.md](./docs/README.md) for complete documentation index
 
 ### ⚠️ Important: Database Migration Sync
 
@@ -498,11 +502,24 @@ lsof -ti:3000 | xargs kill -9
 
 ## 🤝 Contributing
 
-1. Create a feature branch
-2. Make your changes
-3. Run `npm run migration:validate` before committing
-4. Test your changes
-5. Submit a pull request
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for detailed contribution guidelines.
+
+**Quick Start:**
+1. Read [DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md) for setup
+2. Follow [Git Branching Strategy](./.git-branching-strategy.md)
+3. Create a feature branch from `develop`
+4. Make your changes
+5. Run `npm run migration:validate` before committing
+6. Test your changes
+7. Submit a pull request to `develop` or `version-control`
+
+**Branch Strategy:**
+- `main` - Production (protected, maintainers only)
+- `version-control` - Release branch (where we push for production)
+- `develop` - Development integration
+- `feature/*` - Feature branches
+- `bugfix/*` - Bug fix branches
+- `hotfix/*` - Critical production fixes
 
 ---
 

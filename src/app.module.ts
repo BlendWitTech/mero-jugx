@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseConfig } from './config/database.config';
@@ -39,6 +40,9 @@ import { CommonModule } from './common/common.module';
         limit: 10, // 10 requests per minute
       },
     ]),
+
+    // Scheduled tasks
+    ScheduleModule.forRoot(),
 
     // Common module (guards, decorators, etc.)
     CommonModule,

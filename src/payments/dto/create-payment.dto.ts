@@ -48,6 +48,24 @@ export class CreatePaymentDto {
   package_id?: number;
 
   @ApiPropertyOptional({
+    description: 'Subscription period (3_months, 6_months, 1_year, custom)',
+    example: '3_months',
+  })
+  @IsOptional()
+  @IsString()
+  period?: string;
+
+  @ApiPropertyOptional({
+    description: 'Custom period in months (required if period is custom)',
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  custom_months?: number;
+
+  @ApiPropertyOptional({
     description: 'Additional metadata',
     example: { feature: 'premium_features' },
   })
