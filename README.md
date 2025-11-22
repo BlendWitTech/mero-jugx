@@ -4,7 +4,7 @@ Organization-based authentication and user management system built with NestJS a
 
 ## ⚡ Quick Commands
 
-**First time setup:**
+### First Time Setup
 ```bash
 # Windows
 scripts\setup.bat
@@ -13,25 +13,22 @@ scripts\setup.bat
 chmod +x scripts/setup.sh && ./scripts/setup.sh
 ```
 
-**Start development:**
+### Start Development Servers
 ```bash
-# Windows (PowerShell - Recommended)
-.\scripts\start-dev.ps1
-
-# Windows (Command Prompt)
+# Windows
 scripts\start-dev.bat
 
 # Linux/Mac
-./scripts/start-dev.sh
+chmod +x scripts/start-dev.sh && ./scripts/start-dev.sh
 ```
 
-**Reset database:**
+### Reset Database
 ```bash
 # Windows
 scripts\reset-database.bat
 
 # Linux/Mac
-./scripts/reset-database.sh
+chmod +x scripts/reset-database.sh && ./scripts/reset-database.sh
 ```
 
 ---
