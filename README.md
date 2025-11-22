@@ -79,7 +79,7 @@ chmod +x scripts/setup.sh
 Create a `.env` file in the project root. For complete environment variable configuration:
 
 - **[Environment Setup Guide](./docs/ENVIRONMENT-SETUP.md)** - Detailed environment configuration
-- **[Environment Template](./docs/ENV-TEMPLATE.md)** - Complete `.env` template with all variables
+- **[Environment Setup](./docs/ENVIRONMENT-SETUP.md)** - Complete environment setup (includes template)
 
 **Quick Start - Minimum Required Variables:**
 
@@ -111,7 +111,7 @@ ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q
 STRIPE_TEST_SECRET_KEY=sk_test_...
 ```
 
-> **📖 For complete configuration**, see [Environment Setup Guide](./docs/ENVIRONMENT-SETUP.md) and [Environment Template](./docs/ENV-TEMPLATE.md).
+> **📖 For complete configuration**, see [Environment Setup Guide](./docs/ENVIRONMENT-SETUP.md) (includes complete template).
 
 ### Payment Gateway Setup
 
@@ -328,7 +328,7 @@ Or use the npm command:
 npm run migration:validate
 ```
 
-See `docs/DATABASE-SYNC.md` for details.
+See `docs/DATABASE-GUIDE.md` for details.
 
 ---
 
@@ -337,14 +337,12 @@ See `docs/DATABASE-SYNC.md` for details.
 For detailed troubleshooting guides, see:
 
 - **[Developer Guide - Troubleshooting](./DEVELOPER_GUIDE.md#troubleshooting)** - Common development issues and solutions
-- **[Database Connection Fix](./docs/DATABASE-CONNECTION-FIX.md)** - Database connection troubleshooting
-- **[Database Sync](./docs/DATABASE-SYNC.md)** - Database synchronization issues
+- **[Database Guide](./docs/DATABASE-GUIDE.md)** - Complete database guide (connection, migrations, sync, troubleshooting)
 
 **Quick Common Issues:**
 
-- **Database Connection**: See [Database Connection Fix Guide](./docs/DATABASE-CONNECTION-FIX.md)
+- **Database Issues**: See [Database Guide](./docs/DATABASE-GUIDE.md) for connection, migration, and sync issues
 - **Port Already in Use**: See [Developer Guide](./DEVELOPER_GUIDE.md#troubleshooting)
-- **Migration Errors**: See [Migration Guide](./docs/MIGRATION-GUIDE.md)
 - **General Development Issues**: See [Developer Guide - Troubleshooting](./DEVELOPER_GUIDE.md#troubleshooting)
 
 ---

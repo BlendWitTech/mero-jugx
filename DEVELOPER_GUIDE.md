@@ -320,7 +320,7 @@ scripts\reset-database.bat  # Windows
 - **Test migrations on a copy of production data**
 - **Keep migrations small and focused**
 
-See `docs/MIGRATION-GUIDE.md` for detailed migration guide.
+See `docs/DATABASE-GUIDE.md` for detailed database and migration guide.
 
 ---
 

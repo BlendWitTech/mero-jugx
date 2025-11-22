@@ -16,9 +16,8 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 - **[Database Schema](./02-database-schema.md)** 🗄️ - Database structure and relationships
 
 ### 🚀 For DevOps
-- **[Deployment Guide](./DEPLOYMENT-GUIDE.md)** 🚢 - Production deployment steps
-- **[Environment Setup](./ENVIRONMENT-SETUP.md)** ⚙️ - Environment configuration
-- **[Production Checklist](./PRODUCTION-CHECKLIST.md)** ✅ - Pre-deployment checklist
+- **[Deployment Guide](./DEPLOYMENT-GUIDE.md)** 🚢 - Production deployment (includes checklist)
+- **[Environment Setup](./ENVIRONMENT-SETUP.md)** ⚙️ - Environment configuration (includes template)
 
 ---
 
@@ -53,17 +52,14 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 
 | Document | Description |
 |----------|-------------|
-| [Migration Guide](./MIGRATION-GUIDE.md) | Database migration guide |
-| [Database Sync](./DATABASE-SYNC.md) | Database synchronization guide |
-| [Database Connection Fix](./DATABASE-CONNECTION-FIX.md) | Troubleshooting database connection issues |
+| [Database Guide](./DATABASE-GUIDE.md) | Complete database guide (migrations, connection, sync, troubleshooting) |
 
 ### 🚀 Deployment & Operations
 
 | Document | Description |
 |----------|-------------|
-| [Deployment Guide](./DEPLOYMENT-GUIDE.md) | Step-by-step production deployment |
-| [Production Checklist](./PRODUCTION-CHECKLIST.md) | Pre-deployment checklist |
-| [Environment Setup](./ENVIRONMENT-SETUP.md) | Server and environment configuration |
+| [Deployment Guide](./DEPLOYMENT-GUIDE.md) | Step-by-step production deployment (includes checklist) |
+| [Environment Setup](./ENVIRONMENT-SETUP.md) | Server and environment configuration (includes template) |
 
 ### 📊 Business & Planning
 
@@ -71,16 +67,13 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 |----------|-------------|
 | [Use Cases and Flows](./03-use-cases-and-flows.md) | Detailed user flows and use cases |
 | [Development Plan](./05-development-plan.md) | Development phases and roadmap |
-| [Project Summary](./PROJECT-SUMMARY.md) | High-level project overview |
-| [Strategic Plan](./STRATEGIC-PLAN.md) | Strategic planning and roadmap |
-| [Project Analysis](./PROJECT-ANALYSIS-AND-RECOMMENDATIONS.md) | Project analysis and recommendations |
+| [Project Overview](./PROJECT-OVERVIEW.md) | Complete project overview (summary, analysis, strategic plan) |
 
 ### 🔍 Features & Guides
 
 | Document | Description |
 |----------|-------------|
 | [Audit Logs Guide](./AUDIT-LOGS-GUIDE.md) | Understanding and using audit logs |
-| [ENV Template](./ENV-TEMPLATE.md) | Complete environment variable template |
 
 ---
 
@@ -96,11 +89,10 @@ Welcome to the comprehensive documentation for Mero Jugx - an organization-based
 
 ### Deploying to Production? Follow This:
 
-1. **[Production Checklist](./PRODUCTION-CHECKLIST.md)** - Pre-deployment checks
+1. **[Deployment Guide](./DEPLOYMENT-GUIDE.md)** - Complete deployment guide (includes checklist)
 2. **[Environment Setup](./ENVIRONMENT-SETUP.md)** - Configure production environment
-3. **[Deployment Guide](./DEPLOYMENT-GUIDE.md)** - Deploy the application
-4. **[Email Setup](./EMAIL-SETUP.md)** - Configure email service
-5. **[Payment Testing Guide](./PAYMENT-TESTING-GUIDE.md)** - Test payment integrations
+3. **[Email Setup](./EMAIL-SETUP.md)** - Configure email service
+4. **[Payment Testing Guide](./PAYMENT-TESTING-GUIDE.md)** - Test payment integrations
 
 ### Using the Platform? Check This:
 
@@ -136,9 +128,9 @@ When contributing to documentation:
 
 - **Development Issues**: Check [Developer Guide](../DEVELOPER_GUIDE.md) troubleshooting section
 - **API Questions**: See [API Documentation](./API-DOCUMENTATION.md) or visit http://localhost:3000/api/docs
-- **Database Issues**: Review [Database Connection Fix](./DATABASE-CONNECTION-FIX.md)
+- **Database Issues**: Review [Database Guide](./DATABASE-GUIDE.md) for connection, migration, and sync issues
 - **Deployment Help**: See [Deployment Guide](./DEPLOYMENT-GUIDE.md)
-- **General Questions**: Check [Project Summary](./PROJECT-SUMMARY.md) for overview
+- **General Questions**: Check [Project Overview](./PROJECT-OVERVIEW.md) for complete overview
 
 ---
 

@@ -11,7 +11,7 @@ if [ $? -ne 0 ]; then
   echo "❌ Migration validation failed!"
   echo "Please fix the issues before committing."
   echo ""
-  echo "See docs/DATABASE-SYNC.md for help."
+  echo "See docs/DATABASE-GUIDE.md for help."
   exit 1
 fi
 
