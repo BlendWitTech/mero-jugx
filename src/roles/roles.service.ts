@@ -286,6 +286,11 @@ export class RolesService {
       throw new BadRequestException('System roles and default roles cannot be modified');
     }
 
+    // Cannot edit organization owner or admin roles (hierarchy is fixed)
+    if (role.is_organization_owner || role.slug === 'admin') {
+      throw new BadRequestException('Organization Owner and Admin roles cannot be modified. Their hierarchy is fixed.');
+    }
+
     // Check if slug is being changed and if it's unique
     if (dto.slug && dto.slug !== role.slug) {
       const existing = await this.roleRepository.findOne({
@@ -299,8 +304,28 @@ export class RolesService {
       }
     }
 
+    // Validate hierarchy_level if provided
+    // Only organization owners and admins can set hierarchy levels
+    if (dto.hierarchy_level !== undefined) {
+      if (!membership.role.is_organization_owner && membership.role.slug !== 'admin') {
+        throw new ForbiddenException('Only organization owners and admins can set role hierarchy levels');
+      }
+      
+      // Hierarchy level must be >= 3 (Owner=1 and Admin=2 are fixed)
+      if (dto.hierarchy_level < 3) {
+        throw new BadRequestException('Hierarchy level must be 3 or higher. Organization Owner (1) and Admin (2) are fixed and cannot be changed.');
+      }
+    }
+
     // Update role
-    Object.assign(role, dto);
+    if (dto.hierarchy_level !== undefined) {
+      role.hierarchy_level = dto.hierarchy_level;
+    }
+    if (dto.name !== undefined) role.name = dto.name;
+    if (dto.slug !== undefined) role.slug = dto.slug;
+    if (dto.description !== undefined) role.description = dto.description;
+    if (dto.is_active !== undefined) role.is_active = dto.is_active;
+    
     await this.roleRepository.save(role);
 
     // Update permissions if provided
@@ -488,26 +513,68 @@ export class RolesService {
       throw new NotFoundException('User not found in this organization');
     }
 
-    // Cannot change organization owner role
+    // Get current role of target user
     const currentRole = await this.roleRepository.findOne({
       where: { id: targetMembership.role_id },
     });
 
-    if (currentRole?.is_organization_owner) {
+    if (!currentRole) {
+      throw new NotFoundException('Current role of target user not found');
+    }
+
+    // Cannot change organization owner role
+    if (currentRole.is_organization_owner) {
       throw new BadRequestException('Cannot change organization owner role');
     }
 
-    // Verify new role exists and belongs to organization
-    const newRole = await this.roleRepository.findOne({
-      where: {
-        id: dto.role_id,
-        organization_id: organizationId,
-        is_active: true,
-      },
-    });
+    // Verify new role exists and is available for this organization
+    // System/default roles (is_system_role = true or is_default = true) don't have organization_id
+    // Custom roles must belong to this organization
+    const newRole = await this.roleRepository
+      .createQueryBuilder('role')
+      .where('role.id = :roleId', { roleId: dto.role_id })
+      .andWhere('role.is_active = :isActive', { isActive: true })
+      .andWhere(
+        '(role.is_system_role = true OR role.is_default = true OR role.organization_id = :organizationId)',
+        { organizationId },
+      )
+      .getOne();
 
     if (!newRole) {
-      throw new NotFoundException('Role not found or not available');
+      throw new NotFoundException('Role not found or not available for this organization');
+    }
+
+    // ROLE HIERARCHY CHECKS - Critical security validation
+    // Get role hierarchy levels
+    const requestingRoleLevel = this.getRoleHierarchyLevel(membership.role);
+    const targetCurrentRoleLevel = this.getRoleHierarchyLevel(currentRole);
+    const newRoleLevel = this.getRoleHierarchyLevel(newRole);
+
+    // Organization owners can do anything (except change other owners)
+    if (!membership.role.is_organization_owner) {
+      // 1. Check if requesting user can modify target user (must have higher role)
+      if (requestingRoleLevel >= targetCurrentRoleLevel) {
+        throw new ForbiddenException(
+          'You cannot modify users with the same or higher role level. You can only modify users with lower roles.',
+        );
+      }
+
+      // 2. Check if requesting user can assign the new role (must be able to assign roles at that level)
+      // Requesting user can only assign roles that are lower than or equal to their own level
+      // But they can only assign to users who have lower roles than them
+      if (newRoleLevel <= requestingRoleLevel) {
+        throw new ForbiddenException(
+          'You cannot assign roles that are equal to or higher than your own role level.',
+        );
+      }
+
+      // 3. Additional check: Cannot assign a role that's higher than target's current role
+      // (unless you're owner, but we already checked that)
+      if (newRoleLevel < targetCurrentRoleLevel) {
+        throw new ForbiddenException(
+          'You cannot assign a role that is higher than the user\'s current role level.',
+        );
+      }
     }
 
     // Update user's role
@@ -589,6 +656,34 @@ export class RolesService {
     if (notifications.length > 0) {
       await this.notificationRepository.save(notifications);
     }
+  }
+
+  /**
+   * Get role hierarchy level
+   * Organization Owner = 1 (highest, fixed, cannot be changed)
+   * Admin = 2 (fixed, cannot be changed)
+   * Custom roles = 3+ (settable by organization owner/admin via hierarchy_level field)
+   */
+  private getRoleHierarchyLevel(role: Role): number {
+    // Organization Owner is always level 1 (fixed)
+    if (role.is_organization_owner) {
+      return 1;
+    }
+    // Admin role is always level 2 (fixed)
+    if (
+      role.slug === 'admin' ||
+      (role.is_default && role.slug === 'admin') ||
+      (role.is_system_role && role.slug === 'admin')
+    ) {
+      return 2;
+    }
+    // For custom/organization-specific roles, use hierarchy_level if set, otherwise default to 3
+    // hierarchy_level must be >= 3 (cannot override Owner=1 or Admin=2)
+    if (role.hierarchy_level !== null && role.hierarchy_level !== undefined && role.hierarchy_level >= 3) {
+      return role.hierarchy_level;
+    }
+    // Default to 3 if not set
+    return 3;
   }
 
   private async assignPermissionsToRole(roleId: number, permissionIds: number[]): Promise<void> {

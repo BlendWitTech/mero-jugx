@@ -8,6 +8,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../common/decorators/current-organization.decorator';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpdateOrganizationSettingsDto } from './dto/update-organization-settings.dto';
+import { UpdateOrganizationSlugDto } from './dto/update-organization-slug.dto';
 import { SwitchOrganizationDto } from './dto/switch-organization.dto';
 
 @ApiTags('organizations')
@@ -76,5 +77,22 @@ export class OrganizationsController {
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   async switchOrganization(@CurrentUser() user: any, @Body() dto: SwitchOrganizationDto) {
     return this.organizationsService.switchOrganization(user.userId, dto.organization_id);
+  }
+
+  @Put('me/slug')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update organization slug (Basic, Platinum, Diamond only)' })
+  @ApiResponse({ status: 200, description: 'Slug updated successfully' })
+  @ApiResponse({ status: 403, description: 'Only organization owner can update slug, or package does not allow slug changes' })
+  @ApiResponse({ status: 409, description: 'Slug already exists' })
+  async updateOrganizationSlug(
+    @CurrentUser() user: any,
+    @Body() dto: UpdateOrganizationSlugDto,
+  ) {
+    return this.organizationsService.updateOrganizationSlug(
+      user.userId,
+      user.organizationId,
+      dto.slug,
+    );
   }
 }

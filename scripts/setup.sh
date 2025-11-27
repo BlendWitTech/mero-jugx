@@ -23,12 +23,13 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-echo "[1/5] Installing backend dependencies..."
+echo "[1/5] Installing and updating backend dependencies..."
 npm install
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to install backend dependencies!"
     exit 1
 fi
+npm update || echo "WARNING: Some packages could not be updated, but continuing..."
 
 echo ""
 echo "[2/5] Installing frontend dependencies..."
@@ -43,6 +44,7 @@ if [ $? -ne 0 ]; then
     cd ..
     exit 1
 fi
+npm update || echo "WARNING: Some packages could not be updated, but continuing..."
 cd ..
 
 echo ""
@@ -101,13 +103,30 @@ echo ""
 echo "[5/5] Database setup..."
 echo ""
 echo "Choose an option:"
-echo "  1. Reset database (drop all tables and recreate with seeds)"
-echo "  2. Run migrations only"
-echo "  3. Skip database setup"
+echo "  1. Initialize database (run migrations and seeds - recommended for first time)"
+echo "  2. Reset database (drop all tables and recreate with seeds)"
+echo "  3. Run migrations only"
+echo "  4. Skip database setup"
 echo ""
-read -p "Enter choice (1-3): " db_choice
+read -p "Enter choice (1-4): " db_choice
 
 if [ "$db_choice" == "1" ]; then
+    echo ""
+    echo "Initializing database (running migrations and seeds if needed)..."
+    npm run db:init
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "WARNING: Database initialization failed."
+        echo "You may need to:"
+        echo "  1. Create the database manually: CREATE DATABASE mero_jugx;"
+        echo "  2. Check your .env file has correct database credentials"
+        echo "  3. Ensure PostgreSQL is running"
+        echo ""
+        echo "See docs/DATABASE-GUIDE.md for troubleshooting."
+    else
+        echo "Database initialization completed successfully!"
+    fi
+elif [ "$db_choice" == "2" ]; then
     echo ""
     echo "Resetting database..."
     npm run db:reset
@@ -123,7 +142,7 @@ if [ "$db_choice" == "1" ]; then
     else
         echo "Database reset completed successfully!"
     fi
-elif [ "$db_choice" == "2" ]; then
+elif [ "$db_choice" == "3" ]; then
     echo ""
     echo "Running migrations..."
     npm run migration:run
@@ -132,11 +151,16 @@ elif [ "$db_choice" == "2" ]; then
         echo "See docs/DATABASE-GUIDE.md for troubleshooting."
     else
         echo "Migrations completed successfully!"
+        echo ""
+        echo "Note: You may also want to run seeds:"
+        echo "  npm run seed:run"
     fi
 else
     echo "Skipping database setup."
     echo "You can run database setup later using:"
-    echo "  npm run db:reset"
+    echo "  npm run db:init      (recommended - runs migrations and seeds if needed)"
+    echo "  npm run db:reset     (drops all tables and recreates)"
+    echo "  npm run migration:run (runs migrations only)"
     echo "  or"
     echo "  ./scripts/reset-database.sh"
 fi

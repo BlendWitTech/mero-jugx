@@ -63,25 +63,25 @@ export default function RegisterOrganizationPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#36393f] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full space-y-8">
-        <div className="card">
+        <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8">
           <div>
-            <h2 className="text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="text-center text-3xl font-extrabold text-white">
               Register Your Organization
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-[#b9bbbe]">
               Create a new organization account
             </p>
           </div>
           <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Organization Details</h3>
+                <h3 className="text-lg font-medium text-white mb-4">Organization Details</h3>
               </div>
 
               <div className="md:col-span-2">
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="name" className="block text-sm font-medium text-[#b9bbbe]">
                   Organization Name *
                 </label>
                 <input
@@ -92,12 +92,12 @@ export default function RegisterOrganizationPage() {
                   placeholder="Acme Corporation"
                 />
                 {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                  <p className="mt-1 text-sm text-[#ed4245]">{errors.name.message}</p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-[#b9bbbe]">
                   Organization Email *
                 </label>
                 <input
@@ -108,12 +108,12 @@ export default function RegisterOrganizationPage() {
                   placeholder="contact@acme.com"
                 />
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  <p className="mt-1 text-sm text-[#ed4245]">{errors.email.message}</p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="owner_phone" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="owner_phone" className="block text-sm font-medium text-[#b9bbbe]">
                   Phone (Optional)
                 </label>
                 <input
@@ -126,11 +126,11 @@ export default function RegisterOrganizationPage() {
               </div>
 
               <div className="md:col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 mb-4 mt-6">Owner Details</h3>
+                <h3 className="text-lg font-medium text-white mb-4 mt-6">Owner Details</h3>
               </div>
 
               <div>
-                <label htmlFor="owner_email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="owner_email" className="block text-sm font-medium text-[#b9bbbe]">
                   Owner Email *
                 </label>
                 <input
@@ -141,14 +141,14 @@ export default function RegisterOrganizationPage() {
                   placeholder="owner@example.com"
                 />
                 {errors.owner_email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.owner_email.message}</p>
+                  <p className="mt-1 text-sm text-[#ed4245]">{errors.owner_email.message}</p>
                 )}
               </div>
 
               {!isExistingUser && (
                 <>
                   <div>
-                    <label htmlFor="owner_first_name" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="owner_first_name" className="block text-sm font-medium text-[#b9bbbe]">
                       First Name *
                     </label>
                     <input
@@ -159,12 +159,12 @@ export default function RegisterOrganizationPage() {
                       placeholder="John"
                     />
                     {errors.owner_first_name && (
-                      <p className="mt-1 text-sm text-red-600">{errors.owner_first_name.message}</p>
+                      <p className="mt-1 text-sm text-[#ed4245]">{errors.owner_first_name.message}</p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="owner_last_name" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="owner_last_name" className="block text-sm font-medium text-[#b9bbbe]">
                       Last Name *
                     </label>
                     <input
@@ -175,12 +175,12 @@ export default function RegisterOrganizationPage() {
                       placeholder="Doe"
                     />
                     {errors.owner_last_name && (
-                      <p className="mt-1 text-sm text-red-600">{errors.owner_last_name.message}</p>
+                      <p className="mt-1 text-sm text-[#ed4245]">{errors.owner_last_name.message}</p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="owner_password" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="owner_password" className="block text-sm font-medium text-[#b9bbbe]">
                       Password *
                     </label>
                     <input
@@ -191,7 +191,7 @@ export default function RegisterOrganizationPage() {
                       placeholder="••••••••"
                     />
                     {errors.owner_password && (
-                      <p className="mt-1 text-sm text-red-600">{errors.owner_password.message}</p>
+                      <p className="mt-1 text-sm text-[#ed4245]">{errors.owner_password.message}</p>
                     )}
                   </div>
                 </>
@@ -202,9 +202,9 @@ export default function RegisterOrganizationPage() {
                   <input
                     type="checkbox"
                     {...register('is_existing_user')}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="rounded border-[#202225] bg-[#202225] text-[#5865f2] focus:ring-[#5865f2] focus:ring-2"
                   />
-                  <span className="ml-2 text-sm text-gray-700">
+                  <span className="ml-2 text-sm text-[#b9bbbe]">
                     I am an existing user
                   </span>
                 </label>
@@ -225,7 +225,7 @@ export default function RegisterOrganizationPage() {
             </div>
 
             <div className="text-center">
-              <a href="/login" className="text-sm font-medium text-primary-600 hover:text-primary-500">
+              <a href="/login" className="text-sm font-medium text-[#5865f2] hover:text-[#4752c4]">
                 Already have an account? Sign in
               </a>
             </div>

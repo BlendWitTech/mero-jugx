@@ -31,6 +31,7 @@ export interface LoginResponse {
   organization?: {
     id: string;
     name?: string;
+    slug?: string;
   };
   requires_mfa_verification?: boolean;
   temp_token?: string;

@@ -180,12 +180,18 @@ docker-compose up -d
 ### 3. Run Database Migrations and Seeds
 
 ```bash
-# Reset database (drops all tables and recreates with seed data)
+# Initialize database (recommended for first time - runs migrations and seeds if needed)
+npm run db:init
+
+# OR reset database (drops all tables and recreates with seed data)
 npm run db:reset
 
 # OR run migrations and seeds separately
 npm run migration:run
 npm run seed:run
+
+# Check if database is initialized
+npm run db:check
 ```
 
 ### 4. Start Servers Manually
@@ -220,7 +226,9 @@ All scripts are located in the `scripts/` folder. Each script has both Windows (
 ### NPM Scripts
 
 **Database:**
+- `npm run db:init` - Initialize database (runs migrations and seeds if needed - safe for first time setup)
 - `npm run db:reset` - Drop all tables and recreate database structure with seeds
+- `npm run db:check` - Check if database is initialized
 - `npm run migration:validate` - Validate migrations against entity definitions (run before committing)
 - `npm run migration:run` - Run pending migrations
 - `npm run migration:revert` - Revert last migration

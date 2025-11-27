@@ -16,30 +16,80 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  AlertTriangle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { usePermissions } from '../hooks/usePermissions';
+import { useMutation } from '@tanstack/react-query';
+import api from '../services/api';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Users', href: '/users', icon: Users },
-  { name: 'Organizations', href: '/organizations', icon: Building2 },
-  { name: 'Invitations', href: '/invitations', icon: Mail },
-  { name: 'Roles', href: '/roles', icon: Shield },
-  { name: 'Packages', href: '/packages', icon: Package },
-  { name: 'Audit Logs', href: '/audit-logs', icon: Activity },
-  { name: 'Documentation', href: '/documentation', icon: BookOpen },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: null }, // Always visible
+  { name: 'Users', href: '/users', icon: Users, permission: 'users.view' },
+  { name: 'Organizations', href: '/organizations', icon: Building2, permission: null }, // Always visible
+  { name: 'Invitations', href: '/invitations', icon: Mail, permission: 'invitations.view' },
+  { name: 'Roles', href: '/roles', icon: Shield, permission: 'roles.view' },
+  { name: 'Packages', href: '/packages', icon: Package, permission: 'packages.view' },
+  { name: 'Audit Logs', href: '/audit-logs', icon: Activity, permission: 'audit.view' },
+  { name: 'Documentation', href: '/documentation', icon: BookOpen, permission: null }, // Always visible
+  { name: 'Settings', href: '/settings', icon: Settings, permission: null }, // Always visible
 ];
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { user, logout } = useAuthStore();
+  const { user, logout, accessToken, impersonatedBy, setImpersonatedBy } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const { hasPermission } = usePermissions();
+  const [originalUser, setOriginalUser] = useState<any>(null);
+
+  // Decode JWT to get impersonatedBy
+  useEffect(() => {
+    if (accessToken) {
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        if (payload.impersonated_by) {
+          setImpersonatedBy(payload.impersonated_by);
+          // Fetch original user info
+          api.get(`/users/${payload.impersonated_by}`).then((res) => {
+            setOriginalUser(res.data);
+          }).catch(() => {});
+        } else {
+          setImpersonatedBy(null);
+          setOriginalUser(null);
+        }
+      } catch (e) {
+        // Invalid token, ignore
+      }
+    }
+  }, [accessToken, setImpersonatedBy]);
+
+  const stopImpersonationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/users/me/stop-impersonation');
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const authStore = useAuthStore.getState();
+      if (authStore.organization) {
+        authStore.setAuth(
+          { access_token: data.access_token, refresh_token: data.refresh_token },
+          data.user,
+          authStore.organization,
+          null
+        );
+      }
+      toast.success('Stopped impersonation');
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to stop impersonation');
+    },
+  });
 
   const handleLogout = async () => {
     try {
@@ -89,31 +139,33 @@ export default function DashboardLayout() {
           </div>
 
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} py-3 text-sm font-medium rounded-lg transition-colors group relative ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                  title={sidebarCollapsed ? item.name : undefined}
-                >
-                  <Icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'mr-3 h-5 w-5'}`} />
-                  {!sidebarCollapsed && <span>{item.name}</span>}
-                  {sidebarCollapsed && (
-                    <span className="absolute left-full ml-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
-                      {item.name}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {navigation
+              .filter((item) => !item.permission || hasPermission(item.permission))
+              .map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'px-4'} py-3 text-sm font-medium rounded-lg transition-colors group relative ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    title={sidebarCollapsed ? item.name : undefined}
+                  >
+                    <Icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'mr-3 h-5 w-5'}`} />
+                    {!sidebarCollapsed && <span>{item.name}</span>}
+                    {sidebarCollapsed && (
+                      <span className="absolute left-full ml-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
+                        {item.name}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
           </nav>
 
           <div className="border-t border-gray-200 p-4">
@@ -182,6 +234,32 @@ export default function DashboardLayout() {
 
       {/* Main content */}
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+        {/* Impersonation Banner */}
+        {impersonatedBy && originalUser && (
+          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
+            <div className="flex items-center justify-between max-w-7xl mx-auto">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-900">
+                    You are impersonating <strong>{user?.first_name} {user?.last_name}</strong>
+                  </p>
+                  <p className="text-xs text-yellow-700">
+                    Original user: {originalUser.first_name} {originalUser.last_name} ({originalUser.email})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => stopImpersonationMutation.mutate()}
+                disabled={stopImpersonationMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-yellow-900 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {stopImpersonationMutation.isPending ? 'Stopping...' : 'Stop Impersonation'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">

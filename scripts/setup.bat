@@ -24,12 +24,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/5] Installing backend dependencies...
+echo [1/5] Installing and updating backend dependencies...
 call npm install
 if errorlevel 1 (
     echo ERROR: Failed to install backend dependencies!
     pause
     exit /b 1
+)
+call npm update
+if errorlevel 1 (
+    echo WARNING: Some packages could not be updated, but continuing...
 )
 
 echo.
@@ -46,6 +50,10 @@ if errorlevel 1 (
     cd ..
     pause
     exit /b 1
+)
+call npm update
+if errorlevel 1 (
+    echo WARNING: Some packages could not be updated, but continuing...
 )
 cd ..
 
@@ -137,44 +145,78 @@ echo.
 echo [5/5] Database setup...
 echo.
 echo Choose an option:
-echo   1. Reset database (drop all tables and recreate with seeds)
-echo   2. Run migrations only
-echo   3. Skip database setup
+echo   1. Initialize database (run migrations and seeds - recommended for first time)
+echo   2. Reset database (drop all tables and recreate with seeds)
+echo   3. Run migrations only
+echo   4. Skip database setup
 echo.
-set /p db_choice="Enter choice (1-3): "
+set /p db_choice="Enter choice (1-4): "
 
-if "!db_choice!"=="1" (
+if "!db_choice!"=="1" goto :init_db
+if "!db_choice!"=="2" goto :reset_db
+if "!db_choice!"=="3" goto :migrate_only
+goto :skip_db
+
+:init_db
+echo.
+echo Initializing database (running migrations and seeds if needed)...
+call npm run db:init
+if errorlevel 1 (
     echo.
-    echo Resetting database...
-    call npm run db:reset
-    if errorlevel 1 (
-        echo WARNING: Database reset failed.
-        echo You may need to:
-        echo   1. Create the database manually: CREATE DATABASE mero_jugx;
-        echo   2. Check your .env file has correct database credentials
-        echo   3. Ensure PostgreSQL is running
-        echo.
-        echo See docs/DATABASE-GUIDE.md for troubleshooting.
-    ) else (
-        echo Database reset completed successfully!
-    )
-) else if "!db_choice!"=="2" (
+    echo WARNING: Database initialization failed.
+    echo You may need to:
+    echo   1. Create the database manually: CREATE DATABASE mero_jugx;
+    echo   2. Check your .env file has correct database credentials
+    echo   3. Ensure PostgreSQL is running
     echo.
-    echo Running migrations...
-    call npm run migration:run
-    if errorlevel 1 (
-        echo WARNING: Migration failed. Check your database connection.
-        echo See docs/DATABASE-GUIDE.md for troubleshooting.
-    ) else (
-        echo Migrations completed successfully!
-    )
+    echo See docs/DATABASE-GUIDE.md for troubleshooting.
 ) else (
-    echo Skipping database setup.
-    echo You can run database setup later using:
-    echo   npm run db:reset
-    echo   or
-    echo   scripts\reset-database.bat
+    echo Database initialization completed successfully!
 )
+goto :db_done
+
+:reset_db
+echo.
+echo Resetting database...
+call npm run db:reset
+if errorlevel 1 (
+    echo WARNING: Database reset failed.
+    echo You may need to:
+    echo   1. Create the database manually: CREATE DATABASE mero_jugx;
+    echo   2. Check your .env file has correct database credentials
+    echo   3. Ensure PostgreSQL is running
+    echo.
+    echo See docs/DATABASE-GUIDE.md for troubleshooting.
+) else (
+    echo Database reset completed successfully!
+)
+goto :db_done
+
+:migrate_only
+echo.
+echo Running migrations...
+call npm run migration:run
+if errorlevel 1 (
+    echo WARNING: Migration failed. Check your database connection.
+    echo See docs/DATABASE-GUIDE.md for troubleshooting.
+) else (
+    echo Migrations completed successfully!
+    echo.
+    echo Note: You may also want to run seeds:
+    echo   npm run seed:run
+)
+goto :db_done
+
+:skip_db
+echo Skipping database setup.
+echo You can run database setup later using:
+echo   npm run db:init      (recommended - runs migrations and seeds if needed)
+echo   npm run db:reset     (drops all tables and recreates)
+echo   npm run migration:run (runs migrations only)
+echo   or
+echo   scripts\reset-database.bat
+
+:db_done
 
 echo.
 echo ========================================

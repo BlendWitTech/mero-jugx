@@ -241,10 +241,24 @@ export class RoleTemplatesService {
       );
     }
 
+    // Validate hierarchy_level if provided
+    // Only organization owners and admins can set hierarchy levels
+    if (dto.hierarchy_level !== undefined) {
+      if (!membership.role.is_organization_owner && membership.role.slug !== 'admin') {
+        throw new ForbiddenException('Only organization owners and admins can set role hierarchy levels');
+      }
+      
+      // Hierarchy level must be >= 3 (Owner=1 and Admin=2 are fixed)
+      if (dto.hierarchy_level < 3) {
+        throw new BadRequestException('Hierarchy level must be 3 or higher. Organization Owner (1) and Admin (2) are fixed and cannot be changed.');
+      }
+    }
+
     // Create role from template
     const role = this.roleRepository.create({
       organization_id: organizationId,
       name: template.name,
+      hierarchy_level: dto.hierarchy_level || null, // Default to null if not provided (will use default 3 in getRoleHierarchyLevel)
       slug: template.slug,
       description: template.description,
       is_system_role: false,

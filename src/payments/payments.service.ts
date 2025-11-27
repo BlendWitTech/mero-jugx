@@ -131,7 +131,7 @@ export class PaymentsService {
       const currency = createPaymentDto.gateway === PaymentGateway.ESEWA ? 'NPR' : 'USD';
 
       // Calculate amount - ensure it's a valid number with 2 decimal places
-      const amount = Math.round(createPaymentDto.amount * 100) / 100;
+      let amount = Math.round(createPaymentDto.amount * 100) / 100;
 
       // For eSewa: calculate tax (13% VAT in Nepal)
       // For Stripe: amount is as-is (no tax calculation needed, Stripe handles it)

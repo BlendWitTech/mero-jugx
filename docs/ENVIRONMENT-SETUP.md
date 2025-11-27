@@ -236,6 +236,11 @@ API_PREFIX=api
 API_VERSION=v1
 FRONTEND_URL=http://localhost:3001
 
+# Database Auto-Initialization (Optional)
+# Set to 'true' to automatically run migrations and seeds on app startup
+# Recommended: false (run manually using npm run db:init or setup scripts)
+AUTO_INIT_DB=false
+
 # ============================================
 # Database Configuration
 # ============================================
@@ -344,6 +349,7 @@ ALLOWED_FILE_TYPES=pdf,doc,docx,jpg,jpeg,png
 
 #### Application
 - `NODE_ENV`: Environment mode (`development` or `production`)
+- `AUTO_INIT_DB`: Auto-initialize database on startup (`true` or `false`, default: `false`)
 - `PORT`: Backend server port (default: 3000)
 - `FRONTEND_URL`: Frontend application URL
 

@@ -4,10 +4,27 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { initializeDatabase } from './database/init-database';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  // Initialize database (run migrations and seeds if needed)
+  // Only runs if AUTO_INIT_DB is set to 'true' in .env
+  // Run asynchronously to not block server startup
+  if (configService.get<string>('AUTO_INIT_DB', 'false') === 'true') {
+    // Run initialization in background to not block server startup
+    initializeDatabase().catch((error) => {
+      console.error('⚠️  Database auto-initialization failed:', error?.message || error);
+      console.error('⚠️  You may need to run migrations and seeds manually:');
+      console.error('   npm run migration:run');
+      console.error('   npm run seed:run');
+      console.error('   or');
+      console.error('   npm run db:reset\n');
+    });
+  }
 
   // Global prefix
   const apiPrefix = configService.get<string>('API_PREFIX', 'api');
@@ -25,6 +42,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global exception filter to catch all errors
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Global guards
   const reflector = app.get(Reflector);

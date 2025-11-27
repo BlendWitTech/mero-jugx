@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Plus, X, Mail, Clock, CheckCircle, XCircle, UserPlus, Shield, Sparkles, History, ChevronDown } from 'lucide-react';
+import { Plus, X, Mail, Clock, CheckCircle, XCircle, UserPlus, Shield, Sparkles, History, ChevronDown, Mail as MailIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const invitationSchema = z.object({
@@ -109,19 +109,26 @@ export default function InvitationsPage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Invitations</h1>
-          <p className="mt-2 text-gray-600">Manage user invitations to your organization</p>
+    <div className="w-full p-6">
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#5865f2] rounded-lg">
+              <MailIcon className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Invitations</h1>
+              <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage user invitations to your organization</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Invitation
+          </button>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Invitation
-        </button>
       </div>
 
       {/* Create Invitation Modal */}
@@ -135,19 +142,19 @@ export default function InvitationsPage() {
                 reset();
               }}
             ></div>
-            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div className="inline-block align-bottom bg-[#2f3136] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
               {/* Header with gradient */}
-              <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5">
+              <div className="bg-gradient-to-r from-[#5865f2] to-[#4752c4] px-6 py-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-[#2f3136]/20 flex items-center justify-center">
                         <UserPlus className="h-6 w-6 text-white" />
                       </div>
                     </div>
                     <div className="ml-4">
                       <h3 className="text-xl font-semibold text-white">Invite Team Member</h3>
-                      <p className="text-sm text-primary-100 mt-0.5">Send an invitation to join your organization</p>
+                      <p className="text-sm text-white/80 mt-0.5">Send an invitation to join your organization</p>
                     </div>
                   </div>
                   <button
@@ -155,7 +162,7 @@ export default function InvitationsPage() {
                       setShowCreateModal(false);
                       reset();
                     }}
-                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition-colors"
+                    className="text-white/80 hover:text-white hover:bg-[#2f3136]/10 rounded-lg p-2 transition-colors"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -163,11 +170,11 @@ export default function InvitationsPage() {
               </div>
 
               {/* Form Content */}
-              <div className="bg-white px-6 py-6">
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="bg-[#2f3136] px-6 py-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   {/* Email Field */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
+                    <label htmlFor="email" className="block text-sm font-semibold text-white mb-2">
                       Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -178,7 +185,7 @@ export default function InvitationsPage() {
                         id="email"
                         type="email"
                         {...register('email')}
-                        className="input pl-10 w-full border-gray-300 focus:ring-primary-500 focus:border-primary-500"
+                        className="input pl-10 w-full border-[#202225] focus:ring-primary-500 focus:border-primary-500"
                         placeholder="colleague@example.com"
                       />
                     </div>
@@ -191,7 +198,7 @@ export default function InvitationsPage() {
 
                   {/* Role Field */}
                   <div>
-                    <label htmlFor="role_id" className="block text-sm font-semibold text-gray-900 mb-2">
+                    <label htmlFor="role_id" className="block text-sm font-semibold text-white mb-2">
                       Assign Role <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -201,7 +208,7 @@ export default function InvitationsPage() {
                       <select
                         id="role_id"
                         {...register('role_id', { valueAsNumber: true })}
-                        className="input pl-10 w-full border-gray-300 focus:ring-primary-500 focus:border-primary-500 appearance-none bg-white"
+                        className="input pl-10 w-full border-[#202225] focus:ring-primary-500 focus:border-primary-500 appearance-none bg-[#2f3136]"
                       >
                         <option value="">Choose a role...</option>
                         {roles?.filter((role: any) => !role.is_organization_owner).map((role: any) => (
@@ -221,7 +228,7 @@ export default function InvitationsPage() {
                         <span className="mr-1">⚠</span> {errors.role_id.message}
                       </p>
                     )}
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-[#8e9297]">
                       <Sparkles className="h-3 w-3 inline mr-1" />
                       Organization Owner role cannot be assigned via invitations
                     </p>
@@ -229,17 +236,17 @@ export default function InvitationsPage() {
 
                   {/* Message Field */}
                   <div>
-                    <label htmlFor="message" className="block text-sm font-semibold text-gray-900 mb-2">
+                    <label htmlFor="message" className="block text-sm font-semibold text-white mb-2">
                       Personal Message <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <textarea
                       id="message"
                       {...register('message')}
                       rows={4}
-                      className="input w-full border-gray-300 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                      className="input w-full border-[#202225] focus:ring-primary-500 focus:border-primary-500 resize-none"
                       placeholder="Hi! I'd like to invite you to join our organization. Looking forward to working together!"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-[#8e9297]">
                       {(watch('message') || '').length} / 500 characters
                     </p>
                     {errors.message && (
@@ -250,14 +257,14 @@ export default function InvitationsPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-[#202225]">
                     <button
                       type="button"
                       onClick={() => {
                         setShowCreateModal(false);
                         reset();
                       }}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-[#b9bbbe] bg-[#2f3136] border border-[#202225] rounded-lg hover:bg-[#36393f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                     >
                       Cancel
                     </button>
@@ -291,13 +298,13 @@ export default function InvitationsPage() {
 
       {/* Statistics Cards */}
       {data && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div className="card">
             <div className="flex items-center">
               <Mail className="h-8 w-8 text-yellow-500 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-sm text-[#b9bbbe]">Pending</p>
+                <p className="text-2xl font-semibold text-white">
                   {data.invitations?.filter((inv: any) => inv.status === 'pending' && !isExpired(inv.expires_at)).length || 0}
                 </p>
               </div>
@@ -307,8 +314,8 @@ export default function InvitationsPage() {
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Accepted</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-sm text-[#b9bbbe]">Accepted</p>
+                <p className="text-2xl font-semibold text-white">
                   {data.invitations?.filter((inv: any) => inv.status === 'accepted').length || 0}
                 </p>
               </div>
@@ -316,10 +323,10 @@ export default function InvitationsPage() {
           </div>
           <div className="card">
             <div className="flex items-center">
-              <XCircle className="h-8 w-8 text-gray-500 mr-3" />
+              <XCircle className="h-8 w-8 text-[#8e9297] mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Expired/Cancelled</p>
-                <p className="text-2xl font-semibold text-gray-900">
+                <p className="text-sm text-[#b9bbbe]">Expired/Cancelled</p>
+                <p className="text-2xl font-semibold text-white">
                   {data.invitations?.filter((inv: any) => 
                     inv.status === 'expired' || inv.status === 'cancelled' || isExpired(inv.expires_at)
                   ).length || 0}
@@ -332,35 +339,35 @@ export default function InvitationsPage() {
 
       {isLoading ? (
         <div className="card animate-pulse">
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-64 bg-[#36393f] rounded"></div>
         </div>
       ) : (
-        <div className="card">
+        <div className="card mt-4">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[#202225]">
+              <thead className="bg-[#36393f]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
                     Expires
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
                     Invited By
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[#8e9297] uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-[#2f3136] divide-y divide-[#202225]">
                 {data?.invitations && data.invitations.length > 0 ? (() => {
                   // Group invitations by email
                   const groupedByEmail: Record<string, any[]> = {};
@@ -389,11 +396,11 @@ export default function InvitationsPage() {
                     ) || latestInvitation;
 
                     return (
-                      <tr key={email} className="hover:bg-gray-50">
+                      <tr key={email} className="hover:bg-[#36393f]">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <Mail className="h-5 w-5 text-gray-400 mr-2" />
-                            <span className="text-sm font-medium text-gray-900">{email}</span>
+                            <span className="text-sm font-medium text-white">{email}</span>
                             {invitations.length > 1 && (
                               <button
                                 onClick={() => setHistoryModal({ email, invitations })}
@@ -408,7 +415,7 @@ export default function InvitationsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {pendingInvitation.role ? (
-                            <span className="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
+                            <span className="px-2 py-1 text-xs font-medium text-[#b9bbbe] bg-[#393c43] rounded-full">
                               {pendingInvitation.role.name}
                             </span>
                           ) : (
@@ -428,7 +435,7 @@ export default function InvitationsPage() {
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : latestInvitation.status === 'accepted'
                                     ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-800'
+                                    : 'bg-[#393c43] text-[#dcddde]'
                                 }`}
                               >
                                 {invExpired && latestInvitation.status === 'pending' 
@@ -439,7 +446,7 @@ export default function InvitationsPage() {
                           })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center text-sm text-gray-500">
+                          <div className="flex items-center text-sm text-[#8e9297]">
                             <Clock className="h-4 w-4 mr-1" />
                             {formatDate(pendingInvitation.expires_at)}
                             {expired && hasPending && (
@@ -447,7 +454,7 @@ export default function InvitationsPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#8e9297]">
                           {pendingInvitation.inviter ? (
                             <span className="flex items-center">
                               <span className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center mr-2">
@@ -486,7 +493,7 @@ export default function InvitationsPage() {
                             <div className="text-right">
                               {latestInvitation.canceller ? (
                                 <>
-                                  <div className="text-xs text-gray-500 mb-1">Cancelled by</div>
+                                  <div className="text-xs text-[#8e9297] mb-1">Cancelled by</div>
                                   <div className="flex items-center justify-end">
                                     <span className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center mr-2">
                                       <span className="text-red-600 font-medium text-xs">
@@ -494,7 +501,7 @@ export default function InvitationsPage() {
                                         {latestInvitation.canceller.last_name?.[0]?.toUpperCase() || ''}
                                       </span>
                                     </span>
-                                    <span className="text-sm text-gray-700">
+                                    <span className="text-sm text-[#b9bbbe]">
                                       {latestInvitation.canceller.first_name} {latestInvitation.canceller.last_name}
                                     </span>
                                   </div>
@@ -513,7 +520,7 @@ export default function InvitationsPage() {
                   });
                 })() : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-[#8e9297]">
                       <Mail className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                       <p>No invitations found. Create your first invitation to get started.</p>
                     </td>
@@ -533,13 +540,13 @@ export default function InvitationsPage() {
               className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-50 backdrop-blur-sm" 
               onClick={() => setHistoryModal(null)}
             ></div>
-            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <div className="inline-block align-bottom bg-[#2f3136] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
               {/* Header */}
               <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-[#2f3136]/20 flex items-center justify-center">
                         <History className="h-6 w-6 text-white" />
                       </div>
                     </div>
@@ -550,7 +557,7 @@ export default function InvitationsPage() {
                   </div>
                   <button
                     onClick={() => setHistoryModal(null)}
-                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-2 transition-colors"
+                    className="text-white/80 hover:text-white hover:bg-[#2f3136]/10 rounded-lg p-2 transition-colors"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -558,7 +565,7 @@ export default function InvitationsPage() {
               </div>
 
               {/* Content */}
-              <div className="bg-white px-6 py-6 max-h-[70vh] overflow-y-auto">
+              <div className="bg-[#2f3136] px-6 py-6 max-h-[70vh] overflow-y-auto">
                 <div className="space-y-4">
                   {historyModal.invitations.map((invitation: any, index: number) => {
                     const invExpired = isExpired(invitation.expires_at);
@@ -566,7 +573,7 @@ export default function InvitationsPage() {
                       <div
                         key={invitation.id}
                         className={`border rounded-lg p-4 ${
-                          index === 0 ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-gray-50'
+                          index === 0 ? 'border-primary-300 bg-primary-50' : 'border-[#202225] bg-[#36393f]'
                         }`}
                       >
                         <div className="flex items-start justify-between">
@@ -585,7 +592,7 @@ export default function InvitationsPage() {
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : invitation.status === 'accepted'
                                     ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-800'
+                                    : 'bg-[#393c43] text-[#dcddde]'
                                 }`}
                               >
                                 {invExpired && invitation.status === 'pending' 
@@ -593,22 +600,22 @@ export default function InvitationsPage() {
                                   : invitation.status}
                               </span>
                               {invitation.role && (
-                                <span className="px-2 py-0.5 text-xs font-medium text-gray-700 bg-gray-200 rounded-full">
+                                <span className="px-2 py-0.5 text-xs font-medium text-[#b9bbbe] bg-[#36393f] rounded-full">
                                   {invitation.role.name}
                                 </span>
                               )}
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <span className="text-gray-500">Created:</span>
-                                <span className="ml-2 text-gray-900 font-medium">
+                                <span className="text-[#8e9297]">Created:</span>
+                                <span className="ml-2 text-white font-medium">
                                   {formatDate(invitation.created_at)}
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-500">Expires:</span>
+                                <span className="text-[#8e9297]">Expires:</span>
                                 <span className={`ml-2 font-medium ${
-                                  invExpired ? 'text-red-600' : 'text-gray-900'
+                                  invExpired ? 'text-red-600' : 'text-white'
                                 }`}>
                                   {formatDate(invitation.expires_at)}
                                   {invExpired && ' (Expired)'}
@@ -616,24 +623,24 @@ export default function InvitationsPage() {
                               </div>
                               {invitation.accepted_at && (
                                 <div>
-                                  <span className="text-gray-500">Accepted:</span>
-                                  <span className="ml-2 text-gray-900 font-medium">
+                                  <span className="text-[#8e9297]">Accepted:</span>
+                                  <span className="ml-2 text-white font-medium">
                                     {formatDate(invitation.accepted_at)}
                                   </span>
                                 </div>
                               )}
                               {invitation.inviter && (
                                 <div>
-                                  <span className="text-gray-500">Invited By:</span>
-                                  <span className="ml-2 text-gray-900 font-medium">
+                                  <span className="text-[#8e9297]">Invited By:</span>
+                                  <span className="ml-2 text-white font-medium">
                                     {invitation.inviter.first_name} {invitation.inviter.last_name}
                                   </span>
                                 </div>
                               )}
                               {invitation.status === 'cancelled' && invitation.canceller && (
                                 <div>
-                                  <span className="text-gray-500">Cancelled By:</span>
-                                  <span className="ml-2 text-gray-900 font-medium flex items-center">
+                                  <span className="text-[#8e9297]">Cancelled By:</span>
+                                  <span className="ml-2 text-white font-medium flex items-center">
                                     <span className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center mr-2">
                                       <span className="text-red-600 font-medium text-xs">
                                         {invitation.canceller.first_name?.[0]?.toUpperCase() || ''}
@@ -646,9 +653,9 @@ export default function InvitationsPage() {
                               )}
                             </div>
                             {invitation.message && (
-                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                <span className="text-gray-500 text-sm">Message:</span>
-                                <p className="mt-1 text-sm text-gray-700">{invitation.message}</p>
+                              <div className="mt-3 pt-3 border-t border-[#202225]">
+                                <span className="text-[#8e9297] text-sm">Message:</span>
+                                <p className="mt-1 text-sm text-[#b9bbbe]">{invitation.message}</p>
                               </div>
                             )}
                           </div>
@@ -660,11 +667,11 @@ export default function InvitationsPage() {
               </div>
 
               {/* Footer */}
-              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+              <div className="bg-[#36393f] px-6 py-4 border-t border-[#202225]">
                 <div className="flex justify-end">
                   <button
                     onClick={() => setHistoryModal(null)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-[#b9bbbe] bg-[#2f3136] border border-[#202225] rounded-lg hover:bg-[#36393f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                   >
                     Close
                   </button>

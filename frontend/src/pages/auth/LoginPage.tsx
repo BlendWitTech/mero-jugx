@@ -106,18 +106,28 @@ export default function LoginPage() {
 
       // Handle successful login
       if (response.access_token && response.user && response.organization) {
+        const org = {
+          id: response.organization.id,
+          name: response.organization.name || '',
+          slug: response.organization.slug || '',
+        };
         setAuth(
           {
             access_token: response.access_token,
             refresh_token: response.refresh_token || '',
           },
           response.user,
-          { id: response.organization.id, name: response.organization.name || '' },
+          org,
         );
         toast.success('Login successful!');
         // Small delay to ensure token is persisted to localStorage before navigation
         await new Promise(resolve => setTimeout(resolve, 100));
-        navigate('/');
+        // Navigate to organization slug route if available
+        if (org.slug) {
+          navigate(`/org/${org.slug}`);
+        } else {
+          navigate('/');
+        }
         setIsLoading(false);
         return;
       }
@@ -253,14 +263,14 @@ export default function LoginPage() {
 
   if (requiresOrgSelection) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-[#36393f] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          <div className="card">
+          <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8">
             <div>
-              <h2 className="text-center text-3xl font-extrabold text-gray-900">
+              <h2 className="text-center text-3xl font-extrabold text-white">
                 Select Organization
               </h2>
-              <p className="mt-2 text-center text-sm text-gray-600">
+              <p className="mt-2 text-center text-sm text-[#b9bbbe]">
                 You belong to multiple organizations. Please select one to continue.
               </p>
             </div>
@@ -270,10 +280,10 @@ export default function LoginPage() {
                   key={org.id}
                   onClick={() => handleOrganizationSelect(org.id)}
                   disabled={isLoading}
-                  className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
+                  className="w-full p-4 border-2 border-[#202225] rounded-lg hover:border-[#5865f2] hover:bg-[#393c43] transition-colors text-left"
                 >
-                  <div className="font-semibold text-gray-900">{org.name}</div>
-                  <div className="text-sm text-gray-500 mt-1">Role: {org.role}</div>
+                  <div className="font-semibold text-white">{org.name}</div>
+                  <div className="text-sm text-[#8e9297] mt-1">Role: {org.role}</div>
                 </button>
               ))}
               <button
@@ -282,7 +292,7 @@ export default function LoginPage() {
                   setAvailableOrganizations([]);
                   setLoginCredentials(null);
                 }}
-                className="w-full text-sm text-primary-600 hover:text-primary-500"
+                className="w-full text-sm text-[#5865f2] hover:text-[#4752c4]"
               >
                 Back to login
               </button>
@@ -295,20 +305,20 @@ export default function LoginPage() {
 
   if (mfaRequired) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-[#36393f] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          <div className="card">
+          <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8">
             <div>
-              <h2 className="text-center text-3xl font-extrabold text-gray-900">
+              <h2 className="text-center text-3xl font-extrabold text-white">
                 Two-Factor Authentication
               </h2>
-              <p className="mt-2 text-center text-sm text-gray-600">
+              <p className="mt-2 text-center text-sm text-[#b9bbbe]">
                 Enter the 6-digit code from your authenticator app
               </p>
             </div>
             <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleMfaVerify(); }}>
               <div>
-                <label htmlFor="mfa-code" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="mfa-code" className="block text-sm font-medium text-[#b9bbbe]">
                   Verification Code
                 </label>
                 <input
@@ -348,7 +358,7 @@ export default function LoginPage() {
                     setTempToken(null);
                     setMfaCode('');
                   }}
-                  className="text-sm text-primary-600 hover:text-primary-500"
+                  className="text-sm text-[#5865f2] hover:text-[#4752c4]"
                 >
                   Back to login
                 </button>
@@ -361,16 +371,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#36393f] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div className="card">
+        <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8">
           <div>
-            <h2 className="text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="text-center text-3xl font-extrabold text-white">
               Sign in to your account
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-[#b9bbbe]">
               Or{' '}
-              <a href="/register" className="font-medium text-primary-600 hover:text-primary-500">
+              <a href="/register" className="font-medium text-[#5865f2] hover:text-[#4752c4]">
                 register a new organization
               </a>
             </p>
@@ -378,7 +388,7 @@ export default function LoginPage() {
           <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-[#b9bbbe]">
                   Email address
                 </label>
                 <input
@@ -389,12 +399,12 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                 />
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  <p className="mt-1 text-sm text-[#ed4245]">{errors.email.message}</p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-[#b9bbbe]">
                   Password
                 </label>
                 <input
@@ -405,7 +415,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                 />
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  <p className="mt-1 text-sm text-[#ed4245]">{errors.password.message}</p>
                 )}
               </div>
 
@@ -413,7 +423,7 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <a href="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
+                <a href="/forgot-password" className="font-medium text-[#5865f2] hover:text-[#4752c4]">
                   Forgot your password?
                 </a>
               </div>

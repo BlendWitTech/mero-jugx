@@ -32,6 +32,15 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       description: 'Upgrade to unlimited roles',
       is_active: true,
     },
+    {
+      name: 'Chat System',
+      slug: 'chat-system',
+      type: PackageFeatureType.SUPPORT,
+      value: null, // null = unlimited
+      price: 49.99,
+      description: 'Enable team chat, group messaging, audio and video calls',
+      is_active: true,
+    },
   ];
 
   for (const feature of features) {

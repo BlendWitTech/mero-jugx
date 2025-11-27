@@ -266,8 +266,10 @@ export default function RolesPage() {
     return count;
   };
 
-  const toggleExpand = (roleId: number) => {
-    setExpandedRole(expandedRole === roleId ? null : roleId);
+  const toggleExpand = (roleId: number | string) => {
+    const id = Number(roleId);
+    const current = expandedRole !== null ? Number(expandedRole) : null;
+    setExpandedRole(current === id ? null : id);
   };
 
   const groupedPermissions = permissions?.reduce((acc: any, perm: any) => {
@@ -280,57 +282,64 @@ export default function RolesPage() {
   }, {}) || {};
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Roles & Permissions</h1>
-          <p className="mt-2 text-gray-600">Manage organization roles and their permissions</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          {canCreateRoles && (
-            <>
-              {isLoadingTemplates ? (
-                <button disabled className="btn btn-primary opacity-50 cursor-not-allowed">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Loading Templates...
-                </button>
-              ) : roleTemplates && roleTemplates.length > 0 ? (
-                <button onClick={() => setShowTemplateModal(true)} className="btn btn-primary">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Create Role from Template
-                </button>
-              ) : (
-                <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-                  <p className="font-medium text-blue-800">No Templates Available</p>
-                  <p className="text-blue-700">No role templates are available for your current package. Please contact support or check back later.</p>
-                </div>
-              )}
-            </>
-          )}
-          {!canCreateRoles && (
-            <div className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2">
-              <p className="font-medium text-yellow-800">Freemium Package</p>
-              <p className="text-yellow-700">Only default roles (Organization Owner, Admin) are available. Upgrade to create additional roles.</p>
+    <div className="w-full p-6">
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#5865f2] rounded-lg">
+              <Shield className="h-6 w-6 text-white" />
             </div>
-          )}
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Roles & Permissions</h1>
+              <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage organization roles and their permissions</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            {canCreateRoles && (
+              <>
+                {isLoadingTemplates ? (
+                  <button disabled className="btn btn-primary opacity-50 cursor-not-allowed flex items-center">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Loading Templates...
+                  </button>
+                ) : roleTemplates && roleTemplates.length > 0 ? (
+                  <button onClick={() => setShowTemplateModal(true)} className="btn btn-primary flex items-center">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Create Role
+                  </button>
+                ) : (
+                  <div className="text-sm text-[#b9bbbe] bg-[#5865f2]/10 border border-[#5865f2]/20 rounded-lg px-4 py-2">
+                    <p className="font-medium text-[#5865f2]">No Templates Available</p>
+                    <p className="text-[#8e9297]">No role templates are available for your current package. Please contact support or check back later.</p>
+                  </div>
+                )}
+              </>
+            )}
+            {!canCreateRoles && (
+              <div className="text-sm text-[#b9bbbe] bg-[#faa61a]/10 border border-[#faa61a]/20 rounded-lg px-4 py-2">
+                <p className="font-medium text-[#faa61a]">Freemium Package</p>
+                <p className="text-[#8e9297]">Only default roles (Organization Owner, Admin) are available. Upgrade to create additional roles.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="card bg-red-50 border border-red-200 mb-6">
-          <p className="text-red-800">
+        <div className="card bg-[#ed4245]/10 border border-[#ed4245]/20 mb-3">
+          <p className="text-[#ed4245]">
             Error loading roles: {error instanceof Error ? error.message : 'Unknown error'}
           </p>
         </div>
       )}
 
       {isFreemium && (
-        <div className="card bg-blue-50 border border-blue-200 mb-6">
+        <div className="card bg-[#5865f2]/10 border border-[#5865f2]/20 mb-3">
           <div className="flex items-start">
-            <Shield className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+            <Shield className="h-5 w-5 text-[#5865f2] mr-3 mt-0.5" />
             <div>
-              <h3 className="text-sm font-semibold text-blue-900 mb-1">Freemium Package Limitations</h3>
-              <p className="text-sm text-blue-800">
+              <h3 className="text-sm font-semibold text-[#5865f2] mb-1">Freemium Package Limitations</h3>
+              <p className="text-sm text-[#b9bbbe]">
                 Your organization is on the Freemium package. You can only use the default roles (Organization Owner and Admin). 
                 To create additional roles, please upgrade your package.
               </p>
@@ -340,22 +349,22 @@ export default function RolesPage() {
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="card animate-pulse">
-              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-[#36393f] rounded"></div>
             </div>
           ))}
         </div>
       ) : roles && roles.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Default Roles Section */}
           {roles.filter((r: any) => r.is_default || r.is_system_role).length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Shield className="h-5 w-5 mr-2 text-purple-600" />
+              <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+                <Shield className="h-5 w-5 mr-2 text-[#5865f2]" />
                 Default Roles
-                <span className="ml-2 text-sm font-normal text-gray-500">
+                <span className="ml-2 text-sm font-normal text-[#8e9297]">
                   (Available to all organizations)
                 </span>
               </h2>
@@ -364,35 +373,37 @@ export default function RolesPage() {
                   .filter((r: any) => r.is_default || r.is_system_role)
                   .map((role: any) => {
                     const userCount = getUserCountForRole(role.id);
-                    const isExpanded = expandedRole === role.id;
+                    const roleId = Number(role.id);
+                    const currentExpanded = expandedRole !== null ? Number(expandedRole) : null;
+                    const isExpanded = currentExpanded === roleId;
                     const rolePermissions = role.role_permissions?.map((rp: any) => rp.permission) || [];
 
                     return (
-                      <div key={role.id} className="card border-2 border-purple-200 bg-purple-50/50">
+                      <div key={role.id} className="card border-2 border-[#5865f2]/30 bg-[#5865f2]/10">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <Shield className="h-5 w-5 text-purple-600 flex-shrink-0" />
-                              <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{role.name}</h3>
-                              <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full whitespace-nowrap">
+                              <Shield className="h-5 w-5 text-[#5865f2] flex-shrink-0" />
+                              <h3 className="text-base sm:text-lg font-semibold text-white truncate">{role.name}</h3>
+                              <span className="px-2 py-0.5 text-xs font-medium bg-[#5865f2]/20 text-[#5865f2] rounded-full whitespace-nowrap">
                                 Default
                               </span>
                               {role.is_organization_owner && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full whitespace-nowrap">
+                                <span className="px-2 py-0.5 text-xs font-medium bg-[#faa61a]/20 text-[#faa61a] rounded-full whitespace-nowrap">
                                   Owner
                                 </span>
                               )}
                             </div>
                             {role.description && (
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{role.description}</p>
+                              <p className="text-sm text-[#b9bbbe] mb-3 line-clamp-2">{role.description}</p>
                             )}
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
-                              <div className="flex items-center bg-blue-50 px-2 sm:px-3 py-1.5 rounded-lg border border-blue-200 whitespace-nowrap">
-                                <Users className="h-4 w-4 mr-1.5 text-blue-600 flex-shrink-0" />
-                                <span className="font-semibold text-blue-900">{userCount}</span>
-                                <span className="ml-1 text-blue-700">{userCount === 1 ? 'user' : 'users'}</span>
+                              <div className="flex items-center bg-[#5865f2]/10 px-2 sm:px-3 py-1.5 rounded-lg border border-[#5865f2]/20 whitespace-nowrap">
+                                <Users className="h-4 w-4 mr-1.5 text-[#5865f2] flex-shrink-0" />
+                                <span className="font-semibold text-[#5865f2]">{userCount}</span>
+                                <span className="ml-1 text-[#8e9297]">{userCount === 1 ? 'user' : 'users'}</span>
                               </div>
-                              <div className="flex items-center text-gray-600">
+                              <div className="flex items-center text-[#8e9297]">
                                 <Shield className="h-4 w-4 mr-1 flex-shrink-0" />
                                 <span className="text-xs sm:text-sm">{rolePermissions.length} {rolePermissions.length === 1 ? 'permission' : 'permissions'}</span>
                               </div>
@@ -401,7 +412,7 @@ export default function RolesPage() {
                         </div>
                         <button
                           onClick={() => toggleExpand(role.id)}
-                          className="mt-3 w-full flex items-center justify-center text-sm text-gray-600 hover:text-gray-900 py-2 rounded-lg hover:bg-purple-100 transition-colors"
+                          className="mt-3 w-full flex items-center justify-center text-sm text-[#8e9297] hover:text-white py-2 rounded-lg hover:bg-[#5865f2]/20 transition-colors"
                         >
                           {isExpanded ? (
                             <>
@@ -416,8 +427,8 @@ export default function RolesPage() {
                           )}
                         </button>
                         {isExpanded && (
-                          <div className="mt-4 pt-4 border-t border-purple-200">
-                            <p className="text-xs font-medium text-gray-700 mb-2">Permissions:</p>
+                          <div className="mt-4 pt-4 border-t border-[#202225]">
+                            <p className="text-xs font-medium text-[#b9bbbe] mb-2">Permissions:</p>
                             <div className="space-y-1 max-h-48 overflow-y-auto">
                               {Object.entries(groupedPermissions).map(([category, perms]: [string, any]) => {
                                 const categoryPerms = perms.filter((p: any) =>
@@ -426,9 +437,9 @@ export default function RolesPage() {
                                 if (categoryPerms.length === 0) return null;
                                 return (
                                   <div key={category} className="mb-2">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{category}</p>
+                                    <p className="text-xs font-semibold text-[#8e9297] uppercase mb-1">{category}</p>
                                     {categoryPerms.map((perm: any) => (
-                                      <div key={perm.id} className="text-xs text-gray-600 ml-2">
+                                      <div key={perm.id} className="text-xs text-[#b9bbbe] ml-2">
                                         • {perm.name}
                                       </div>
                                     ))}
@@ -448,10 +459,10 @@ export default function RolesPage() {
           {/* Custom Roles Section */}
           {roles.filter((r: any) => !r.is_default && !r.is_system_role).length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Shield className="h-5 w-5 mr-2 text-primary-600" />
+              <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+                <Shield className="h-5 w-5 mr-2 text-[#5865f2]" />
                 Custom Roles
-                <span className="ml-2 text-sm font-normal text-gray-500">
+                <span className="ml-2 text-sm font-normal text-[#8e9297]">
                   ({roles.filter((r: any) => !r.is_default && !r.is_system_role).length})
                 </span>
               </h2>
@@ -459,154 +470,142 @@ export default function RolesPage() {
                 {roles
                   .filter((r: any) => !r.is_default && !r.is_system_role)
                   .map((role: any) => {
-            const userCount = getUserCountForRole(role.id);
-            const isExpanded = expandedRole === role.id;
-            const rolePermissions = role.role_permissions?.map((rp: any) => rp.permission) || [];
+                    const userCount = getUserCountForRole(role.id);
+                    const roleId = Number(role.id);
+                    const currentExpanded = expandedRole !== null ? Number(expandedRole) : null;
+                    const isExpanded = currentExpanded === roleId;
+                    const rolePermissions = role.role_permissions?.map((rp: any) => rp.permission) || [];
 
-            return (
-              <div key={role.id} className="card">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <Shield className={`h-5 w-5 flex-shrink-0 ${
-                        role.is_system_role ? 'text-purple-600' : 'text-primary-600'
-                      }`} />
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{role.name}</h3>
-                      {role.is_system_role && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full whitespace-nowrap">
-                          System Role
-                        </span>
-                      )}
-                      {role.is_organization_owner && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full whitespace-nowrap">
-                          Owner
-                        </span>
-                      )}
-                    </div>
-                    {role.description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{role.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
-                      <div className="flex items-center bg-blue-50 px-2 sm:px-3 py-1.5 rounded-lg border border-blue-200 whitespace-nowrap">
-                        <Users className="h-4 w-4 mr-1.5 text-blue-600 flex-shrink-0" />
-                        <span className="font-semibold text-blue-900">{userCount}</span>
-                        <span className="ml-1 text-blue-700">{userCount === 1 ? 'user' : 'users'}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <Shield className="h-4 w-4 mr-1 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm">{rolePermissions.length} {rolePermissions.length === 1 ? 'permission' : 'permissions'}</span>
-                      </div>
-                      <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
-                        role.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {role.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end sm:justify-start space-x-2 sm:ml-4 flex-shrink-0">
-                    {!role.is_system_role && (
-                      <>
-                        <button
-                          onClick={() => handleEdit(role)}
-                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                          title="Edit Role"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        {userCount === 0 && !role.is_system_role && (
-                          <button
-                            onClick={() => handleDelete(role)}
-                            disabled={deleteMutation.isPending}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                            title="Delete Role"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </>
-                    )}
-                    <button
-                      onClick={() => toggleExpand(role.id)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                    return (
+                      <div key={role.id} className="card">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <Shield className={`h-5 w-5 flex-shrink-0 ${
+                                role.is_system_role ? 'text-[#5865f2]' : 'text-[#5865f2]'
+                              }`} />
+                              <h3 className="text-base sm:text-lg font-semibold text-white truncate">{role.name}</h3>
+                              {role.is_system_role && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-[#5865f2]/20 text-[#5865f2] rounded-full whitespace-nowrap">
+                                  System Role
+                                </span>
+                              )}
+                              {role.is_organization_owner && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-[#faa61a]/20 text-[#faa61a] rounded-full whitespace-nowrap">
+                                  Owner
+                                </span>
+                              )}
+                            </div>
+                            {role.description && (
+                              <p className="text-sm text-[#8e9297] mb-3 line-clamp-2">{role.description}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
+                              <div className="flex items-center bg-[#5865f2]/10 px-2 sm:px-3 py-1.5 rounded-lg border border-[#5865f2]/20 whitespace-nowrap">
+                                <Users className="h-4 w-4 mr-1.5 text-[#5865f2] flex-shrink-0" />
+                                <span className="font-semibold text-[#5865f2]">{userCount}</span>
+                                <span className="ml-1 text-[#8e9297]">{userCount === 1 ? 'user' : 'users'}</span>
+                              </div>
+                              <div className="flex items-center text-[#8e9297]">
+                                <Shield className="h-4 w-4 mr-1 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm">{rolePermissions.length} {rolePermissions.length === 1 ? 'permission' : 'permissions'}</span>
+                              </div>
+                              <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
+                                role.is_active
+                                  ? 'bg-[#23a55a]/20 text-[#23a55a]'
+                                  : 'bg-[#393c43] text-[#dcddde]'
+                              }`}>
+                                {role.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-end sm:justify-start space-x-2 sm:ml-4 flex-shrink-0">
+                            {!role.is_system_role && (
+                              <>
+                                <button
+                                  onClick={() => handleEdit(role)}
+                                  className="p-2 text-[#5865f2] hover:bg-[#5865f2]/10 rounded-lg transition-colors"
+                                  title="Edit Role"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                {userCount === 0 && !role.is_system_role && (
+                                  <button
+                                    onClick={() => handleDelete(role)}
+                                    disabled={deleteMutation.isPending}
+                                    className="p-2 text-red-600 hover:bg-[#ed4245]/10 rounded-lg transition-colors disabled:opacity-50"
+                                    title="Delete Role"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              onClick={() => toggleExpand(role.id)}
+                              className="p-2 text-[#8e9297] hover:bg-[#393c43] rounded-lg transition-colors"
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
 
-                {/* Expanded Permissions View */}
-                {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    {rolePermissions.length > 0 ? (
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Permissions</h4>
-                        <div className="space-y-3">
-                          {Object.entries(groupedPermissions).map(([category, perms]: [string, any]) => {
-                            const categoryPerms = perms.filter((p: any) =>
-                              rolePermissions.some((rp: any) => rp.id === p.id)
-                            );
-                            if (categoryPerms.length === 0) return null;
+                        {/* Expanded Permissions View */}
+                        {isExpanded && (
+                          <div className="mt-4 pt-4 border-t border-[#202225]">
+                            {rolePermissions.length > 0 ? (
+                              <div>
+                                <h4 className="text-sm font-semibold text-white mb-3">Permissions</h4>
+                                <div className="space-y-3">
+                                  {Object.entries(groupedPermissions).map(([category, perms]: [string, any]) => {
+                                    const categoryPerms = perms.filter((p: any) =>
+                                      rolePermissions.some((rp: any) => rp.id === p.id)
+                                    );
+                                    if (categoryPerms.length === 0) return null;
 
-                            return (
-                              <div key={category}>
-                                <p className="text-xs font-medium text-gray-500 uppercase mb-2">
-                                  {category.replace('_', ' ')}
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  {categoryPerms.map((perm: any) => (
-                                    <span
-                                      key={perm.id}
-                                      className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-800 rounded"
-                                    >
-                                      {perm.name}
-                                    </span>
-                                  ))}
+                                    return (
+                                      <div key={category}>
+                                        <p className="text-xs font-medium text-[#8e9297] uppercase mb-2">
+                                          {category.replace('_', ' ')}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                          {categoryPerms.map((perm: any) => (
+                                            <span
+                                              key={perm.id}
+                                              className="px-2 py-1 text-xs font-medium bg-[#5865f2]/20 text-[#5865f2] rounded"
+                                            >
+                                              {perm.name}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            ) : (
+                              <div className="text-center py-4 text-[#8e9297]">
+                                <Shield className="h-8 w-8 mx-auto mb-2 text-[#8e9297]" />
+                                <p className="text-sm">No permissions assigned</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="text-center py-4 text-gray-500">
-                        <Shield className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm">No permissions assigned</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
+                    );
                   })}
               </div>
-            </div>
-          )}
-
-          {/* Empty State - Show only if no roles at all */}
-          {roles.filter((r: any) => r.is_default || r.is_system_role).length === 0 && 
-           roles.filter((r: any) => !r.is_default && !r.is_system_role).length === 0 && (
-            <div className="card text-center py-12">
-              <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No custom roles found</h3>
-              <p className="text-gray-600 mb-4">Get started by creating your first custom role.</p>
-              <button onClick={handleCreate} className="btn btn-primary">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Role
-              </button>
             </div>
           )}
         </div>
       ) : (
         <div className="card text-center py-12">
-          <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No roles found</h3>
-          <p className="text-gray-600 mb-4">Get started by creating your first role.</p>
+          <Shield className="h-12 w-12 mx-auto mb-3 text-[#8e9297]" />
+          <h3 className="text-lg font-medium text-white mb-2">No roles found</h3>
+          <p className="text-[#8e9297] mb-3">Get started by creating your first role.</p>
           <button onClick={handleCreate} className="btn btn-primary">
             <Plus className="mr-2 h-4 w-4" />
             Create Role
@@ -618,23 +617,23 @@ export default function RolesPage() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowCreateModal(false)}></div>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Create New Role</h3>
+            <div className="fixed inset-0 transition-opacity bg-black/50" onClick={() => setShowCreateModal(false)}></div>
+            <div className="inline-block align-bottom bg-[#2f3136] rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              <div className="bg-[#2f3136] px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium text-white">Create New Role</h3>
                   <button
                     onClick={() => {
                       setShowCreateModal(false);
                       resetCreate();
                     }}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-[#8e9297] hover:text-white"
                   >
                     <X className="h-6 w-6" />
                   </button>
                 </div>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-yellow-800">
+                <div className="bg-[#faa61a]/10 border border-[#faa61a]/20 rounded-lg p-4 mb-3">
+                  <p className="text-sm text-[#faa61a]">
                     <strong>Custom role creation is disabled.</strong> Please use role templates from your package instead. 
                     {isFreemium && ' Freemium packages can only use default roles (Organization Owner and Admin).'}
                   </p>
@@ -642,7 +641,7 @@ export default function RolesPage() {
                 <form onSubmit={handleCreateSubmit(onCreateSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="create_name" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="create_name" className="block text-sm font-medium text-[#b9bbbe]">
                         Role Name *
                       </label>
                       <input
@@ -663,7 +662,7 @@ export default function RolesPage() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="create_slug" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="create_slug" className="block text-sm font-medium text-[#b9bbbe]">
                         Slug *
                       </label>
                       <input
@@ -679,7 +678,7 @@ export default function RolesPage() {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="create_description" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="create_description" className="block text-sm font-medium text-[#b9bbbe]">
                       Description
                     </label>
                     <textarea
@@ -697,31 +696,31 @@ export default function RolesPage() {
                   {/* Permissions Selection */}
                   {permissions && permissions.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[#b9bbbe] mb-2">
                         Permissions
                       </label>
-                      <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                      <div className="border border-[#202225] rounded-lg p-4 max-h-60 overflow-y-auto">
                         {Object.entries(groupedPermissions).map(([category, perms]: [string, any]) => (
-                          <div key={category} className="mb-4 last:mb-0">
-                            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                          <div key={category} className="mb-3 last:mb-0">
+                            <p className="text-xs font-semibold text-[#8e9297] uppercase mb-2">
                               {category.replace(/_/g, ' ')}
                             </p>
                             <div className="space-y-2">
                               {perms.map((perm: any) => (
                                 <label
                                   key={perm.id}
-                                  className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer"
+                                  className="flex items-center p-2 hover:bg-[#36393f] rounded cursor-pointer"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={createPermissionIds.includes(perm.id)}
                                     onChange={() => togglePermission(perm.id, false)}
-                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    className="rounded border-[#202225] text-[#5865f2] focus:ring-[#5865f2]"
                                   />
                                   <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{perm.name}</p>
+                                    <p className="text-sm font-medium text-white">{perm.name}</p>
                                     {perm.description && (
-                                      <p className="text-xs text-gray-500">{perm.description}</p>
+                                      <p className="text-xs text-[#8e9297]">{perm.description}</p>
                                     )}
                                   </div>
                                 </label>
@@ -764,17 +763,17 @@ export default function RolesPage() {
       {showEditModal && selectedRole && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowEditModal(false)}></div>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Edit Role</h3>
+            <div className="fixed inset-0 transition-opacity bg-black/50" onClick={() => setShowEditModal(false)}></div>
+            <div className="inline-block align-bottom bg-[#2f3136] rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              <div className="bg-[#2f3136] px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium text-white">Edit Role</h3>
                   <button
                     onClick={() => {
                       setShowEditModal(false);
                       resetEdit();
                     }}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-[#8e9297] hover:text-white"
                   >
                     <X className="h-6 w-6" />
                   </button>
@@ -782,7 +781,7 @@ export default function RolesPage() {
                 <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="edit_name" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="edit_name" className="block text-sm font-medium text-[#b9bbbe]">
                         Role Name *
                       </label>
                       <input
@@ -796,7 +795,7 @@ export default function RolesPage() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="edit_slug" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="edit_slug" className="block text-sm font-medium text-[#b9bbbe]">
                         Slug *
                       </label>
                       <input
@@ -811,7 +810,7 @@ export default function RolesPage() {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="edit_description" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="edit_description" className="block text-sm font-medium text-[#b9bbbe]">
                       Description
                     </label>
                     <textarea
@@ -830,40 +829,40 @@ export default function RolesPage() {
                       <input
                         type="checkbox"
                         {...registerEdit('is_active')}
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="rounded border-[#202225] text-[#5865f2] focus:ring-[#5865f2]"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Active</span>
+                      <span className="ml-2 text-sm text-[#b9bbbe]">Active</span>
                     </label>
                   </div>
 
                   {/* Permissions Selection */}
                   {permissions && permissions.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[#b9bbbe] mb-2">
                         Permissions
                       </label>
-                      <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                      <div className="border border-[#202225] rounded-lg p-4 max-h-60 overflow-y-auto">
                         {Object.entries(groupedPermissions).map(([category, perms]: [string, any]) => (
-                          <div key={category} className="mb-4 last:mb-0">
-                            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                          <div key={category} className="mb-3 last:mb-0">
+                            <p className="text-xs font-semibold text-[#8e9297] uppercase mb-2">
                               {category.replace(/_/g, ' ')}
                             </p>
                             <div className="space-y-2">
                               {perms.map((perm: any) => (
                                 <label
                                   key={perm.id}
-                                  className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer"
+                                  className="flex items-center p-2 hover:bg-[#36393f] rounded cursor-pointer"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={editPermissionIds.includes(perm.id)}
                                     onChange={() => togglePermission(perm.id, true)}
-                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    className="rounded border-[#202225] text-[#5865f2] focus:ring-[#5865f2]"
                                   />
                                   <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{perm.name}</p>
+                                    <p className="text-sm font-medium text-white">{perm.name}</p>
                                     {perm.description && (
-                                      <p className="text-xs text-gray-500">{perm.description}</p>
+                                      <p className="text-xs text-[#8e9297]">{perm.description}</p>
                                     )}
                                   </div>
                                 </label>
@@ -905,18 +904,18 @@ export default function RolesPage() {
       {/* Create from Template Modal */}
       {showTemplateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-[#2f3136] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-[#202225]">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Create Role from Template</h2>
+                <h2 className="text-2xl font-bold text-white">Create Role</h2>
                 <button
                   onClick={() => setShowTemplateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#8e9297] hover:text-white"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm text-[#8e9297]">
                 Select a template to quickly create a role with predefined permissions
               </p>
             </div>
@@ -928,18 +927,18 @@ export default function RolesPage() {
                     return (
                       <div
                         key={template.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:bg-primary-50 transition-colors cursor-pointer"
+                        className="border border-[#202225] rounded-lg p-4 hover:border-[#5865f2] hover:bg-[#5865f2]/10 transition-colors cursor-pointer"
                         onClick={() => {
                           createFromTemplateMutation.mutate({ template_id: template.id });
                         }}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">{template.name}</h3>
+                            <h3 className="text-lg font-semibold text-white">{template.name}</h3>
                             {template.description && (
-                              <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+                              <p className="text-sm text-[#8e9297] mt-1">{template.description}</p>
                             )}
-                            <div className="mt-3 flex items-center text-sm text-gray-600">
+                            <div className="mt-3 flex items-center text-sm text-[#8e9297]">
                               <Shield className="h-4 w-4 mr-1" />
                               <span>{templatePermissions.length} {templatePermissions.length === 1 ? 'permission' : 'permissions'}</span>
                             </div>
@@ -950,9 +949,9 @@ export default function RolesPage() {
                               createFromTemplateMutation.mutate({ template_id: template.id });
                             }}
                             disabled={createFromTemplateMutation.isPending}
-                            className="btn btn-primary ml-4"
+                            className="btn btn-primary ml-4 flex items-center"
                           >
-                            {createFromTemplateMutation.isPending ? 'Creating...' : 'Use Template'}
+                            {createFromTemplateMutation.isPending ? 'Creating...' : 'Create Role'}
                           </button>
                         </div>
                       </div>
@@ -961,13 +960,13 @@ export default function RolesPage() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No templates available</h3>
-                  <p className="text-gray-600">There are no role templates available for your package.</p>
+                  <Shield className="h-12 w-12 mx-auto mb-3 text-[#8e9297]" />
+                  <h3 className="text-lg font-medium text-white mb-2">No templates available</h3>
+                  <p className="text-[#8e9297]">There are no role templates available for your package.</p>
                 </div>
               )}
             </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end">
+            <div className="p-6 border-t border-[#202225] flex justify-end">
               <button
                 onClick={() => setShowTemplateModal(false)}
                 className="btn btn-secondary"

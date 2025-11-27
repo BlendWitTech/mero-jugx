@@ -11,10 +11,11 @@ import {
 } from '../../database/entities/organization-member.entity';
 
 export interface JwtPayload {
-  sub: string; // user id
+  sub: string; // user id (impersonated user if impersonating)
   email: string;
   organization_id: string;
   role_id: number;
+  impersonated_by?: string; // original user id if impersonating
   iat?: number;
   exp?: number;
 }
@@ -92,6 +93,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       organizationId: payload.organization_id,
       roleId: payload.role_id,
+      impersonatedBy: payload.impersonated_by,
       user,
       membership,
     };

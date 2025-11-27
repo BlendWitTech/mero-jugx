@@ -42,6 +42,18 @@ export class NotificationsController {
     return this.notificationsService.getUnreadCount(user.userId, user.organizationId || null);
   }
 
+  @Get('preferences')
+  @ApiOperation({ summary: 'Get notification preferences' })
+  @ApiResponse({ status: 200, description: 'Preferences retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Not a member of organization' })
+  async getNotificationPreferences(@CurrentUser() user: any, @Query('scope') scope?: string) {
+    return this.notificationsService.getNotificationPreferences(
+      user.userId,
+      user.organizationId || null, // Ensure null instead of undefined
+      scope as any,
+    );
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get notification by ID' })
   @ApiParam({ name: 'id', description: 'Notification ID' })
@@ -97,18 +109,6 @@ export class NotificationsController {
       user.userId,
       user.organizationId,
       notificationId,
-    );
-  }
-
-  @Get('preferences')
-  @ApiOperation({ summary: 'Get notification preferences' })
-  @ApiResponse({ status: 200, description: 'Preferences retrieved successfully' })
-  @ApiResponse({ status: 403, description: 'Not a member of organization' })
-  async getNotificationPreferences(@CurrentUser() user: any, @Query('scope') scope?: string) {
-    return this.notificationsService.getNotificationPreferences(
-      user.userId,
-      user.organizationId || null, // Ensure null instead of undefined
-      scope as any,
     );
   }
 

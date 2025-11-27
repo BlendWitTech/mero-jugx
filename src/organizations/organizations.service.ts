@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { Organization } from '../database/entities/organization.entity';
 import {
@@ -44,31 +46,48 @@ export class OrganizationsService {
     private redisService: RedisService,
     private auditLogsService: AuditLogsService,
     private dataSource: DataSource,
+    private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async getCurrentOrganization(
     userId: string,
     organizationId: string,
   ): Promise<Organization & { current_user_role?: any }> {
-    // Verify user is member of organization
-    const membership = await this.memberRepository.findOne({
-      where: {
-        user_id: userId,
-        organization_id: organizationId,
-        status: OrganizationMemberStatus.ACTIVE,
-      },
-      relations: ['organization', 'organization.package', 'role'],
-    });
+    try {
+      // Verify user is member of organization
+      const membership = await this.memberRepository.findOne({
+        where: {
+          user_id: userId,
+          organization_id: organizationId,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+        relations: ['organization', 'organization.package', 'role'],
+      });
 
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this organization');
+      if (!membership) {
+        throw new ForbiddenException('You are not a member of this organization');
+      }
+
+      if (!membership.organization) {
+        console.error('Membership found but organization is null:', { userId, organizationId, membershipId: membership.id });
+        throw new NotFoundException('Organization not found');
+      }
+
+      // Return organization with current user's role information
+      return {
+        ...membership.organization,
+        current_user_role: membership.role,
+      };
+    } catch (error: any) {
+      console.error('Error in getCurrentOrganization:', {
+        userId,
+        organizationId,
+        error: error?.message,
+        stack: error?.stack,
+      });
+      throw error;
     }
-
-    // Return organization with current user's role information
-    return {
-      ...membership.organization,
-      current_user_role: membership.role,
-    };
   }
 
   async getUserOrganizations(userId: string): Promise<Organization[]> {
@@ -126,6 +145,7 @@ export class OrganizationsService {
 
     const organization = await this.organizationRepository.findOne({
       where: { id: organizationId },
+      relations: ['package'],
     });
 
     if (!organization) {
@@ -140,8 +160,12 @@ export class OrganizationsService {
       if (existing) {
         throw new ConflictException('Organization name already exists');
       }
-      // Update slug when name changes
-      organization.slug = this.generateSlug(dto.name);
+      // Update slug when name changes (only for non-Freemium packages)
+      const packageSlug = organization.package?.slug;
+      if (packageSlug && packageSlug !== 'freemium') {
+        organization.slug = this.generateSlug(dto.name);
+      }
+      // For Freemium, slug remains unchanged (set during registration)
     }
 
     if (dto.email && dto.email !== organization.email) {
@@ -414,7 +438,23 @@ export class OrganizationsService {
   async switchOrganization(
     userId: string,
     organizationId: string,
-  ): Promise<{ message: string; organization: Organization }> {
+  ): Promise<{
+    message: string;
+    access_token: string;
+    refresh_token: string;
+    user: {
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      avatar_url: string | null;
+    };
+    organization: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }> {
     // Verify user is member of the target organization
     const membership = await this.memberRepository.findOne({
       where: {
@@ -422,17 +462,140 @@ export class OrganizationsService {
         organization_id: organizationId,
         status: OrganizationMemberStatus.ACTIVE,
       },
-      relations: ['organization', 'organization.package', 'role'],
+      relations: ['organization', 'organization.package', 'role', 'user'],
     });
 
     if (!membership) {
       throw new ForbiddenException('You are not a member of this organization');
     }
 
+    // Get user
+    const user = membership.user || await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Generate new tokens with new organization_id
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      organization_id: organizationId,
+      role_id: membership.role_id,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
+    });
+
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+      },
+    );
+
     return {
       message: 'Organization switched successfully',
-      organization: membership.organization,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        avatar_url: user.avatar_url,
+      },
+      organization: {
+        id: membership.organization.id,
+        name: membership.organization.name,
+        slug: membership.organization.slug,
+      },
     };
+  }
+
+  async updateOrganizationSlug(
+    userId: string,
+    organizationId: string,
+    slug: string,
+  ): Promise<Organization> {
+    // Verify user is organization owner
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role', 'organization', 'organization.package'],
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    if (!membership.role.is_organization_owner) {
+      throw new ForbiddenException('Only organization owner can update organization slug');
+    }
+
+    const organization = membership.organization;
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // Check package - only Basic, Platinum, and Diamond can change slug
+    const packageSlug = organization.package?.slug;
+    if (packageSlug === 'freemium') {
+      throw new ForbiddenException(
+        'Slug cannot be changed for Freemium package. Please upgrade to Basic, Platinum, or Diamond package to change your organization slug.',
+      );
+    }
+
+    if (!['basic', 'platinum', 'diamond'].includes(packageSlug)) {
+      throw new ForbiddenException(
+        'Slug can only be changed for Basic, Platinum, or Diamond packages.',
+      );
+    }
+
+    // Normalize slug
+    const normalizedSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+
+    if (normalizedSlug.length < 3 || normalizedSlug.length > 50) {
+      throw new ConflictException('Slug must be between 3 and 50 characters');
+    }
+
+    // Check if slug is already taken
+    if (normalizedSlug !== organization.slug) {
+      const existing = await this.organizationRepository.findOne({
+        where: { slug: normalizedSlug },
+      });
+      if (existing) {
+        throw new ConflictException('This slug is already taken. Please choose a different one.');
+      }
+    }
+
+    // Store old value for audit log
+    const oldSlug = organization.slug;
+
+    // Update slug
+    organization.slug = normalizedSlug;
+    await this.organizationRepository.save(organization);
+
+    // Create audit log
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'organization.slug_updated',
+      'organization',
+      organizationId,
+      { slug: oldSlug },
+      { slug: normalizedSlug },
+    );
+
+    return organization;
   }
 
   private generateSlug(name: string): string {

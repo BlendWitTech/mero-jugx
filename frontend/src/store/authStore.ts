@@ -12,6 +12,7 @@ interface User {
 interface Organization {
   id: string;
   name: string;
+  slug: string;
 }
 
 interface AuthState {
@@ -20,13 +21,15 @@ interface AuthState {
   user: User | null;
   organization: Organization | null;
   isAuthenticated: boolean;
+  impersonatedBy: string | null;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
-  setAuth: (tokens: { access_token: string; refresh_token: string }, user: User, organization: Organization) => void;
+  setAuth: (tokens: { access_token: string; refresh_token: string }, user: User, organization: Organization, impersonatedBy?: string | null) => void;
   setUser: (user: User) => void;
   setOrganization: (organization: Organization) => void;
   logout: () => void;
   updateToken: (accessToken: string) => void;
+  setImpersonatedBy: (userId: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -37,19 +40,21 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       organization: null,
       isAuthenticated: false,
+      impersonatedBy: null,
       _hasHydrated: false,
       setHasHydrated: (state) => {
         set({
           _hasHydrated: state,
         });
       },
-      setAuth: (tokens, user, organization) =>
+      setAuth: (tokens, user, organization, impersonatedBy = null) =>
         set({
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
           user,
           organization,
           isAuthenticated: true,
+          impersonatedBy,
         }),
       setUser: (user) => set({ user }),
       setOrganization: (organization) => set({ organization }),
@@ -60,8 +65,10 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           organization: null,
           isAuthenticated: false,
+          impersonatedBy: null,
         }),
       updateToken: (accessToken) => set({ accessToken }),
+      setImpersonatedBy: (userId) => set({ impersonatedBy: userId }),
     }),
     {
       name: 'auth-storage',

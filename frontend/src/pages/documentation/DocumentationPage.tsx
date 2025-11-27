@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, ChevronRight, Search, FileText, HelpCircle, Settings, Users, Shield, Package, Mail, Activity } from 'lucide-react';
+import { BookOpen, Search, FileText, HelpCircle, Settings, Users, Shield, Package, Mail, Activity } from 'lucide-react';
 
 const documentationSections = [
   {
@@ -320,135 +320,127 @@ export default function DocumentationPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary-100 rounded-lg">
-                <BookOpen className="h-6 w-6 text-primary-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Documentation & Guides</h1>
-                <p className="text-sm text-gray-500 mt-1">Learn how to use Mero Jugx platform</p>
-              </div>
+    <div className="h-full flex flex-col bg-[#36393f]">
+      {/* Header with Tabs */}
+      <div className="bg-[#2f3136] border-b border-[#202225] px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#5865f2] rounded-lg">
+              <BookOpen className="h-6 w-6 text-white" />
             </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Documentation & Guides</h1>
+              <p className="text-sm text-[#b9bbbe] mt-1">Learn how to use Mero Jugx platform</p>
+            </div>
+          </div>
+          {/* Search */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#8e9297]" />
+            <input
+              type="text"
+              placeholder="Search documentation..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[#202225] border border-[#202225] rounded-lg text-white placeholder-[#8e9297] focus:outline-none focus:ring-2 focus:ring-[#5865f2] focus:border-transparent"
+            />
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-12rem)]">
-          {/* Sidebar */}
-          <div className="w-80 border-r border-gray-200 overflow-y-auto">
-            {/* Search */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search documentation..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
+        {/* Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+          {filteredSections.map((section) => {
+            const Icon = section.icon;
+            const isActive = selectedSection.id === section.id;
+            return (
+              <button
+                key={section.id}
+                onClick={() => setSelectedSection(section)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
+                  isActive
+                    ? 'bg-[#393c43] text-white shadow-lg'
+                    : 'text-[#b9bbbe] hover:bg-[#393c43] hover:text-[#dcddde]'
+                }`}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                <span className="font-medium text-sm">{section.title}</span>
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#5865f2] rounded-full"></div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-            {/* Sections List */}
-            <nav className="p-4 space-y-1">
-              {filteredSections.map((section) => {
-                const Icon = section.icon;
-                const isActive = selectedSection.id === section.id;
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="prose prose-lg max-w-none prose-invert">
+            <div className="flex items-center gap-3 mb-6">
+              {selectedSection.icon && (
+                <div className="p-2 bg-[#5865f2] rounded-lg">
+                  <selectedSection.icon className="h-6 w-6 text-white" />
+                </div>
+              )}
+              <h1 className="text-3xl font-bold text-white mb-0">{selectedSection.title}</h1>
+            </div>
+            <div className="markdown-content text-[#dcddde]">
+              {selectedSection.content.split('\n').map((line, index) => {
+                // Simple markdown rendering
+                if (line.startsWith('# ')) {
+                  return <h1 key={index} className="text-3xl font-bold mt-8 mb-4 text-white">{line.substring(2)}</h1>;
+                }
+                if (line.startsWith('## ')) {
+                  return <h2 key={index} className="text-2xl font-bold mt-6 mb-3 text-white">{line.substring(3)}</h2>;
+                }
+                if (line.startsWith('### ')) {
+                  return <h3 key={index} className="text-xl font-semibold mt-4 mb-2 text-white">{line.substring(4)}</h3>;
+                }
+                if (line.startsWith('- ') || line.startsWith('* ')) {
+                  return <li key={index} className="ml-6 list-disc mb-1 text-[#dcddde]">{line.substring(2)}</li>;
+                }
+                if (/^\d+\. /.test(line)) {
+                  return <li key={index} className="ml-6 list-decimal mb-1 text-[#dcddde]">{line.replace(/^\d+\. /, '')}</li>;
+                }
+                if (line.trim() === '') {
+                  return <br key={index} />;
+                }
+                // Handle bold text
+                const parts = line.split(/(\*\*.*?\*\*)/g);
                 return (
-                  <button
-                    key={section.id}
-                    onClick={() => setSelectedSection(section)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">{section.title}</span>
-                    {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
-                  </button>
+                  <p key={index} className="mb-3 text-[#dcddde] leading-relaxed">
+                    {parts.map((part, partIndex) => {
+                      if (part.startsWith('**') && part.endsWith('**')) {
+                        return <strong key={partIndex} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+                      }
+                      return <span key={partIndex}>{part}</span>;
+                    })}
+                  </p>
                 );
               })}
-            </nav>
+            </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="prose prose-lg max-w-none">
-                <div className="flex items-center gap-3 mb-6">
-                  {selectedSection.icon && (
-                    <div className="p-2 bg-primary-100 rounded-lg">
-                      <selectedSection.icon className="h-6 w-6 text-primary-600" />
-                    </div>
-                  )}
-                  <h1 className="text-3xl font-bold text-gray-900 mb-0">{selectedSection.title}</h1>
-                </div>
-                <div className="markdown-content">
-                  {selectedSection.content.split('\n').map((line, index) => {
-                    // Simple markdown rendering
-                    if (line.startsWith('# ')) {
-                      return <h1 key={index} className="text-3xl font-bold mt-8 mb-4 text-gray-900">{line.substring(2)}</h1>;
-                    }
-                    if (line.startsWith('## ')) {
-                      return <h2 key={index} className="text-2xl font-bold mt-6 mb-3 text-gray-900">{line.substring(3)}</h2>;
-                    }
-                    if (line.startsWith('### ')) {
-                      return <h3 key={index} className="text-xl font-semibold mt-4 mb-2 text-gray-900">{line.substring(4)}</h3>;
-                    }
-                    if (line.startsWith('- ') || line.startsWith('* ')) {
-                      return <li key={index} className="ml-6 list-disc mb-1 text-gray-700">{line.substring(2)}</li>;
-                    }
-                    if (/^\d+\. /.test(line)) {
-                      return <li key={index} className="ml-6 list-decimal mb-1 text-gray-700">{line.replace(/^\d+\. /, '')}</li>;
-                    }
-                    if (line.trim() === '') {
-                      return <br key={index} />;
-                    }
-                    // Handle bold text
-                    const parts = line.split(/(\*\*.*?\*\*)/g);
-                    return (
-                      <p key={index} className="mb-3 text-gray-700 leading-relaxed">
-                        {parts.map((part, partIndex) => {
-                          if (part.startsWith('**') && part.endsWith('**')) {
-                            return <strong key={partIndex} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
-                          }
-                          return <span key={partIndex}>{part}</span>;
-                        })}
-                      </p>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Quick Links */}
-              <div className="mt-12 pt-8 border-t border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {documentationSections
-                    .filter((s) => s.id !== selectedSection.id)
-                    .slice(0, 4)
-                    .map((section) => {
-                      const Icon = section.icon;
-                      return (
-                        <button
-                          key={section.id}
-                          onClick={() => setSelectedSection(section)}
-                          className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-left"
-                        >
-                          <Icon className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                          <span className="font-medium text-gray-900">{section.title}</span>
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
+          {/* Quick Links */}
+          <div className="mt-12 pt-8 border-t border-[#202225]">
+            <h3 className="text-lg font-semibold text-white mb-4">Quick Links</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {documentationSections
+                .filter((s) => s.id !== selectedSection.id)
+                .slice(0, 4)
+                .map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => setSelectedSection(section)}
+                      className="flex items-center gap-3 p-4 border border-[#202225] rounded-lg hover:border-[#5865f2] hover:bg-[#393c43] transition-colors text-left bg-[#2f3136]"
+                    >
+                      <Icon className="h-5 w-5 text-[#5865f2] flex-shrink-0" />
+                      <span className="font-medium text-white">{section.title}</span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
         </div>

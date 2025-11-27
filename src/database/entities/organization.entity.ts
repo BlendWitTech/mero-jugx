@@ -111,6 +111,9 @@ export class Organization {
   @Column({ type: 'boolean', default: false })
   package_auto_renew: boolean;
 
+  @Column({ type: 'text', nullable: true })
+  package_auto_renew_credentials: string | null;
+
   @Column({ type: 'boolean', default: false })
   has_upgraded_from_freemium: boolean;
 

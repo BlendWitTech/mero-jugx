@@ -7,12 +7,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { User, UserStatus } from '../database/entities/user.entity';
+import { Organization } from '../database/entities/organization.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
 } from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
+import { Permission } from '../database/entities/permission.entity';
 import { Session } from '../database/entities/session.entity';
 import { AuditLog } from '../database/entities/audit-log.entity';
 import { Notification } from '../database/entities/notification.entity';
@@ -35,8 +40,12 @@ export class UsersService {
     private userRepository: Repository<User>,
     @InjectRepository(OrganizationMember)
     private memberRepository: Repository<OrganizationMember>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @InjectRepository(Permission)
+    private permissionRepository: Repository<Permission>,
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
     @InjectRepository(AuditLog)
@@ -47,9 +56,14 @@ export class UsersService {
     private notificationHelper: NotificationHelperService,
     private notificationsService: NotificationsService,
     private dataSource: DataSource,
+    private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
-  async getCurrentUser(userId: string, organizationId: string): Promise<User> {
+  async getCurrentUser(
+    userId: string,
+    organizationId: string,
+  ): Promise<User & { role?: any; permissions?: string[] }> {
     // Verify user is member of organization
     const membership = await this.memberRepository.findOne({
       where: {
@@ -57,14 +71,43 @@ export class UsersService {
         organization_id: organizationId,
         status: OrganizationMemberStatus.ACTIVE,
       },
-      relations: ['user'],
+      relations: ['user', 'role', 'role.role_permissions', 'role.role_permissions.permission'],
     });
 
     if (!membership) {
       throw new ForbiddenException('You are not a member of this organization');
     }
 
-    return membership.user;
+    // Get permissions for the user's role
+    let permissions: string[] = [];
+    if (membership.role) {
+      if (membership.role.is_organization_owner) {
+        // Organization owners have all permissions
+        const allPermissions = await this.permissionRepository.find({
+          select: ['slug'],
+        });
+        permissions = allPermissions.map((p) => p.slug);
+      } else {
+        // Get permissions from role
+        const roleWithPermissions = await this.roleRepository.findOne({
+          where: { id: membership.role_id },
+          relations: ['role_permissions', 'role_permissions.permission'],
+        });
+
+        if (roleWithPermissions?.role_permissions) {
+          permissions = roleWithPermissions.role_permissions
+            .map((rp) => rp.permission.slug)
+            .filter(Boolean);
+        }
+      }
+    }
+
+    return {
+      ...membership.user,
+      fullName: `${membership.user.first_name} ${membership.user.last_name}`,
+      role: membership.role,
+      permissions,
+    };
   }
 
   async updateCurrentUser(
@@ -176,18 +219,24 @@ export class UsersService {
       });
     }
 
-    // Get total count
-    const total = await queryBuilder.getCount();
-
-    // Get paginated results
-    const members = await queryBuilder
+    // Get all members - no role hierarchy filtering for visibility
+    // Role hierarchy only affects modification permissions, not visibility
+    // All users with 'users.view' permission can see all users in the organization
+    const allMembers = await queryBuilder
       .orderBy('user.created_at', 'DESC')
-      .skip(skip)
-      .take(limit)
       .getMany();
 
+    // Include all members including the requesting user (they can see themselves but can't edit/revoke themselves)
+    const filteredMembers = allMembers;
+
+    // Get total count
+    const total = filteredMembers.length;
+
+    // Apply pagination
+    const members = filteredMembers.slice(skip, skip + limit);
+
     // Map members to include user with role information
-    const users = members.map((member) => ({
+    const users = filteredMembers.map((member) => ({
       ...member.user,
       fullName: `${member.user.first_name} ${member.user.last_name}`,
       role: member.role
@@ -195,18 +244,22 @@ export class UsersService {
             id: member.role.id,
             name: member.role.name,
             slug: member.role.slug,
+            is_organization_owner: member.role.is_organization_owner,
           }
         : null,
       membership_status: member.status,
       joined_at: member.joined_at,
     }));
 
+    // Total is already calculated from filtered members
+    const filteredTotal = total;
+
     return {
       users,
-      total,
+      total: filteredTotal,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(filteredTotal / limit),
     };
   }
 
@@ -257,6 +310,9 @@ export class UsersService {
     if (!targetMembership) {
       throw new NotFoundException('User not found in this organization');
     }
+
+    // Role hierarchy only affects modification permissions, not visibility
+    // All users with 'users.view' permission can view all users in the organization
 
     return targetMembership.user;
   }
@@ -429,24 +485,30 @@ export class UsersService {
 
   /**
    * Get role hierarchy level
-   * Organization Owner = 1 (highest)
-   * Admin = 2
-   * Other roles = 3+ (based on creation order or custom logic)
+   * Organization Owner = 1 (highest, fixed, cannot be changed)
+   * Admin = 2 (fixed, cannot be changed)
+   * Custom roles = 3+ (settable by organization owner/admin via hierarchy_level field)
    */
   private getRoleHierarchyLevel(role: Role): number {
+    // Organization Owner is always level 1 (fixed)
     if (role.is_organization_owner) {
-      return 1; // Highest level
+      return 1;
     }
-    // Admin role can be identified by slug 'admin' or by being a default/system role with admin-like permissions
+    // Admin role is always level 2 (fixed)
     if (
       role.slug === 'admin' ||
       (role.is_default && role.slug === 'admin') ||
       (role.is_system_role && role.slug === 'admin')
     ) {
-      return 2; // Second level
+      return 2;
     }
-    // For other roles, use creation order or a default level
-    return 3; // Default level for custom roles
+    // For custom/organization-specific roles, use hierarchy_level if set, otherwise default to 3
+    // hierarchy_level must be >= 3 (cannot override Owner=1 or Admin=2)
+    if (role.hierarchy_level !== null && role.hierarchy_level !== undefined && role.hierarchy_level >= 3) {
+      return role.hierarchy_level;
+    }
+    // Default to 3 if not set
+    return 3;
   }
 
   async revokeAccess(
@@ -740,4 +802,292 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async downloadAccountData(
+    userId: string,
+    organizationId: string,
+  ): Promise<any> {
+    // Verify user is organization owner
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role', 'organization', 'user'],
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    if (!membership.role?.is_organization_owner) {
+      throw new ForbiddenException('Only organization owners can download account data');
+    }
+
+    // Get all organization data
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+      relations: ['package', 'members', 'members.user', 'members.role'],
+    });
+
+    // Get all audit logs for the organization
+    const auditLogs = await this.auditLogRepository.find({
+      where: { organization_id: organizationId },
+      relations: ['user'],
+      order: { created_at: 'DESC' },
+    });
+
+    // Get all users in the organization
+    const members = await this.memberRepository.find({
+      where: { organization_id: organizationId },
+      relations: ['user', 'role'],
+    });
+
+    // Get all payments
+    const payments = await this.dataSource.query(
+      `SELECT * FROM payments WHERE organization_id = $1 ORDER BY created_at DESC`,
+      [organizationId],
+    );
+
+    return {
+      exported_at: new Date().toISOString(),
+      organization: {
+        id: organization?.id,
+        name: organization?.name,
+        email: organization?.email,
+        package: organization?.package,
+        created_at: organization?.created_at,
+        updated_at: organization?.updated_at,
+      },
+      members: members.map((m) => ({
+        user: {
+          id: m.user.id,
+          email: m.user.email,
+          first_name: m.user.first_name,
+          last_name: m.user.last_name,
+          phone: m.user.phone,
+          created_at: m.user.created_at,
+        },
+        role: m.role,
+        joined_at: m.joined_at,
+        status: m.status,
+      })),
+      audit_logs: auditLogs.map((log) => ({
+        id: log.id,
+        action: log.action,
+        entity_type: log.entity_type,
+        entity_id: log.entity_id,
+        user: log.user ? {
+          id: log.user.id,
+          email: log.user.email,
+          first_name: log.user.first_name,
+          last_name: log.user.last_name,
+        } : null,
+        old_values: log.old_values,
+        new_values: log.new_values,
+        created_at: log.created_at,
+      })),
+      payments: payments,
+    };
+  }
+
+  async impersonateUser(
+    impersonatorUserId: string,
+    organizationId: string,
+    targetUserId: string,
+  ): Promise<{ access_token: string; refresh_token: string; impersonated_user: any }> {
+    // Get impersonator's membership and role
+    const impersonatorMembership = await this.memberRepository.findOne({
+      where: {
+        user_id: impersonatorUserId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role'],
+    });
+
+    if (!impersonatorMembership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    // Check permission: Organization owner or admin can always impersonate
+    // Other roles need 'users.impersonate' permission
+    let canImpersonate = false;
+    if (impersonatorMembership.role.is_organization_owner) {
+      canImpersonate = true;
+    } else {
+      // Check if role is admin (slug === 'admin' or is_system_role with admin-like permissions)
+      const isAdmin = impersonatorMembership.role.slug === 'admin' || 
+                     (impersonatorMembership.role.is_system_role && impersonatorMembership.role.slug === 'admin');
+      
+      if (isAdmin) {
+        canImpersonate = true;
+      } else {
+        // Check for impersonate permission
+        const roleWithPermissions = await this.roleRepository.findOne({
+          where: { id: impersonatorMembership.role_id },
+          relations: ['role_permissions', 'role_permissions.permission'],
+        });
+
+        const hasPermission = roleWithPermissions?.role_permissions?.some(
+          (rp) => rp.permission.slug === 'users.impersonate',
+        );
+
+        if (!hasPermission) {
+          throw new ForbiddenException('You do not have permission to impersonate users');
+        }
+        canImpersonate = true;
+      }
+    }
+
+    // Get target user's membership
+    const targetMembership = await this.memberRepository.findOne({
+      where: {
+        user_id: targetUserId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user', 'role'],
+    });
+
+    if (!targetMembership) {
+      throw new NotFoundException('Target user not found or not a member of this organization');
+    }
+
+    // Cannot impersonate yourself
+    if (targetUserId === impersonatorUserId) {
+      throw new BadRequestException('You cannot impersonate yourself');
+    }
+
+    // Check role hierarchy - can only impersonate users with lower roles
+    const impersonatorRoleLevel = this.getRoleHierarchyLevel(impersonatorMembership.role);
+    const targetRoleLevel = this.getRoleHierarchyLevel(targetMembership.role);
+
+    if (targetRoleLevel <= impersonatorRoleLevel) {
+      throw new ForbiddenException(
+        'You can only impersonate users with roles below your own. You cannot impersonate users with the same or higher role.',
+      );
+    }
+
+    // Generate impersonation tokens
+    const payload: JwtPayload = {
+      sub: targetUserId, // Impersonated user's ID
+      email: targetMembership.user.email,
+      organization_id: organizationId,
+      role_id: targetMembership.role_id,
+      impersonated_by: impersonatorUserId, // Original user's ID
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
+    });
+
+    const refreshToken = this.jwtService.sign(
+      { sub: targetUserId, impersonated_by: impersonatorUserId },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+      },
+    );
+
+    // Create audit log
+    await this.auditLogRepository.save(
+      this.auditLogRepository.create({
+        organization_id: organizationId,
+        user_id: impersonatorUserId,
+        action: 'user.impersonate.start',
+        entity_type: 'user',
+        entity_id: targetUserId,
+        new_values: {
+          impersonated_user_id: targetUserId,
+          impersonated_user_email: targetMembership.user.email,
+          impersonated_user_role: targetMembership.role.name,
+        },
+      }),
+    );
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      impersonated_user: {
+        id: targetMembership.user.id,
+        email: targetMembership.user.email,
+        first_name: targetMembership.user.first_name,
+        last_name: targetMembership.user.last_name,
+        role: targetMembership.role,
+      },
+    };
+  }
+
+  async stopImpersonation(
+    impersonatedUserId: string,
+    organizationId: string,
+    originalUserId: string | undefined,
+  ): Promise<{ access_token: string; refresh_token: string; user: any }> {
+    if (!originalUserId) {
+      throw new BadRequestException('Not currently impersonating any user');
+    }
+
+    // Get original user's membership
+    const originalMembership = await this.memberRepository.findOne({
+      where: {
+        user_id: originalUserId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user', 'role'],
+    });
+
+    if (!originalMembership) {
+      throw new NotFoundException('Original user not found or not a member of this organization');
+    }
+
+    // Generate tokens for original user (without impersonation)
+    const payload: JwtPayload = {
+      sub: originalUserId,
+      email: originalMembership.user.email,
+      organization_id: organizationId,
+      role_id: originalMembership.role_id,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
+    });
+
+    const refreshToken = this.jwtService.sign(
+      { sub: originalUserId },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+      },
+    );
+
+    // Create audit log
+    await this.auditLogRepository.save(
+      this.auditLogRepository.create({
+        organization_id: organizationId,
+        user_id: originalUserId,
+        action: 'user.impersonate.stop',
+        entity_type: 'user',
+        entity_id: impersonatedUserId,
+        old_values: {
+          impersonated_user_id: impersonatedUserId,
+        },
+      }),
+    );
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        id: originalMembership.user.id,
+        email: originalMembership.user.email,
+        first_name: originalMembership.user.first_name,
+        last_name: originalMembership.user.last_name,
+        role: originalMembership.role,
+      },
+    };
+  }
+
 }

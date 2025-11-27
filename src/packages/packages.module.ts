@@ -8,6 +8,8 @@ import { OrganizationPackageFeature } from '../database/entities/organization-pa
 import { Organization } from '../database/entities/organization.entity';
 import { OrganizationMember } from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
+import { Permission } from '../database/entities/permission.entity';
+import { RolePermission } from '../database/entities/role-permission.entity';
 import { CommonModule } from '../common/common.module';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 import { PackageExpirationService } from './package-expiration.service';
@@ -23,6 +25,8 @@ import { User } from '../database/entities/user.entity';
       Organization,
       OrganizationMember,
       Role,
+      Permission,
+      RolePermission,
       User,
     ]),
     CommonModule,

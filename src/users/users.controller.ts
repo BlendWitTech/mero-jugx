@@ -10,7 +10,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -116,5 +118,35 @@ export class UsersController {
     return this.usersService.revokeAccess(user.userId, user.organizationId, targetUserId, {
       transfer_data: false,
     });
+  }
+
+  @Get('me/download-data')
+  @ApiOperation({ summary: 'Download all account data (organization owner only)' })
+  @ApiResponse({ status: 200, description: 'Account data downloaded successfully' })
+  @ApiResponse({ status: 403, description: 'Only organization owners can download account data' })
+  async downloadAccountData(@CurrentUser() user: any, @Res() res: Response) {
+    const data = await this.usersService.downloadAccountData(user.userId, user.organizationId);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=account-data-${user.userId}-${new Date().toISOString().split('T')[0]}.json`);
+    return res.json(data);
+  }
+
+  @Post(':id/impersonate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Impersonate a user (owner/admin or with permission)' })
+  @ApiParam({ name: 'id', description: 'User ID to impersonate' })
+  @ApiResponse({ status: 200, description: 'Impersonation started successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions or cannot impersonate this user' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async impersonateUser(@CurrentUser() user: any, @Param('id') targetUserId: string) {
+    return this.usersService.impersonateUser(user.userId, user.organizationId, targetUserId);
+  }
+
+  @Post('me/stop-impersonation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Stop impersonating and return to original user' })
+  @ApiResponse({ status: 200, description: 'Impersonation stopped successfully' })
+  async stopImpersonation(@CurrentUser() user: any) {
+    return this.usersService.stopImpersonation(user.userId, user.organizationId, user.impersonatedBy);
   }
 }

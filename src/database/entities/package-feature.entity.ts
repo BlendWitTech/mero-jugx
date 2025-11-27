@@ -11,6 +11,8 @@ import { OrganizationPackageFeature } from './organization-package-feature.entit
 export enum PackageFeatureType {
   USER_UPGRADE = 'user_upgrade',
   ROLE_UPGRADE = 'role_upgrade',
+  CHAT = 'chat', // Chat system feature (deprecated, use SUPPORT)
+  SUPPORT = 'support', // Support features like chat system
 }
 
 @Entity('package_features')

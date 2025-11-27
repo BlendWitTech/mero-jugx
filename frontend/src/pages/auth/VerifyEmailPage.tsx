@@ -114,19 +114,19 @@ export default function VerifyEmailPage() {
   }, [token, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4">
-      <div className="card max-w-md w-full text-center shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-[#36393f] px-4">
+      <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8 max-w-md w-full text-center">
         {status === 'loading' && (
           <>
             <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary-100 mb-4">
-                <Loader2 className="h-10 w-10 text-primary-600 animate-spin" />
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#5865f2]/20 mb-4">
+                <Loader2 className="h-10 w-10 text-[#5865f2] animate-spin" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifying Email</h2>
-            <p className="text-gray-600 mb-4">{message}</p>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-primary-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            <h2 className="text-2xl font-bold text-white mb-2">Verifying Email</h2>
+            <p className="text-[#b9bbbe] mb-4">{message}</p>
+            <div className="w-full bg-[#202225] rounded-full h-2">
+              <div className="bg-[#5865f2] h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
             </div>
           </>
         )}
@@ -134,20 +134,20 @@ export default function VerifyEmailPage() {
         {status === 'success' && (
           <>
             <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4 animate-scale-in">
-                <CheckCircle className="h-12 w-12 text-green-600" />
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#23a55a]/20 mb-4 animate-scale-in">
+                <CheckCircle className="h-12 w-12 text-[#23a55a]" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification Successful!</h2>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-green-800">
+            <h2 className="text-2xl font-bold text-white mb-2">Verification Successful!</h2>
+            <p className="text-[#b9bbbe] mb-6">{message}</p>
+            <div className="bg-[#23a55a]/10 border border-[#23a55a]/20 rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#23a55a]">
                 ✅ Your email address has been verified successfully. You can now login to your account.
               </p>
             </div>
-            <p className="text-sm text-gray-500 mb-4">Redirecting to login page...</p>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-green-600 h-2 rounded-full animate-progress" style={{ width: '100%' }}></div>
+            <p className="text-sm text-[#8e9297] mb-4">Redirecting to login page...</p>
+            <div className="w-full bg-[#202225] rounded-full h-2">
+              <div className="bg-[#23a55a] h-2 rounded-full animate-progress" style={{ width: '100%' }}></div>
             </div>
             <button
               onClick={() => navigate('/login', { 
@@ -166,14 +166,14 @@ export default function VerifyEmailPage() {
         {status === 'error' && (
           <>
             <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-100 mb-4">
-                <XCircle className="h-12 w-12 text-red-600" />
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#ed4245]/20 mb-4">
+                <XCircle className="h-12 w-12 text-[#ed4245]" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification Failed</h2>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-red-800">
+            <h2 className="text-2xl font-bold text-white mb-2">Verification Failed</h2>
+            <p className="text-[#b9bbbe] mb-6">{message}</p>
+            <div className="bg-[#ed4245]/10 border border-[#ed4245]/20 rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#ed4245]">
                 ⚠️ The verification link is invalid or has expired. Please request a new verification email.
               </p>
             </div>

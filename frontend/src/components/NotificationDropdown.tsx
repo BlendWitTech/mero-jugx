@@ -296,25 +296,25 @@ export default function NotificationDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
+        className="relative p-2 text-[#b9bbbe] hover:text-white hover:bg-[#393c43] rounded transition-colors"
         aria-label="Notifications"
       >
         <Bell className="h-6 w-6" />
         {hasUnread && (
-          <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+          <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-[#ed4245] ring-2 ring-[#36393f]"></span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[600px] flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] z-50 max-h-[600px] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-[#202225]">
+            <h3 className="text-lg font-semibold text-white">Notifications</h3>
             <div className="flex items-center space-x-2">
               {hasUnread && (
                 <button
                   onClick={() => markAllAsReadMutation.mutate()}
                   disabled={markAllAsReadMutation.isPending}
-                  className="text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                  className="text-sm text-[#5865f2] hover:text-[#4752c4] disabled:opacity-50"
                   title="Mark all as read"
                 >
                   <CheckCheck className="h-4 w-4" />
@@ -322,28 +322,28 @@ export default function NotificationDropdown() {
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#b9bbbe] hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-[#202225] scrollbar-track-transparent">
             {isLoading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
+              <div className="p-4 text-center text-[#b9bbbe]">Loading...</div>
             ) : notifications.length === 0 ? (
               <div className="p-8 text-center">
-                <Bell className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                <p className="text-gray-500">No new notifications</p>
+                <Bell className="h-12 w-12 mx-auto mb-2 text-[#8e9297]" />
+                <p className="text-[#b9bbbe]">No new notifications</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-[#202225]">
                 {notifications.map((notification: any) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                      !notification.read_at ? 'bg-primary-50/50' : ''
+                    className={`p-4 hover:bg-[#393c43] transition-colors cursor-pointer ${
+                      !notification.read_at ? 'bg-[#5865f2]/10' : ''
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -351,15 +351,15 @@ export default function NotificationDropdown() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start">
                           {!notification.read_at && (
-                            <span className="mt-1.5 mr-2 h-2 w-2 rounded-full bg-primary-600 flex-shrink-0"></span>
+                            <span className="mt-1.5 mr-2 h-2 w-2 rounded-full bg-[#5865f2] flex-shrink-0"></span>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                            <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                            <p className="text-sm font-medium text-white">{notification.title}</p>
+                            <p className="text-sm text-[#b9bbbe] mt-1">{notification.message}</p>
                             <div className="flex items-center justify-between mt-2">
-                              <span className="text-xs text-gray-500">{formatTime(notification.created_at)}</span>
+                              <span className="text-xs text-[#8e9297]">{formatTime(notification.created_at)}</span>
                               {notification.data?.link && (
-                                <span className="text-xs text-primary-600 flex items-center">
+                                <span className="text-xs text-[#5865f2] flex items-center">
                                   View <ExternalLink className="h-3 w-3 ml-1" />
                                 </span>
                               )}
@@ -374,7 +374,7 @@ export default function NotificationDropdown() {
                               e.stopPropagation();
                               markAsReadMutation.mutate({ notificationId: notification.id, read: true });
                             }}
-                            className="p-1 text-gray-400 hover:text-primary-600"
+                            className="p-1 text-[#b9bbbe] hover:text-[#5865f2]"
                             title="Mark as read"
                           >
                             <Check className="h-4 w-4" />
@@ -385,7 +385,7 @@ export default function NotificationDropdown() {
                             e.stopPropagation();
                             deleteMutation.mutate(notification.id);
                           }}
-                          className="p-1 text-gray-400 hover:text-red-600"
+                          className="p-1 text-[#b9bbbe] hover:text-[#ed4245]"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -399,13 +399,13 @@ export default function NotificationDropdown() {
           </div>
 
           {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200">
+            <div className="p-3 border-t border-[#202225]">
               <button
                 onClick={() => {
                   navigate('/notifications');
                   setIsOpen(false);
                 }}
-                className="w-full text-sm text-primary-600 hover:text-primary-700 font-medium"
+                className="w-full text-sm text-[#5865f2] hover:text-[#4752c4] font-medium"
               >
                 View all notifications
               </button>

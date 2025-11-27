@@ -61,7 +61,7 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
     await roleRepository.save(newAdminRole);
     console.log('✓ Seeded role: Admin');
 
-    // Assign permissions to Admin (all except package upgrade/purchase)
+    // Assign permissions to Admin (all except package upgrade/purchase, but including all chat permissions)
     const adminPermissions = await permissionRepository.find({
       where: [
         { slug: 'users.view' },
@@ -84,6 +84,12 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
         { slug: 'mfa.disable' },
         { slug: 'mfa.backup-codes' },
         { slug: 'audit.view' },
+        // Chat permissions - automatically granted to Admin
+        { slug: 'chat.view' },
+        { slug: 'chat.create_group' },
+        { slug: 'chat.manage_group' },
+        { slug: 'chat.delete' },
+        { slug: 'chat.initiate_call' },
       ],
     });
 
@@ -97,6 +103,63 @@ export async function seedRoles(dataSource: DataSource): Promise<void> {
     }
     console.log(`✓ Assigned ${adminPermissions.length} permissions to Admin`);
   } else {
-    console.log('- Admin role already exists');
+    // Admin role already exists - ensure it has all required permissions
+    console.log('- Admin role already exists, ensuring permissions are assigned...');
+    const adminPermissions = await permissionRepository.find({
+      where: [
+        { slug: 'users.view' },
+        { slug: 'users.edit' },
+        { slug: 'users.delete' },
+        { slug: 'users.revoke' },
+        { slug: 'roles.view' },
+        { slug: 'roles.create' },
+        { slug: 'roles.edit' },
+        { slug: 'roles.delete' },
+        { slug: 'roles.assign' },
+        { slug: 'organizations.view' },
+        { slug: 'organizations.edit' },
+        { slug: 'organizations.settings' },
+        { slug: 'packages.view' },
+        { slug: 'invitations.view' },
+        { slug: 'invitations.create' },
+        { slug: 'invitations.cancel' },
+        { slug: 'mfa.setup' },
+        { slug: 'mfa.disable' },
+        { slug: 'mfa.backup-codes' },
+        { slug: 'audit.view' },
+        // Chat permissions - automatically granted to Admin
+        { slug: 'chat.view' },
+        { slug: 'chat.create_group' },
+        { slug: 'chat.manage_group' },
+        { slug: 'chat.delete' },
+        { slug: 'chat.initiate_call' },
+      ],
+    });
+
+    let assignedCount = 0;
+    for (const permission of adminPermissions) {
+      // Check if permission already exists
+      const existing = await rolePermissionRepository.findOne({
+        where: {
+          role_id: adminRole.id,
+          permission_id: permission.id,
+        },
+      });
+
+      if (!existing) {
+        await rolePermissionRepository.save(
+          rolePermissionRepository.create({
+            role_id: adminRole.id,
+            permission_id: permission.id,
+          }),
+        );
+        assignedCount++;
+      }
+    }
+    if (assignedCount > 0) {
+      console.log(`✓ Assigned ${assignedCount} missing permissions to existing Admin role`);
+    } else {
+      console.log('- Admin role already has all required permissions');
+    }
   }
 }

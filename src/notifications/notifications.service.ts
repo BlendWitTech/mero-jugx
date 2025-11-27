@@ -439,40 +439,46 @@ export class NotificationsService {
       }
     }
 
-    // Find or create preference
-    let preference = await this.preferenceRepository.findOne({
-      where: {
-        user_id: userId,
-        organization_id: organizationId,
-        scope: preferenceScope,
-      },
-    });
+      // For personal scope, organization_id should be set (per-organization personal preferences)
+      // For organization scope, organization_id should be set (organization-wide settings)
+      const queryOrganizationId = preferenceScope === NotificationPreferenceScope.ORGANIZATION 
+        ? organizationId 
+        : organizationId; // Personal preferences are also per-organization
 
-    if (!preference) {
-      preference = this.preferenceRepository.create({
-        user_id: userId,
-        organization_id: organizationId,
-        scope: preferenceScope,
-        email_enabled: dto.email_enabled !== undefined ? dto.email_enabled : true,
-        in_app_enabled: dto.in_app_enabled !== undefined ? dto.in_app_enabled : true,
-        preferences: dto.preferences || {},
+      // Find or create preference
+      let preference = await this.preferenceRepository.findOne({
+        where: {
+          user_id: userId,
+          organization_id: queryOrganizationId,
+          scope: preferenceScope,
+        },
       });
-    } else {
-      // Update existing preference - only update fields that are explicitly provided
-      if (dto.email_enabled !== undefined) {
-        preference.email_enabled = dto.email_enabled;
+
+      if (!preference) {
+        preference = this.preferenceRepository.create({
+          user_id: userId,
+          organization_id: queryOrganizationId,
+          scope: preferenceScope,
+          email_enabled: dto.email_enabled !== undefined ? dto.email_enabled : true,
+          in_app_enabled: dto.in_app_enabled !== undefined ? dto.in_app_enabled : true,
+          preferences: dto.preferences || {},
+        });
+      } else {
+        // Update existing preference - only update fields that are explicitly provided
+        if (dto.email_enabled !== undefined) {
+          preference.email_enabled = dto.email_enabled;
+        }
+        if (dto.in_app_enabled !== undefined) {
+          preference.in_app_enabled = dto.in_app_enabled;
+        }
+        if (dto.preferences !== undefined) {
+          // Merge preferences instead of replacing
+          preference.preferences = {
+            ...(preference.preferences || {}),
+            ...dto.preferences,
+          };
+        }
       }
-      if (dto.in_app_enabled !== undefined) {
-        preference.in_app_enabled = dto.in_app_enabled;
-      }
-      if (dto.preferences !== undefined) {
-        // Merge preferences instead of replacing
-        preference.preferences = {
-          ...(preference.preferences || {}),
-          ...dto.preferences,
-        };
-      }
-    }
 
     await this.preferenceRepository.save(preference);
 

@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -206,6 +207,61 @@ api.interceptors.response.use(
         }
         return Promise.reject(refreshError);
       }
+    }
+
+    // Show user-friendly error messages for non-401 errors
+    // Skip showing errors for auth endpoints (they handle their own errors)
+    if (error.response?.status && error.response.status !== 401 && !isAuthEndpoint && !isMfaSetupEndpoint) {
+      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+      const status = error.response.status;
+      
+      // Convert technical error messages to user-friendly ones
+      let userFriendlyMessage = errorMessage;
+      
+      // Role hierarchy errors
+      if (errorMessage.includes('cannot view users with the same or higher role level') || 
+          errorMessage.includes('cannot view users with higher role level') ||
+          errorMessage.includes('You cannot view users with the same or higher role level')) {
+        userFriendlyMessage = 'You do not have permission to view this user. You can only view users with lower roles than yours.';
+      } else if (errorMessage.includes('Organization Owner cannot be edited') ||
+                 errorMessage.includes('Organization Owner cannot be edited by any other user')) {
+        userFriendlyMessage = 'Organization owners can only edit their own profile. You cannot edit another organization owner\'s profile.';
+      } else if (errorMessage.includes('cannot edit users with the same or higher role level') ||
+                 errorMessage.includes('cannot edit users with higher role level')) {
+        userFriendlyMessage = 'You do not have permission to edit this user. You can only edit users with lower roles than yours.';
+      } else if (errorMessage.includes('cannot revoke access') ||
+                 errorMessage.includes('cannot revoke access for users')) {
+        userFriendlyMessage = 'You do not have permission to revoke this user\'s access. You can only revoke access for users with lower roles than yours.';
+      } else if (errorMessage.includes('Chat feature is not available')) {
+        userFriendlyMessage = errorMessage; // Already user-friendly
+      } else if (errorMessage.includes('do not have permission') ||
+                 errorMessage.includes('Insufficient permissions')) {
+        userFriendlyMessage = errorMessage; // Already user-friendly
+      } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+        userFriendlyMessage = 'The requested resource was not found.';
+      } else if (errorMessage.includes('already exists') || errorMessage.includes('already taken')) {
+        userFriendlyMessage = errorMessage || 'This resource already exists. Please use a different value.';
+      } else if (status === 403) {
+        userFriendlyMessage = errorMessage || 'You do not have permission to perform this action.';
+      } else if (status === 404) {
+        userFriendlyMessage = 'The requested resource was not found.';
+      } else if (status === 400) {
+        userFriendlyMessage = errorMessage || 'Invalid request. Please check your input and try again.';
+      } else if (status === 409) {
+        userFriendlyMessage = errorMessage || 'This resource already exists. Please use a different value.';
+      } else if (status === 422) {
+        userFriendlyMessage = errorMessage || 'Validation error. Please check your input and try again.';
+      } else if (status === 500) {
+        userFriendlyMessage = 'A server error occurred. Please try again later or contact support if the problem persists.';
+      } else if (status >= 500) {
+        userFriendlyMessage = 'A server error occurred. Please try again later or contact support if the problem persists.';
+      }
+      
+      // Show toast notification
+      toast.error(userFriendlyMessage, {
+        duration: 5000,
+        position: 'top-right',
+      });
     }
 
     return Promise.reject(error);

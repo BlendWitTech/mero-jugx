@@ -31,4 +31,9 @@ export class UpdateRoleDto {
   @IsOptional()
   @IsInt({ each: true })
   permission_ids?: number[];
+
+  @ApiPropertyOptional({ description: 'Hierarchy level (lower number = higher authority). Must be >= 3. Owner=1, Admin=2 are fixed.', minimum: 3 })
+  @IsOptional()
+  @IsInt()
+  hierarchy_level?: number;
 }

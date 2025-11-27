@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CommonModule } from './common/common.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { CommonModule } from './common/common.module';
     NotificationsModule,
     AuditLogsModule,
     PaymentsModule,
+    ChatModule,
     // PermissionsModule,
   ],
   controllers: [AppController],

@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -35,6 +36,9 @@ export class PaymentsController {
     @CurrentOrganization() organization: any,
     @Body() createPaymentDto: CreatePaymentDto,
   ) {
+    if (!organization || !organization.id) {
+      throw new NotFoundException('Organization not found. Please ensure you are a member of an organization.');
+    }
     return this.paymentsService.createPayment(user.userId, organization.id, createPaymentDto);
   }
 
@@ -104,6 +108,9 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get all payments for organization' })
   @ApiResponse({ status: 200, description: 'Payments retrieved successfully' })
   async getPayments(@CurrentUser() user: any, @CurrentOrganization() organization: any) {
+    if (!organization || !organization.id) {
+      throw new NotFoundException('Organization not found. Please ensure you are a member of an organization.');
+    }
     return this.paymentsService.getPayments(organization.id, user.userId);
   }
 
@@ -116,6 +123,9 @@ export class PaymentsController {
     @CurrentUser() user: any,
     @CurrentOrganization() organization: any,
   ) {
+    if (!organization || !organization.id) {
+      throw new NotFoundException('Organization not found. Please ensure you are a member of an organization.');
+    }
     return this.paymentsService.getPayment(paymentId, user.userId, organization.id);
   }
 }

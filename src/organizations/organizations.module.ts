@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OrganizationsController } from './organizations.controller';
 import { DocumentsController } from './documents.controller';
 import { OrganizationsService } from './organizations.service';
@@ -27,6 +29,16 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
       Invitation,
       Notification,
     ]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     CommonModule,
     AuditLogsModule,
   ],

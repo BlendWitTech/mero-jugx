@@ -41,9 +41,13 @@ export class AuditLogsService {
     ) {
       return 2; // Second level
     }
-    // For other roles, use creation order or a default level
-    // You could add a sort_order or level field to roles table in the future
-    return 3; // Default level for custom roles
+    // For custom/organization-specific roles, use hierarchy_level if set, otherwise default to 3
+    // hierarchy_level must be >= 3 (cannot override Owner=1 or Admin=2)
+    if (role.hierarchy_level !== null && role.hierarchy_level !== undefined && role.hierarchy_level >= 3) {
+      return role.hierarchy_level;
+    }
+    // Default to 3 if not set
+    return 3;
   }
 
   /**

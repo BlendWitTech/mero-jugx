@@ -566,6 +566,8 @@ export class AuthService {
       },
       organization: {
         id: membership.organization_id,
+        name: membership.organization.name,
+        slug: membership.organization.slug,
       },
     };
   }
@@ -692,6 +694,8 @@ export class AuthService {
       },
       organization: {
         id: membership.organization_id,
+        name: membership.organization.name,
+        slug: membership.organization.slug,
       },
     };
   }

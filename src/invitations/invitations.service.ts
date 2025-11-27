@@ -123,8 +123,8 @@ export class InvitationsService {
       );
     }
 
-    // Check if user is already a member
-    const existingMember = await this.memberRepository.findOne({
+    // Check if user is already an active member (exclude revoked/left members - they can be re-invited)
+    const existingActiveMember = await this.memberRepository.findOne({
       where: {
         organization_id: organizationId,
         user: { email: dto.email },
@@ -132,8 +132,8 @@ export class InvitationsService {
       },
     });
 
-    if (existingMember) {
-      throw new ConflictException('User is already a member of this organization');
+    if (existingActiveMember) {
+      throw new ConflictException('User is already an active member of this organization');
     }
 
     // Check if there's a pending invitation for this email
@@ -189,10 +189,24 @@ export class InvitationsService {
       }
     }
 
-    // Check if user exists
+    // Check if user exists (including revoked users - they can be re-invited)
     const existingUser = await this.userRepository.findOne({
       where: { email: dto.email },
     });
+
+    // If user exists, check if they have a revoked/left membership for this organization
+    // This helps us determine if this is a re-invitation
+    let isReinvitation = false;
+    if (existingUser) {
+      const revokedMembership = await this.memberRepository.findOne({
+        where: {
+          organization_id: organizationId,
+          user_id: existingUser.id,
+          status: In([OrganizationMemberStatus.REVOKED, OrganizationMemberStatus.LEFT]),
+        },
+      });
+      isReinvitation = !!revokedMembership;
+    }
 
     // Create invitation
     const token = crypto.randomUUID();
@@ -208,7 +222,7 @@ export class InvitationsService {
       expires_at: expiresAt,
       message: dto.message,
       invited_by: userId,
-      user_id: existingUser?.id || null, // Set user_id if existing user
+      user_id: existingUser?.id || null, // Set user_id if existing user (including revoked users)
     });
 
     const savedInvitation = await this.invitationRepository.save(invitation);
@@ -246,7 +260,7 @@ export class InvitationsService {
       inviterName,
       organization.name,
       token,
-      !existingUser, // isNewUser
+      !existingUser, // isNewUser - false if user exists (including revoked users)
     );
 
     // Create in-app notification for existing users
@@ -464,13 +478,20 @@ export class InvitationsService {
         throw new NotFoundException('User not found');
       }
 
-      if (user.status !== UserStatus.ACTIVE) {
-        throw new BadRequestException('User account is not active');
+      // Allow reactivating suspended users, but not deleted users
+      if (user.status === UserStatus.DELETED) {
+        throw new BadRequestException('User account has been deleted and cannot be reactivated');
+      }
+
+      // If user is suspended, reactivate them
+      if (user.status === UserStatus.SUSPENDED) {
+        user.status = UserStatus.ACTIVE;
+        await this.userRepository.save(user);
       }
     }
 
-    // Check if user is already a member
-    const existingMember = await this.memberRepository.findOne({
+    // Check if user is already an active member
+    const existingActiveMember = await this.memberRepository.findOne({
       where: {
         organization_id: invitation.organization_id,
         user_id: user.id,
@@ -478,8 +499,91 @@ export class InvitationsService {
       },
     });
 
-    if (existingMember) {
-      throw new ConflictException('User is already a member of this organization');
+    if (existingActiveMember) {
+      throw new ConflictException('User is already an active member of this organization');
+    }
+
+    // Check if user has a revoked/left membership - if so, reactivate it instead of creating new
+    const existingRevokedMember = await this.memberRepository.findOne({
+      where: {
+        organization_id: invitation.organization_id,
+        user_id: user.id,
+        status: In([OrganizationMemberStatus.REVOKED, OrganizationMemberStatus.LEFT]),
+      },
+    });
+
+    if (existingRevokedMember) {
+      // Reactivate the existing membership instead of creating a new one
+      existingRevokedMember.status = OrganizationMemberStatus.ACTIVE;
+      existingRevokedMember.role_id = invitation.role_id; // Update to the new role from invitation
+      existingRevokedMember.joined_at = new Date(); // Update joined date
+      existingRevokedMember.revoked_at = null;
+      existingRevokedMember.revoked_by = null;
+      existingRevokedMember.data_transferred_to = null;
+      
+      await this.memberRepository.save(existingRevokedMember);
+
+      // Update invitation status
+      invitation.status = InvitationStatus.ACCEPTED;
+      invitation.accepted_at = new Date();
+      invitation.user_id = user.id;
+      await this.invitationRepository.save(invitation);
+
+      // Create audit logs
+      try {
+        await this.auditLogsService.createAuditLog(
+          invitation.organization_id,
+          user.id,
+          'invitation.accept',
+          'invitation',
+          invitation.id,
+          {
+            status: InvitationStatus.PENDING,
+          },
+          {
+            status: InvitationStatus.ACCEPTED,
+            accepted_at: new Date(),
+            role_id: invitation.role_id,
+            membership_reactivated: true,
+          },
+        );
+
+        await this.auditLogsService.createAuditLog(
+          invitation.organization_id,
+          user.id,
+          'user.reactivated',
+          'user',
+          user.id,
+          {
+            status: existingRevokedMember.status,
+            role_id: existingRevokedMember.role_id,
+          },
+          {
+            status: OrganizationMemberStatus.ACTIVE,
+            role_id: invitation.role_id,
+            reactivated_via: 'invitation',
+          },
+        );
+      } catch (error) {
+        console.error('Failed to create audit logs for invitation acceptance:', error);
+      }
+
+      // Send confirmation email
+      await this.emailService.sendEmail(
+        user.email,
+        `Welcome back to ${invitation.organization.name}!`,
+        `
+          <h2>Welcome back!</h2>
+          <p>Hello ${user.first_name},</p>
+          <p>You have been re-invited and your access to <strong>${invitation.organization.name}</strong> has been reactivated.</p>
+          <p>You can now access the organization dashboard again.</p>
+        `,
+      );
+
+      return {
+        message: 'Invitation accepted successfully. Your access has been reactivated.',
+        user,
+      };
     }
 
     // Create organization membership
@@ -759,8 +863,13 @@ export class InvitationsService {
     ) {
       return 2; // Second level
     }
-    // For other roles, use creation order or a default level
-    return 3; // Default level for custom roles
+    // For custom/organization-specific roles, use hierarchy_level if set, otherwise default to 3
+    // hierarchy_level must be >= 3 (cannot override Owner=1 or Admin=2)
+    if (role.hierarchy_level !== null && role.hierarchy_level !== undefined && role.hierarchy_level >= 3) {
+      return role.hierarchy_level;
+    }
+    // Default to 3 if not set
+    return 3;
   }
 
   /**

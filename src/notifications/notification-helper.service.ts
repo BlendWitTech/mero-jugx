@@ -29,6 +29,12 @@ export enum NotificationType {
   MFA_ENABLED = 'mfa.enabled',
   MFA_DISABLED = 'mfa.disabled',
   SECURITY_ALERT = 'security.alert',
+  // Chat notifications
+  CHAT_MESSAGE = 'chat.message',
+  CHAT_UNREAD = 'chat.unread',
+  CHAT_MENTION = 'chat.mention',
+  CHAT_GROUP_ADDED = 'chat.group_added',
+  CHAT_INITIATED = 'chat.initiated',
 }
 
 export interface NotificationLink {
@@ -114,15 +120,37 @@ export class NotificationHelperService {
 
     try {
       // Get user's personal preferences for this organization
-      // If organizationId is null, this would check for global preferences
-      // Currently, preferences are per-organization (organization_id is always set)
-      const preference = await this.preferenceRepository.findOne({
+      // First check personal preferences, then organization-level if user is owner
+      let preference = await this.preferenceRepository.findOne({
         where: {
           user_id: userId,
-          organization_id: organizationId, // Per-organization preferences
+          organization_id: organizationId,
           scope: NotificationPreferenceScope.PERSONAL,
         },
       });
+
+      // If no personal preference found, check organization-level preferences (if user is owner)
+      if (!preference && organizationId) {
+        // Check if user is organization owner
+        const membership = await this.memberRepository.findOne({
+          where: {
+            user_id: userId,
+            organization_id: organizationId,
+            status: OrganizationMemberStatus.ACTIVE,
+          },
+          relations: ['role'],
+        });
+
+        if (membership?.role?.is_organization_owner) {
+          preference = await this.preferenceRepository.findOne({
+            where: {
+              user_id: userId,
+              organization_id: organizationId,
+              scope: NotificationPreferenceScope.ORGANIZATION,
+            },
+          });
+        }
+      }
 
       // If no preference found, default to enabled
       if (!preference) {
@@ -181,6 +209,12 @@ export class NotificationHelperService {
       [NotificationType.MFA_ENABLED]: 'security_alerts',
       [NotificationType.MFA_DISABLED]: 'security_alerts',
       [NotificationType.SECURITY_ALERT]: 'security_alerts',
+      // Chat notifications
+      [NotificationType.CHAT_MESSAGE]: 'chat_messages',
+      [NotificationType.CHAT_UNREAD]: 'chat_messages',
+      [NotificationType.CHAT_MENTION]: 'chat_mentions',
+      [NotificationType.CHAT_GROUP_ADDED]: 'chat_group_updates',
+      [NotificationType.CHAT_INITIATED]: 'chat_messages',
     };
     return typeMap[type] || 'other';
   }

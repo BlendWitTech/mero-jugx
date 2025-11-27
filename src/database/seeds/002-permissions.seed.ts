@@ -30,6 +30,12 @@ export async function seedPermissions(dataSource: DataSource): Promise<void> {
       category: 'users',
       description: 'Revoke user access and transfer data',
     },
+    {
+      name: 'Impersonate Users',
+      slug: 'users.impersonate',
+      category: 'users',
+      description: 'Impersonate users with lower roles for support purposes',
+    },
 
     // Role permissions
     {
@@ -145,6 +151,38 @@ export async function seedPermissions(dataSource: DataSource): Promise<void> {
       slug: 'audit.view',
       category: 'audit',
       description: 'View organization audit logs',
+    },
+
+    // Chat permissions
+    {
+      name: 'View Chats',
+      slug: 'chat.view',
+      category: 'chat',
+      description: 'View and access chats',
+    },
+    {
+      name: 'Create Group Chats',
+      slug: 'chat.create_group',
+      category: 'chat',
+      description: 'Create new group chats',
+    },
+    {
+      name: 'Manage Group Chats',
+      slug: 'chat.manage_group',
+      category: 'chat',
+      description: 'Manage group chat settings, add/remove members',
+    },
+    {
+      name: 'Delete Chats',
+      slug: 'chat.delete',
+      category: 'chat',
+      description: 'Delete chats and messages',
+    },
+    {
+      name: 'Initiate Calls',
+      slug: 'chat.initiate_call',
+      category: 'chat',
+      description: 'Start audio and video calls',
     },
   ];
 

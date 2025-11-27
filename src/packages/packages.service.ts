@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import * as crypto from 'crypto';
 import { Package } from '../database/entities/package.entity';
 import { PackageFeature, PackageFeatureType } from '../database/entities/package-feature.entity';
 import {
@@ -19,6 +20,8 @@ import {
   OrganizationMemberStatus,
 } from '../database/entities/organization-member.entity';
 import { Role } from '../database/entities/role.entity';
+import { Permission } from '../database/entities/permission.entity';
+import { RolePermission } from '../database/entities/role-permission.entity';
 import { UpgradePackageDto, SubscriptionPeriod } from './dto/upgrade-package.dto';
 import { PurchaseFeatureDto } from './dto/purchase-feature.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -39,6 +42,10 @@ export class PackagesService {
     private memberRepository: Repository<OrganizationMember>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @InjectRepository(Permission)
+    private permissionRepository: Repository<Permission>,
+    @InjectRepository(RolePermission)
+    private rolePermissionRepository: Repository<RolePermission>,
     private dataSource: DataSource,
     private auditLogsService: AuditLogsService,
   ) {}
@@ -251,17 +258,57 @@ export class PackagesService {
         organization.package_expires_at &&
         organization.package_expires_at > new Date()
       ) {
+        // Get active features to include in prorated credit
+        const activeFeatures = await this.orgFeatureRepository.find({
+          where: {
+            organization_id: organizationId,
+            status: OrganizationPackageFeatureStatus.ACTIVE,
+          },
+          relations: ['feature'],
+        });
+
+        // Find chat feature to check if it's already purchased
+        const chatFeature = await this.featureRepository.findOne({
+          where: { slug: 'chat-system', is_active: true },
+        });
+
+        // If upgrading to Platinum/Diamond and chat is already purchased, exclude it from credit calculation
+        // because we'll deduct its price from the new package price instead
+        const isUpgradingToPlatinumOrDiamond = newPackage.slug === 'platinum' || newPackage.slug === 'diamond';
+        const hasChatPurchased = chatFeature && activeFeatures.some(
+          (f) => f.feature_id === chatFeature.id
+        );
+
+        // Calculate total current monthly cost (package + features)
+        // If upgrading to Platinum/Diamond and chat is purchased, exclude chat from credit calculation
+        const currentPackagePrice = organization.package.price || 0;
+        const activeFeaturesPrice = activeFeatures.reduce((sum, orgFeature) => {
+          // Exclude chat feature price if upgrading to Platinum/Diamond (we'll deduct it separately)
+          if (isUpgradingToPlatinumOrDiamond && chatFeature && orgFeature.feature_id === chatFeature.id) {
+            return sum; // Don't include chat in credit calculation
+          }
+          return sum + (orgFeature.feature?.price || 0);
+        }, 0);
+        const totalCurrentMonthlyPrice = currentPackagePrice + activeFeaturesPrice;
+
+        // If upgrading to Platinum/Diamond and chat is already purchased, deduct chat price from new package price
+        let adjustedNewPackagePrice = newPackage.price;
+        if (isUpgradingToPlatinumOrDiamond && hasChatPurchased && chatFeature) {
+          // Deduct chat feature price from new package price (like we do for user upgrades)
+          adjustedNewPackagePrice = Math.max(0, newPackage.price - (chatFeature.price || 0));
+        }
+
         upgradePriceCalc = calculateUpgradePrice(
-          organization.package.price || 0,
-          newPackage.price,
+          totalCurrentMonthlyPrice,
+          adjustedNewPackagePrice,
           organization.package_expires_at,
           period,
           dto.custom_months,
         );
         proratedCredit = upgradePriceCalc.creditAmount;
 
-        // Calculate new subscription period
-        subscriptionCalc = calculateSubscription(newPackage.price, period, dto.custom_months);
+        // Calculate new subscription period using adjusted price
+        subscriptionCalc = calculateSubscription(adjustedNewPackagePrice, period, dto.custom_months);
 
         // Extend expiration from current expiration date (not from now)
         expirationDate = new Date(organization.package_expires_at);
@@ -333,6 +380,111 @@ export class PackagesService {
     console.log(
       `Package upgrade verified successfully: ${updatedOrganization.package.name} (ID: ${updatedOrganization.package.id})`,
     );
+
+    // Cancel redundant features if new package includes them
+    // If new package has unlimited users (-1), cancel any user_upgrade features
+    // If new package has unlimited roles (-1), cancel any role_upgrade features
+    if (newLimits.users === -1 || newLimits.roles === -1) {
+      const activeFeatures = await this.orgFeatureRepository.find({
+        where: {
+          organization_id: organizationId,
+          status: OrganizationPackageFeatureStatus.ACTIVE,
+        },
+        relations: ['feature'],
+      });
+
+      for (const orgFeature of activeFeatures) {
+        if (
+          (newLimits.users === -1 && orgFeature.feature?.type === PackageFeatureType.USER_UPGRADE) ||
+          (newLimits.roles === -1 && orgFeature.feature?.type === PackageFeatureType.ROLE_UPGRADE)
+        ) {
+          orgFeature.status = OrganizationPackageFeatureStatus.CANCELLED;
+          orgFeature.cancelled_at = new Date();
+          await this.orgFeatureRepository.save(orgFeature);
+
+          // Create audit log for feature cancellation
+          await this.auditLogsService.createAuditLog(
+            organizationId,
+            userId,
+            'package.feature.cancel',
+            'organization_package_feature',
+            orgFeature.id.toString(),
+            {
+              feature_id: orgFeature.feature_id,
+              feature_name: orgFeature.feature?.name,
+              status: OrganizationPackageFeatureStatus.ACTIVE,
+            },
+            {
+              feature_id: orgFeature.feature_id,
+              feature_name: orgFeature.feature?.name,
+              status: OrganizationPackageFeatureStatus.CANCELLED,
+              reason: 'Cancelled due to package upgrade - feature included in new package',
+            },
+          );
+        }
+      }
+    }
+
+    // Handle chat feature based on upgrade scenario
+    const chatFeature = await this.featureRepository.findOne({
+      where: { slug: 'chat-system', is_active: true },
+    });
+
+    if (chatFeature) {
+      const existingChatFeature = await this.orgFeatureRepository.findOne({
+        where: {
+          organization_id: organizationId,
+          feature_id: chatFeature.id,
+          status: OrganizationPackageFeatureStatus.ACTIVE,
+        },
+      });
+
+      // If upgrading to Platinum or Diamond
+      if (newPackage.slug === 'platinum' || newPackage.slug === 'diamond') {
+        // Auto-purchase chat system if not already purchased (it's free with Platinum/Diamond)
+        if (!existingChatFeature) {
+          const orgChatFeature = this.orgFeatureRepository.create({
+            organization_id: organizationId,
+            feature_id: chatFeature.id,
+            status: OrganizationPackageFeatureStatus.ACTIVE,
+            purchased_at: new Date(),
+          });
+
+          await this.orgFeatureRepository.save(orgChatFeature);
+
+          // Create audit log for auto-purchase
+          await this.auditLogsService.createAuditLog(
+            organizationId,
+            userId,
+            'package.feature.auto_purchase',
+            'package_feature',
+            orgChatFeature.id.toString(),
+            null,
+            {
+              feature_id: chatFeature.id,
+              feature_name: chatFeature.name,
+              feature_type: chatFeature.type,
+              reason: 'Auto-purchased with Platinum/Diamond package (free)',
+            },
+          );
+        }
+        // If chat was already purchased, keep it active (price was already deducted from upgrade price above)
+
+        // Assign chat permissions to Admin and Organization Owner roles
+        await this.assignChatPermissionsToAdminAndOwner(organizationId);
+      } else if (organization.package.slug === 'freemium' && newPackage.slug === 'basic') {
+        // When upgrading from freemium to basic:
+        // - If chat was purchased, keep it active
+        // - If chat was not purchased, don't give it (user needs to purchase separately)
+        if (existingChatFeature) {
+          // Chat was purchased, keep it active - no action needed
+          // Assign chat permissions to Admin and Organization Owner roles
+          await this.assignChatPermissionsToAdminAndOwner(organizationId);
+        }
+        // If chat was not purchased, do nothing - user can purchase it separately if they want
+      }
+      // For other upgrade scenarios, keep existing chat feature as-is
+    }
 
     // Create audit log
     const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
@@ -461,6 +613,11 @@ export class PackagesService {
 
     // Update organization limits based on feature
     await this.updateOrganizationLimits(organizationId);
+
+    // If chat feature is purchased, automatically assign chat permissions to Admin and Organization Owner roles
+    if (feature.slug === 'chat-system' || (feature.type === PackageFeatureType.SUPPORT && feature.name?.toLowerCase().includes('chat'))) {
+      await this.assignChatPermissionsToAdminAndOwner(organizationId);
+    }
 
     // Create audit log
     await this.auditLogsService.createAuditLog(
@@ -664,10 +821,28 @@ export class PackagesService {
       };
     }
 
+    // Get active features to include in prorated credit calculation
+    const activeFeatures = await this.orgFeatureRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationPackageFeatureStatus.ACTIVE,
+      },
+      relations: ['feature'],
+    });
+
+    // Calculate total current monthly cost (package + features)
+    const currentPackagePrice = organization.package.price || 0;
+    const activeFeaturesPrice = activeFeatures.reduce((sum, orgFeature) => {
+      return sum + (orgFeature.feature?.price || 0);
+    }, 0);
+    const totalCurrentMonthlyPrice = currentPackagePrice + activeFeaturesPrice;
+
     // Calculate upgrade price
     const period = dto.period || SubscriptionPeriod.THREE_MONTHS;
+    
+    // Calculate prorated credit from total current cost (package + features)
     const upgradePriceCalc = calculateUpgradePrice(
-      organization.package.price || 0,
+      totalCurrentMonthlyPrice,
       newPackage.price,
       organization.package_expires_at,
       period,
@@ -687,10 +862,33 @@ export class PackagesService {
     };
   }
 
+  private encryptCredentials(credentials: any): string {
+    // Use environment variable for encryption key, fallback to a default (not recommended for production)
+    const encryptionKey = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production';
+    const algorithm = 'aes-256-cbc';
+    const key = crypto.scryptSync(encryptionKey, 'salt', 32);
+    const iv = crypto.randomBytes(16);
+    
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    const credentialsJson = JSON.stringify(credentials);
+    let encrypted = cipher.update(credentialsJson, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    // Return IV + encrypted data (IV is needed for decryption)
+    return iv.toString('hex') + ':' + encrypted;
+  }
+
   async toggleAutoRenew(
     userId: string,
     organizationId: string,
     enabled: boolean,
+    credentials?: {
+      payment_method: 'esewa' | 'stripe';
+      esewa_username?: string;
+      stripe_card_token?: string;
+      card_last4?: string;
+      card_brand?: string;
+    },
   ): Promise<{ message: string; auto_renew: boolean }> {
     // Verify user is member and has permission (packages.upgrade)
     const membership = await this.memberRepository.findOne({
@@ -731,11 +929,36 @@ export class PackagesService {
       throw new NotFoundException('Organization not found');
     }
 
+    // If enabling auto-renewal, credentials are required
+    if (enabled && !credentials) {
+      throw new BadRequestException('Payment credentials are required to enable auto-renewal');
+    }
+
+    // Validate credentials based on payment method
+    if (enabled && credentials) {
+      if (credentials.payment_method === 'esewa' && !credentials.esewa_username?.trim()) {
+        throw new BadRequestException('eSewa username is required');
+      }
+      if (credentials.payment_method === 'stripe' && !credentials.stripe_card_token) {
+        throw new BadRequestException('Stripe card token is required');
+      }
+    }
+
     // Store old value for audit log
     const oldAutoRenew = organization.package_auto_renew;
+    const oldHasCredentials = !!organization.package_auto_renew_credentials;
 
     // Update auto-renewal setting
     organization.package_auto_renew = enabled;
+    
+    // Encrypt and save credentials if provided
+    if (enabled && credentials) {
+      organization.package_auto_renew_credentials = this.encryptCredentials(credentials);
+    } else if (!enabled) {
+      // Clear credentials when disabling
+      organization.package_auto_renew_credentials = null;
+    }
+    
     await this.organizationRepository.save(organization);
 
     // Create audit log
@@ -747,9 +970,12 @@ export class PackagesService {
       organizationId,
       {
         package_auto_renew: oldAutoRenew,
+        has_credentials: oldHasCredentials,
       },
       {
         package_auto_renew: enabled,
+        has_credentials: enabled && !!credentials,
+        payment_method: credentials?.payment_method,
       },
     );
 
@@ -860,6 +1086,90 @@ export class PackagesService {
       throw new BadRequestException(
         `Cannot downgrade: Current custom role count (${currentCustomRoles}) exceeds new limit (${newLimits.roles}). Default roles (Organization Owner and Admin) are not counted. Please remove custom roles first.`,
       );
+    }
+  }
+
+  /**
+   * Automatically assign chat permissions and users.view to Admin and Organization Owner roles
+   * when chat feature is purchased
+   */
+  private async assignChatPermissionsToAdminAndOwner(organizationId: string): Promise<void> {
+    // Get all chat permissions
+    const chatPermissions = await this.permissionRepository.find({
+      where: [
+        { slug: 'chat.view' },
+        { slug: 'chat.create_group' },
+        { slug: 'chat.manage_group' },
+        { slug: 'chat.delete' },
+        { slug: 'chat.initiate_call' },
+      ],
+    });
+
+    // Also get users.view permission (needed for Members and Online Now features)
+    const usersViewPermission = await this.permissionRepository.findOne({
+      where: { slug: 'users.view' },
+    });
+
+    const permissionsToAssign = [...chatPermissions];
+    if (usersViewPermission) {
+      permissionsToAssign.push(usersViewPermission);
+    }
+
+    if (permissionsToAssign.length === 0) {
+      return; // Permissions not found, skip
+    }
+
+    // Get Admin and Organization Owner roles (system roles)
+    const adminRole = await this.roleRepository.findOne({
+      where: { slug: 'admin', is_system_role: true },
+    });
+
+    const ownerRole = await this.roleRepository.findOne({
+      where: { slug: 'organization-owner', is_system_role: true },
+    });
+
+    // Assign permissions to Admin role
+    if (adminRole) {
+      for (const permission of permissionsToAssign) {
+        // Check if permission already exists
+        const existing = await this.rolePermissionRepository.findOne({
+          where: {
+            role_id: adminRole.id,
+            permission_id: permission.id,
+          },
+        });
+
+        if (!existing) {
+          await this.rolePermissionRepository.save(
+            this.rolePermissionRepository.create({
+              role_id: adminRole.id,
+              permission_id: permission.id,
+            }),
+          );
+        }
+      }
+    }
+
+    // Assign permissions to Organization Owner role
+    if (ownerRole) {
+      for (const permission of permissionsToAssign) {
+        // Check if permission already exists
+        const existing = await this.rolePermissionRepository.findOne({
+          where: {
+            role_id: ownerRole.id,
+            permission_id: permission.id,
+          },
+        });
+
+        if (!existing) {
+          await this.rolePermissionRepository.save(
+            this.rolePermissionRepository.create({
+              role_id: ownerRole.id,
+              permission_id: permission.id,
+            }),
+          );
+        }
+      }
     }
   }
 }

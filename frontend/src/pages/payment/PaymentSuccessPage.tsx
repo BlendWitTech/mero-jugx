@@ -291,44 +291,44 @@ export default function PaymentSuccessPage() {
   }, [refId, transactionId, sessionId, userToken, tokenMessage, esewaData, allParams, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
+    <div className="min-h-screen bg-[#36393f] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8 text-center">
         {verifying ? (
           <>
-            <Loader2 className="h-16 w-16 text-blue-600 mx-auto mb-4 animate-spin" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <Loader2 className="h-16 w-16 text-[#5865f2] mx-auto mb-4 animate-spin" />
+            <h2 className="text-2xl font-bold text-white mb-2">
               Verifying Payment...
             </h2>
-            <p className="text-gray-600">
+            <p className="text-[#b9bbbe]">
               Please wait while we verify your payment with eSewa.
             </p>
           </>
         ) : verified ? (
           <>
-            <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <CheckCircle className="h-16 w-16 text-[#23a55a] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">
               Payment Successful!
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-[#b9bbbe] mb-4">
               Your payment has been verified and processed successfully.
             </p>
-            <p className="text-sm text-gray-500">
-              Redirecting to payments page...
+            <p className="text-sm text-[#8e9297]">
+              Redirecting to packages page...
             </p>
           </>
         ) : (
           <>
-            <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl text-red-600">✕</span>
+            <div className="h-16 w-16 bg-[#ed4245]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl text-[#ed4245]">✕</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-white mb-2">
               Payment Verification Failed
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-[#b9bbbe] mb-4">
               We couldn't verify your payment. Please contact support if you believe this is an error.
             </p>
-            <p className="text-sm text-gray-500">
-              Redirecting to payment page...
+            <p className="text-sm text-[#8e9297]">
+              Redirecting to packages page...
             </p>
           </>
         )}

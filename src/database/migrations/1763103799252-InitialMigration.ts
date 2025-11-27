@@ -68,7 +68,7 @@ export class InitialMigration1763103799252 implements MigrationInterface {
       `CREATE UNIQUE INDEX "IDX_e577dcf9bb6d084373ed399850" ON "invitations" ("token") `,
     );
     await queryRunner.query(
-      `CREATE TYPE "public"."package_features_type_enum" AS ENUM('user_upgrade', 'role_upgrade')`,
+      `CREATE TYPE "public"."package_features_type_enum" AS ENUM('user_upgrade', 'role_upgrade', 'chat', 'support')`,
     );
     await queryRunner.query(
       `CREATE TABLE "package_features" ("id" SERIAL NOT NULL, "name" character varying(100) NOT NULL, "slug" character varying(100) NOT NULL, "type" "public"."package_features_type_enum" NOT NULL, "value" integer, "price" numeric(10,2) NOT NULL, "description" text, "is_active" boolean NOT NULL DEFAULT true, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_414a566d05aa19276fd12c94e95" UNIQUE ("name"), CONSTRAINT "UQ_472218c0cc935b5b820d0bca3b3" UNIQUE ("slug"), CONSTRAINT "PK_62d8d878bc152b6b42224c7ff15" PRIMARY KEY ("id"))`,
@@ -210,6 +210,117 @@ export class InitialMigration1763103799252 implements MigrationInterface {
       `CREATE UNIQUE INDEX "IDX_97672ac88f789774dd47f7c8be" ON "users" ("email") `,
     );
     await queryRunner.query(
+      `CREATE TYPE "public"."chats_type_enum" AS ENUM('direct', 'group')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."chats_status_enum" AS ENUM('active', 'archived', 'deleted')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."chat_members_role_enum" AS ENUM('owner', 'admin', 'member')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."chat_members_status_enum" AS ENUM('active', 'left', 'removed')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."messages_type_enum" AS ENUM('text', 'image', 'file', 'audio', 'video', 'system')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."messages_status_enum" AS ENUM('sent', 'delivered', 'read', 'deleted')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."call_sessions_type_enum" AS ENUM('audio', 'video')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."call_sessions_status_enum" AS ENUM('initiating', 'ringing', 'active', 'ended', 'cancelled', 'missed')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."call_participants_status_enum" AS ENUM('invited', 'ringing', 'joined', 'left', 'declined', 'missed')`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "chats" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "organization_id" uuid NOT NULL, "type" "public"."chats_type_enum" NOT NULL, "name" character varying(255), "description" text, "avatar_url" character varying(500), "created_by" uuid NOT NULL, "status" "public"."chats_status_enum" NOT NULL DEFAULT 'active', "last_message_at" TIMESTAMP, "last_message_id" uuid, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_9f0ab25c70993be9c8712741410" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chats_organization_id" ON "chats" ("organization_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chats_type" ON "chats" ("type") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chats_status" ON "chats" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chats_created_by" ON "chats" ("created_by") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "chat_members" ("id" SERIAL NOT NULL, "chat_id" uuid NOT NULL, "user_id" uuid NOT NULL, "role" "public"."chat_members_role_enum" NOT NULL DEFAULT 'member', "status" "public"."chat_members_status_enum" NOT NULL DEFAULT 'active', "last_read_at" TIMESTAMP, "unread_count" integer NOT NULL DEFAULT '0', "notifications_enabled" boolean NOT NULL DEFAULT true, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_chat_members_chat_user" UNIQUE ("chat_id", "user_id"), CONSTRAINT "PK_chat_members" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chat_members_chat_id" ON "chat_members" ("chat_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chat_members_user_id" ON "chat_members" ("user_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_chat_members_status" ON "chat_members" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "messages" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "chat_id" uuid NOT NULL, "sender_id" uuid NOT NULL, "type" "public"."messages_type_enum" NOT NULL DEFAULT 'text', "content" text, "status" "public"."messages_status_enum" NOT NULL DEFAULT 'sent', "reply_to_id" uuid, "is_edited" boolean NOT NULL DEFAULT false, "edited_at" TIMESTAMP, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP, CONSTRAINT "PK_messages" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_messages_chat_id" ON "messages" ("chat_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_messages_sender_id" ON "messages" ("sender_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_messages_created_at" ON "messages" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_messages_status" ON "messages" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "message_attachments" ("id" SERIAL NOT NULL, "message_id" uuid NOT NULL, "file_name" character varying(255) NOT NULL, "file_url" character varying(500) NOT NULL, "file_type" character varying(100) NOT NULL, "file_size" bigint NOT NULL, "thumbnail_url" character varying(500), "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_message_attachments" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_message_attachments_message_id" ON "message_attachments" ("message_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "message_reactions" ("id" SERIAL NOT NULL, "message_id" uuid NOT NULL, "user_id" uuid NOT NULL, "emoji" character varying(10) NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_message_reactions_message_user_emoji" UNIQUE ("message_id", "user_id", "emoji"), CONSTRAINT "PK_message_reactions" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_message_reactions_message_id" ON "message_reactions" ("message_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_message_reactions_user_id" ON "message_reactions" ("user_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "call_sessions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "chat_id" uuid NOT NULL, "initiated_by" uuid NOT NULL, "type" "public"."call_sessions_type_enum" NOT NULL, "status" "public"."call_sessions_status_enum" NOT NULL DEFAULT 'initiating', "started_at" TIMESTAMP, "ended_at" TIMESTAMP, "duration_seconds" integer, "webrtc_offer" character varying(500), "webrtc_answer" character varying(500), "ice_candidates" jsonb, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_call_sessions" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_sessions_chat_id" ON "call_sessions" ("chat_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_sessions_initiated_by" ON "call_sessions" ("initiated_by") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_sessions_status" ON "call_sessions" ("status") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_sessions_created_at" ON "call_sessions" ("created_at") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "call_participants" ("id" SERIAL NOT NULL, "call_session_id" uuid NOT NULL, "user_id" uuid NOT NULL, "status" "public"."call_participants_status_enum" NOT NULL DEFAULT 'invited', "joined_at" TIMESTAMP, "left_at" TIMESTAMP, "audio_enabled" boolean NOT NULL DEFAULT false, "video_enabled" boolean NOT NULL DEFAULT false, "webrtc_connection_id" character varying(500), "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_call_participants_call_user" UNIQUE ("call_session_id", "user_id"), CONSTRAINT "PK_call_participants" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_participants_call_session_id" ON "call_participants" ("call_session_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_participants_user_id" ON "call_participants" ("user_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_call_participants_status" ON "call_participants" ("status") `,
+    );
+    await queryRunner.query(
       `ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_178199805b901ccd220ab7740ec" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
@@ -278,9 +389,93 @@ export class InitialMigration1763103799252 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "audit_logs" ADD CONSTRAINT "FK_bd2726fd31b35443f2245b93ba0" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`,
     );
+    await queryRunner.query(
+      `ALTER TABLE "chats" ADD CONSTRAINT "FK_chats_organization" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chats" ADD CONSTRAINT "FK_chats_created_by" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chat_members" ADD CONSTRAINT "FK_chat_members_chat" FOREIGN KEY ("chat_id") REFERENCES "chats"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chat_members" ADD CONSTRAINT "FK_chat_members_user" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "messages" ADD CONSTRAINT "FK_messages_chat" FOREIGN KEY ("chat_id") REFERENCES "chats"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "messages" ADD CONSTRAINT "FK_messages_sender" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "messages" ADD CONSTRAINT "FK_messages_reply_to" FOREIGN KEY ("reply_to_id") REFERENCES "messages"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "message_attachments" ADD CONSTRAINT "FK_message_attachments_message" FOREIGN KEY ("message_id") REFERENCES "messages"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "message_reactions" ADD CONSTRAINT "FK_message_reactions_message" FOREIGN KEY ("message_id") REFERENCES "messages"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "message_reactions" ADD CONSTRAINT "FK_message_reactions_user" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_sessions" ADD CONSTRAINT "FK_call_sessions_chat" FOREIGN KEY ("chat_id") REFERENCES "chats"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_sessions" ADD CONSTRAINT "FK_call_sessions_initiated_by" FOREIGN KEY ("initiated_by") REFERENCES "users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_participants" ADD CONSTRAINT "FK_call_participants_call_session" FOREIGN KEY ("call_session_id") REFERENCES "call_sessions"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_participants" ADD CONSTRAINT "FK_call_participants_user" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE "call_participants" DROP CONSTRAINT "FK_call_participants_user"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_participants" DROP CONSTRAINT "FK_call_participants_call_session"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_sessions" DROP CONSTRAINT "FK_call_sessions_initiated_by"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "call_sessions" DROP CONSTRAINT "FK_call_sessions_chat"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "message_reactions" DROP CONSTRAINT "FK_message_reactions_user"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "message_reactions" DROP CONSTRAINT "FK_message_reactions_message"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "message_attachments" DROP CONSTRAINT "FK_message_attachments_message"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "messages" DROP CONSTRAINT "FK_messages_reply_to"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "messages" DROP CONSTRAINT "FK_messages_sender"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "messages" DROP CONSTRAINT "FK_messages_chat"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chat_members" DROP CONSTRAINT "FK_chat_members_user"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chat_members" DROP CONSTRAINT "FK_chat_members_chat"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chats" DROP CONSTRAINT "FK_chats_created_by"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "chats" DROP CONSTRAINT "FK_chats_organization"`,
+    );
     await queryRunner.query(
       `ALTER TABLE "audit_logs" DROP CONSTRAINT "FK_bd2726fd31b35443f2245b93ba0"`,
     );
@@ -348,6 +543,43 @@ export class InitialMigration1763103799252 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_178199805b901ccd220ab7740ec"`,
     );
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_participants_status"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_participants_user_id"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_participants_call_session_id"`);
+    await queryRunner.query(`DROP TABLE "call_participants"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_sessions_created_at"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_sessions_status"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_sessions_initiated_by"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_call_sessions_chat_id"`);
+    await queryRunner.query(`DROP TABLE "call_sessions"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_message_reactions_user_id"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_message_reactions_message_id"`);
+    await queryRunner.query(`DROP TABLE "message_reactions"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_message_attachments_message_id"`);
+    await queryRunner.query(`DROP TABLE "message_attachments"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_messages_status"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_messages_created_at"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_messages_sender_id"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_messages_chat_id"`);
+    await queryRunner.query(`DROP TABLE "messages"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chat_members_status"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chat_members_user_id"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chat_members_chat_id"`);
+    await queryRunner.query(`DROP TABLE "chat_members"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chats_created_by"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chats_status"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chats_type"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_chats_organization_id"`);
+    await queryRunner.query(`DROP TABLE "chats"`);
+    await queryRunner.query(`DROP TYPE "public"."call_participants_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."call_sessions_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."call_sessions_type_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."messages_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."messages_type_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."chat_members_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."chat_members_role_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."chats_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."chats_type_enum"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_97672ac88f789774dd47f7c8be"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_3676155292d72c67cd4e090514"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_cf96ca0dc9c97fdc2ae06831d8"`);
@@ -409,6 +641,8 @@ export class InitialMigration1763103799252 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX "public"."IDX_472218c0cc935b5b820d0bca3b"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_fa94e031b5dbb95b495e8f9580"`);
     await queryRunner.query(`DROP TABLE "package_features"`);
+    // Note: Cannot remove enum value 'chat' from package_features_type_enum in PostgreSQL
+    // The enum will remain but won't cause issues
     await queryRunner.query(`DROP TYPE "public"."package_features_type_enum"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_e577dcf9bb6d084373ed399850"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_3afc80b5ecc0276428da3e3a87"`);

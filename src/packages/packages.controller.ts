@@ -112,8 +112,26 @@ export class OrganizationPackagesController {
   @ApiOperation({ summary: 'Toggle package auto-renewal' })
   @ApiResponse({ status: 200, description: 'Auto-renewal toggled successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async toggleAutoRenew(@CurrentUser() user: any, @Body() body: { enabled: boolean }) {
-    return this.packagesService.toggleAutoRenew(user.userId, user.organizationId, body.enabled);
+  @ApiResponse({ status: 400, description: 'Invalid credentials or missing required fields' })
+  async toggleAutoRenew(
+    @CurrentUser() user: any,
+    @Body() body: {
+      enabled: boolean;
+      credentials?: {
+        payment_method: 'esewa' | 'stripe';
+        esewa_username?: string;
+        stripe_card_token?: string;
+        card_last4?: string;
+        card_brand?: string;
+      };
+    },
+  ) {
+    return this.packagesService.toggleAutoRenew(
+      user.userId,
+      user.organizationId,
+      body.enabled,
+      body.credentials,
+    );
   }
 
   @Post('me/package/calculate-upgrade-price')

@@ -9,11 +9,16 @@ import {
   formatCurrency,
   isNepalRegion,
 } from '../../utils/currency';
+import { usePermissions } from '../../hooks/usePermissions';
+import { formatLimit } from '../../utils/formatLimit';
 
 export default function PackagesPage() {
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const queryClient = useQueryClient();
   const [isNepal] = useState(() => isNepalRegion());
+  const { hasPermission } = usePermissions();
+  const canUpgradePackage = hasPermission('packages.upgrade');
+  const canPurchaseFeature = hasPermission('packages.features.purchase');
   const [selectedGateway, setSelectedGateway] = useState<'esewa' | 'stripe'>('esewa');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
@@ -31,6 +36,15 @@ export default function PackagesPage() {
     can_upgrade: boolean;
     reason?: string;
   } | null>(null);
+  const [showCredentialModal, setShowCredentialModal] = useState(false);
+  const [pendingAutoRenew, setPendingAutoRenew] = useState<boolean | null>(null);
+  const [autoRenewCredentials, setAutoRenewCredentials] = useState({
+    payment_method: 'esewa' as 'esewa' | 'stripe',
+    esewa_username: '',
+    stripe_card_token: '',
+    card_last4: '',
+    card_brand: '',
+  });
 
   // Format date helper
   const formatDate = (dateString: string | null | undefined) => {
@@ -129,18 +143,63 @@ export default function PackagesPage() {
 
   // Toggle auto-renewal mutation
   const toggleAutoRenewMutation = useMutation({
-    mutationFn: async (enabled: boolean) => {
-      const response = await api.put('/organizations/me/package/auto-renew', { enabled });
+    mutationFn: async (data: { enabled: boolean; credentials?: any }) => {
+      const response = await api.put('/organizations/me/package/auto-renew', {
+        enabled: data.enabled,
+        credentials: data.credentials,
+      });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['current-package'] });
       toast.success('Auto-renewal setting updated');
+      setShowCredentialModal(false);
+      setPendingAutoRenew(null);
+      setAutoRenewCredentials({
+        payment_method: 'esewa',
+        esewa_username: '',
+        stripe_card_token: '',
+        card_last4: '',
+        card_brand: '',
+      });
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Failed to update auto-renewal setting');
     },
   });
+
+  const handleAutoRenewToggle = (enabled: boolean) => {
+    if (enabled) {
+      // If enabling, show credential modal first
+      setPendingAutoRenew(true);
+      setShowCredentialModal(true);
+    } else {
+      // If disabling, just toggle directly
+      toggleAutoRenewMutation.mutate({ enabled: false });
+    }
+  };
+
+  const handleSaveCredentials = () => {
+    if (pendingAutoRenew === null) return;
+
+    // Validate credentials based on payment method
+    if (autoRenewCredentials.payment_method === 'esewa') {
+      if (!autoRenewCredentials.esewa_username.trim()) {
+        toast.error('Please enter your eSewa username');
+        return;
+      }
+    } else if (autoRenewCredentials.payment_method === 'stripe') {
+      if (!autoRenewCredentials.stripe_card_token) {
+        toast.error('Please provide payment card information');
+        return;
+      }
+    }
+
+    toggleAutoRenewMutation.mutate({
+      enabled: pendingAutoRenew,
+      credentials: autoRenewCredentials,
+    });
+  };
 
   // Refetch current package when component mounts, comes into focus, or when package is updated
   // This ensures we have the latest package data after payment
@@ -279,6 +338,9 @@ export default function PackagesPage() {
         return;
       }
 
+      // Store return path before redirecting to payment gateway
+      localStorage.setItem('payment_return_path', '/packages');
+
       const gateway = data.payment?.gateway || 'esewa';
       console.log(`Creating ${gateway} payment for package upgrade:`, {
         url: data.payment_form.formUrl,
@@ -401,6 +463,9 @@ export default function PackagesPage() {
         console.error('Payment form data:', data);
         return;
       }
+
+      // Store return path before redirecting to payment gateway
+      localStorage.setItem('payment_return_path', '/packages');
 
       const gateway = data.payment?.gateway || 'esewa';
       console.log(`Creating ${gateway} payment for feature purchase:`, {
@@ -647,25 +712,32 @@ export default function PackagesPage() {
   };
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Packages</h1>
-        <p className="mt-2 text-gray-600">Manage your organization package and features</p>
+    <div className="w-full p-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#5865f2] rounded-lg">
+            <Package className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Packages</h1>
+            <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage your organization package and features</p>
+          </div>
+        </div>
       </div>
 
       {isLoadingCurrent || isLoadingPackages || isLoadingFeatures ? (
         <div className="card animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-8 bg-[#36393f] rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-[#36393f] rounded w-1/2"></div>
         </div>
       ) : (
         <>
           {/* Current Package - Collapsible */}
           {currentPackage && (
-            <div className="card mb-6 overflow-hidden">
+            <div className="card mb-4 overflow-hidden">
               <button
                 onClick={() => setIsCurrentPackageExpanded(!isCurrentPackageExpanded)}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between p-4 hover:bg-[#393c43] transition-colors"
               >
                 <div className="flex items-center flex-1">
                   <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 mr-4">
@@ -673,18 +745,18 @@ export default function PackagesPage() {
                   </div>
                   <div className="text-left flex-1">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold text-gray-900">
+                      <h2 className="text-lg font-semibold text-white">
                         {getPackageDisplayName()}
                       </h2>
                       {currentPackage?.active_features && currentPackage.active_features.length > 0 && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full flex items-center gap-1">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-[#5865f2]/20 to-[#5865f2]/30 text-[#5865f2] border border-[#5865f2]/30 rounded-full flex items-center gap-1">
                           <Sparkles className="h-3 w-3" />
                           Upgraded
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {currentPackage?.current_limits?.users || 0} users, {currentPackage?.current_limits?.roles || 0} roles
+                    <p className="text-sm text-[#b9bbbe] mt-1">
+                      {formatLimit(currentPackage?.current_limits?.users)} users, {formatLimit(currentPackage?.current_limits?.roles)} roles
                     </p>
                   </div>
                 </div>
@@ -700,7 +772,7 @@ export default function PackagesPage() {
                     
                     return (
                       <div className="text-right">
-                        <p className="text-xl font-bold text-primary-600">
+                        <p className="text-xl font-bold text-[#5865f2]">
                           {totalPrice === 0 
                             ? 'Free' 
                             : isNepal
@@ -708,40 +780,40 @@ export default function PackagesPage() {
                               : `${formatCurrency(totalPrice, 'USD')} (≈ ${formatCurrency(convertUSDToNPR(totalPrice), 'NPR')})`}
                         </p>
                         {totalPrice > 0 && (
-                          <p className="text-xs text-gray-500">per month</p>
+                          <p className="text-xs text-[#8e9297]">per month</p>
                         )}
                       </div>
                     );
                   })()}
                   {isCurrentPackageExpanded ? (
-                    <ChevronUp className="h-5 w-5 text-gray-400" />
+                    <ChevronUp className="h-5 w-5 text-[#8e9297]" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="h-5 w-5 text-[#8e9297]" />
                   )}
                 </div>
               </button>
 
               {isCurrentPackageExpanded && (
-                <div className="px-4 pb-4 border-t border-gray-200 pt-4 space-y-4">
+                <div className="px-4 pb-4 border-t border-[#202225] pt-4 space-y-4">
 
                   {/* Package Expiration */}
                   {currentPackage?.package_expires_at && (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                        <span>Expires on: <strong className="text-gray-900">{formatDate(currentPackage.package_expires_at)}</strong></span>
+                    <div className="flex items-center justify-between p-3 bg-[#202225] rounded-lg border border-[#36393f]">
+                      <div className="flex items-center text-sm text-[#b9bbbe]">
+                        <Calendar className="h-4 w-4 mr-2 text-[#5865f2]" />
+                        <span>Expires on: <strong className="text-white">{formatDate(currentPackage.package_expires_at)}</strong></span>
                       </div>
                       {(() => {
                         const daysRemaining = getDaysRemaining(currentPackage.package_expires_at);
                         if (daysRemaining !== null) {
                           if (daysRemaining < 0) {
-                            return <span className="px-2 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded">Expired</span>;
+                            return <span className="px-2 py-1 text-xs font-semibold bg-[#ed4245]/20 text-[#ed4245] border border-[#ed4245]/30 rounded">Expired</span>;
                           } else if (daysRemaining <= 3) {
-                            return <span className="px-2 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left</span>;
+                            return <span className="px-2 py-1 text-xs font-semibold bg-[#ed4245]/20 text-[#ed4245] border border-[#ed4245]/30 rounded">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left</span>;
                           } else if (daysRemaining <= 7) {
-                            return <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left</span>;
+                            return <span className="px-2 py-1 text-xs font-semibold bg-[#faa61a]/20 text-[#faa61a] border border-[#faa61a]/30 rounded">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left</span>;
                           } else {
-                            return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left</span>;
+                            return <span className="px-2 py-1 text-xs font-medium bg-[#23a55a]/20 text-[#23a55a] border border-[#23a55a]/30 rounded">{daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left</span>;
                           }
                         }
                         return null;
@@ -750,28 +822,33 @@ export default function PackagesPage() {
                   )}
 
                   {/* Auto-Renewal Toggle */}
-                  {currentPackage?.package && currentPackage.package.price > 0 && (
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Auto-Renewal</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Automatically renew when package expires</p>
+                  {currentPackage?.package && currentPackage.package.price > 0 && canUpgradePackage && (
+                    <div className="flex items-center justify-between p-3 bg-[#202225] rounded-lg border border-[#36393f]">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="p-2 bg-[#5865f2]/20 rounded-lg">
+                          <Calendar className="h-4 w-4 text-[#5865f2]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white">Auto-Renewal</p>
+                          <p className="text-xs text-[#8e9297] mt-0.5">Automatically renew when package expires</p>
+                        </div>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
+                      <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
                         <input
                           type="checkbox"
                           checked={currentPackage?.package_auto_renew || false}
-                          onChange={(e) => toggleAutoRenewMutation.mutate(e.target.checked)}
+                          onChange={(e) => handleAutoRenewToggle(e.target.checked)}
                           disabled={toggleAutoRenewMutation.isPending}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                        <div className="w-11 h-6 bg-[#36393f] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#5865f2]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#2f3136] after:border-[#36393f] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865f2]"></div>
                       </label>
                     </div>
                   )}
 
                   {/* Package and Features Cards */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Active Subscriptions</h3>
+                    <h3 className="text-sm font-semibold text-white mb-3">Active Subscriptions</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Package Card */}
                       {(() => {
@@ -779,17 +856,17 @@ export default function PackagesPage() {
                         if (packagePrice === 0) return null;
                         
                         return (
-                          <div className="p-4 bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-lg">
+                          <div className="p-4 bg-gradient-to-br from-[#202225] to-[#2f3136] border border-[#36393f] rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <Package className="h-5 w-5 text-primary-600" />
-                                <span className="text-sm font-medium text-gray-900">
+                                <Package className="h-5 w-5 text-[#5865f2]" />
+                                <span className="text-sm font-medium text-white">
                                   {currentPackage?.package?.name || 'Package'}
                                 </span>
                               </div>
                             </div>
                             <div className="mt-2">
-                              <p className="text-2xl font-bold text-primary-600">
+                              <p className="text-2xl font-bold text-[#5865f2]">
                                 {isNepal
                                   ? formatCurrency(convertUSDToNPR(packagePrice), 'NPR')
                                   : formatCurrency(packagePrice, 'USD')}
@@ -809,12 +886,12 @@ export default function PackagesPage() {
                             return (
                               <div
                                 key={feature.id}
-                                className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg"
+                                className="p-4 bg-gradient-to-br from-[#202225] to-[#2f3136] border border-[#36393f] rounded-lg"
                               >
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-purple-600" />
-                                    <span className="text-sm font-medium text-gray-900">
+                                    <Sparkles className="h-5 w-5 text-[#5865f2]" />
+                                    <span className="text-sm font-medium text-white">
                                       {feature.feature?.type === 'user_upgrade' 
                                         ? `+${feature.feature.value || 'Unlimited'} Users`
                                         : feature.feature?.type === 'role_upgrade'
@@ -824,7 +901,7 @@ export default function PackagesPage() {
                                   </div>
                                 </div>
                                 <div className="mt-2">
-                                  <p className="text-2xl font-bold text-purple-600">
+                                  <p className="text-2xl font-bold text-[#5865f2]">
                                     {isNepal
                                       ? formatCurrency(convertUSDToNPR(featurePrice), 'NPR')
                                       : formatCurrency(featurePrice, 'USD')}
@@ -842,12 +919,24 @@ export default function PackagesPage() {
             </div>
           )}
 
-          {/* Available Packages */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Packages</h2>
-            {packages && packages.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {packages.map((pkg: any) => {
+          {/* Other Available Packages - Only show if user can upgrade */}
+          {canUpgradePackage && packages && packages.length > 0 && (
+            <div className="mb-4">
+              {packages.filter((pkg: any) => {
+                const currentPackageId = currentPackage?.package?.id;
+                return currentPackageId !== undefined && 
+                  (currentPackageId !== pkg.id && 
+                   String(currentPackageId) !== String(pkg.id) &&
+                   Number(currentPackageId) !== Number(pkg.id));
+              }).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {packages.filter((pkg: any) => {
+                    const currentPackageId = currentPackage?.package?.id;
+                    return currentPackageId !== undefined && 
+                      (currentPackageId !== pkg.id && 
+                       String(currentPackageId) !== String(pkg.id) &&
+                       Number(currentPackageId) !== Number(pkg.id));
+                  }).map((pkg: any) => {
                   // Compare package IDs - handle both number and string types
                   const currentPackageId = currentPackage?.package?.id;
                   const isCurrentPackage = currentPackageId !== undefined && 
@@ -860,12 +949,12 @@ export default function PackagesPage() {
                       key={pkg.id}
                       className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-xl ${
                         isCurrentPackage
-                          ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-blue-50 shadow-lg'
-                          : 'border-gray-200 bg-white hover:border-primary-300'
+                          ? 'border-[#5865f2] bg-gradient-to-br from-[#5865f2]/20 to-[#5865f2]/10 shadow-lg'
+                          : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f]'
                       }`}
                     >
                       {isCurrentPackage && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-br from-primary-500 to-primary-600 text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
+                        <div className="absolute top-0 right-0 bg-gradient-to-br from-[#5865f2] to-[#4752c4] text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
                           Current
                         </div>
                       )}
@@ -876,26 +965,26 @@ export default function PackagesPage() {
                             <div className="flex items-center gap-2 mb-2">
                               <div className={`p-2 rounded-lg ${
                                 isCurrentPackage 
-                                  ? 'bg-primary-100' 
-                                  : 'bg-gray-100'
+                                  ? 'bg-[#5865f2]/20' 
+                                  : 'bg-[#393c43]'
                               }`}>
                                 <Package className={`h-5 w-5 ${
                                   isCurrentPackage 
-                                    ? 'text-primary-600' 
-                                    : 'text-gray-600'
+                                    ? 'text-[#5865f2]' 
+                                    : 'text-[#8e9297]'
                                 }`} />
                               </div>
-                              <h3 className="text-xl font-bold text-gray-900">{pkg.name}</h3>
+                              <h3 className="text-xl font-bold text-white">{pkg.name}</h3>
                             </div>
                             {pkg.description && (
-                              <p className="text-sm text-gray-600">{pkg.description}</p>
+                              <p className="text-sm text-[#8e9297]">{pkg.description}</p>
                             )}
                           </div>
                         </div>
 
-                        <div className="mb-6">
+                        <div className="mb-4">
                           <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-4xl font-bold text-gray-900">
+                            <span className="text-4xl font-bold text-white">
                               {pkg.price === 0 ? (
                                 'Free'
                               ) : (
@@ -903,14 +992,14 @@ export default function PackagesPage() {
                                   {isNepal ? (
                                     <>
                                       {formatCurrency(convertUSDToNPR(pkg.price), 'NPR')}
-                                      <span className="text-lg font-normal text-gray-500 ml-1">
+                                      <span className="text-lg font-normal text-[#8e9297] ml-1">
                                         (≈ {formatCurrency(pkg.price, 'USD')})
                                       </span>
                                     </>
                                   ) : (
                                     <>
                                       {formatCurrency(pkg.price, 'USD')}
-                                      <span className="text-lg font-normal text-gray-500 ml-1">
+                                      <span className="text-lg font-normal text-[#8e9297] ml-1">
                                         (≈ {formatCurrency(convertUSDToNPR(pkg.price), 'NPR')})
                                       </span>
                                     </>
@@ -920,35 +1009,43 @@ export default function PackagesPage() {
                             </span>
                           </div>
                           {pkg.price > 0 && (
-                            <p className="text-sm text-gray-500">per month</p>
+                            <p className="text-sm text-[#8e9297]">per month</p>
                           )}
                         </div>
 
-                        <div className="mb-6 space-y-3">
-                          <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                        <div className="mb-4 space-y-3">
+                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
                             <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                            <span className="text-sm text-gray-700">
-                              <strong>{pkg.base_user_limit}</strong> users included
+                            <span className="text-sm text-[#b9bbbe]">
+                              <strong>{formatLimit(pkg.base_user_limit)}</strong> users included
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
                             <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                            <span className="text-sm text-gray-700">
+                            <span className="text-sm text-[#b9bbbe]">
                               <strong>{pkg.base_role_limit}</strong> base roles
                               {pkg.additional_role_limit > 0 && (
-                                <span className="text-xs text-gray-500 ml-1">
+                                <span className="text-xs text-[#8e9297] ml-1">
                                   (+{pkg.additional_role_limit} additional)
                                 </span>
                               )}
                             </span>
                           </div>
+                          {(pkg.slug === 'platinum' || pkg.slug === 'diamond') && (
+                            <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                              <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                              <span className="text-sm text-[#b9bbbe]">
+                                <strong>Chat System</strong> included
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {(() => {
                           // Don't show purchase button for freemium
                           if (pkg.slug === 'freemium') {
                             return (
-                              <button className="w-full py-3 px-4 bg-gray-100 text-gray-600 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
+                              <button className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
                                 <Check className="h-5 w-5 mr-2" />
                                 {isCurrentPackage ? 'Current Package' : 'Default Package'}
                               </button>
@@ -965,7 +1062,7 @@ export default function PackagesPage() {
 
                           if (isCurrentPackage) {
                             return (
-                              <button className="w-full py-3 px-4 bg-gray-100 text-gray-600 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
+                              <button className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
                                 <Check className="h-5 w-5 mr-2" />
                                 Current Package
                               </button>
@@ -974,6 +1071,13 @@ export default function PackagesPage() {
 
                           // Show upgrade button for higher packages, or if current package expired
                           if (isUpgrade || !hasActiveSubscription) {
+                            if (!canUpgradePackage) {
+                              return (
+                                <div className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg text-center text-sm">
+                                  Upgrade not available
+                                </div>
+                              );
+                            }
                             return (
                               <button
                                 onClick={() => handlePackageUpgrade(pkg)}
@@ -998,7 +1102,7 @@ export default function PackagesPage() {
                           // Show disabled button for downgrades when subscription is active
                           if (isDowngrade && hasActiveSubscription) {
                             return (
-                              <button className="w-full py-3 px-4 bg-gray-100 text-gray-600 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
+                              <button className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
                                 <X className="h-5 w-5 mr-2" />
                                 Downgrade Not Available
                               </button>
@@ -1006,6 +1110,13 @@ export default function PackagesPage() {
                           }
 
                           // Default: show purchase button
+                          if (!canUpgradePackage) {
+                            return (
+                              <div className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg text-center text-sm">
+                                Purchase not available
+                              </div>
+                            );
+                          }
                           return (
                             <button
                               onClick={() => handlePackageUpgrade(pkg)}
@@ -1032,16 +1143,17 @@ export default function PackagesPage() {
                 })}
               </div>
             ) : (
-              <div className="card text-center py-8 text-gray-500">
+              <div className="card text-center py-8 text-[#8e9297]">
                 No packages available
               </div>
             )}
           </div>
+          )}
 
           {/* Available Features */}
           {features && features.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Features</h2>
+              <h2 className="text-lg font-semibold text-white mb-4">Available Features</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {features.map((feature: any) => {
                   // Check if this feature is active/purchased
@@ -1054,28 +1166,34 @@ export default function PackagesPage() {
                       key={feature.id}
                       className={`card ${
                         isActive
-                          ? 'border-2 border-primary-500 bg-primary-50'
+                          ? 'border-2 border-[#5865f2] bg-[#5865f2]/10'
                           : ''
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="text-md font-semibold text-gray-900">{feature.name}</h3>
+                        <h3 className="text-md font-semibold text-white">{feature.name}</h3>
                         <div className="flex items-center gap-2">
                           {isActive && (
-                            <Check className="h-5 w-5 text-primary-600" />
+                            <Check className="h-5 w-5 text-[#5865f2]" />
                           )}
-                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                            {feature.type === 'user_upgrade' ? 'User Upgrade' : 'Role Upgrade'}
+                          <span className="px-2 py-1 text-xs font-medium bg-[#393c43] text-[#b9bbbe] rounded">
+                            {feature.type === 'user_upgrade' 
+                              ? 'User Upgrade' 
+                              : feature.type === 'role_upgrade'
+                              ? 'Role Upgrade'
+                              : feature.type === 'support' || feature.type === 'chat'
+                              ? 'Support'
+                              : 'Feature'}
                           </span>
                         </div>
                       </div>
                       {feature.description && (
-                        <p className="text-sm text-gray-600 mb-3">{feature.description}</p>
+                        <p className="text-sm text-[#8e9297] mb-3">{feature.description}</p>
                       )}
                       <div className="flex items-center justify-between">
                         <div>
                           {feature.value && (
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-[#b9bbbe]">
                               Value: {feature.value === null ? 'Unlimited' : feature.value}
                             </p>
                           )}
@@ -1090,14 +1208,14 @@ export default function PackagesPage() {
                                 {isNepal ? (
                                   <>
                                     {formatCurrency(convertUSDToNPR(feature.price), 'NPR')}
-                                    <span className="text-xs font-normal text-gray-500 ml-1">
+                                    <span className="text-xs font-normal text-[#8e9297] ml-1">
                                       (≈ {formatCurrency(feature.price, 'USD')})
                                     </span>
                                   </>
                                 ) : (
                                   <>
                                     {formatCurrency(feature.price, 'USD')}
-                                    <span className="text-xs font-normal text-gray-500 ml-1">
+                                    <span className="text-xs font-normal text-[#8e9297] ml-1">
                                       (≈ {formatCurrency(convertUSDToNPR(feature.price), 'NPR')})
                                     </span>
                                   </>
@@ -1108,23 +1226,29 @@ export default function PackagesPage() {
                         </div>
                       </div>
                       {!isActive ? (
-                        <button
-                          onClick={() => handleFeaturePurchase(feature)}
-                          disabled={createFeaturePaymentMutation.isPending}
-                          className="btn btn-primary w-full mt-4 flex items-center justify-center"
-                        >
-                          {createFeaturePaymentMutation.isPending ? (
-                            <>
-                              <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              Purchase
-                            </>
-                          )}
-                        </button>
+                        canPurchaseFeature ? (
+                          <button
+                            onClick={() => handleFeaturePurchase(feature)}
+                            disabled={createFeaturePaymentMutation.isPending}
+                            className="btn btn-primary w-full mt-4 flex items-center justify-center"
+                          >
+                            {createFeaturePaymentMutation.isPending ? (
+                              <>
+                                <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Purchase
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <div className="w-full mt-4 py-2 px-4 bg-[#393c43] text-[#8e9297] text-center text-sm rounded-lg">
+                            Purchase not available
+                          </div>
+                        )
                       ) : (
                         <button className="btn btn-secondary w-full mt-4" disabled>
                           <Check className="h-4 w-4 mr-2 inline" />
@@ -1143,32 +1267,32 @@ export default function PackagesPage() {
       {/* Payment Method Selection Modal */}
       {showPaymentModal && pendingPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 animate-slideUp">
+          <div className="bg-[#2f3136] rounded-xl shadow-2xl max-w-lg w-full p-6 animate-slideUp">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Select Payment Method</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-white">Select Payment Method</h2>
               <button
                 onClick={() => {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-[#8e9297] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             {/* Item Details */}
-            <div className="mb-6 p-4 bg-gradient-to-br from-primary-50 to-blue-50 rounded-lg border border-primary-200">
-              <p className="text-sm font-medium text-gray-700 mb-1">Purchasing:</p>
-              <p className="text-lg font-semibold text-gray-900 mb-3">
+            <div className="mb-4 p-4 bg-gradient-to-br from-[#202225] to-[#2f3136] rounded-lg border border-[#36393f]">
+              <p className="text-sm font-medium text-[#b9bbbe] mb-1">Purchasing:</p>
+              <p className="text-lg font-semibold text-white mb-3">
                 {pendingPayment.type === 'package' ? pendingPayment.item.name : pendingPayment.item.name}
               </p>
               
               {/* Subscription Period Selection (only for packages) */}
               {pendingPayment.type === 'package' && pendingPayment.item.price > 0 && (
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Subscription Period</label>
+                  <label className="block text-sm font-medium text-[#b9bbbe] mb-2">Subscription Period</label>
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     {(['3_months', '6_months', '1_year', 'custom'] as const).map((period) => (
                       <button
@@ -1192,8 +1316,8 @@ export default function PackagesPage() {
                         }}
                         className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
                           selectedPeriod === period
-                            ? 'border-primary-500 bg-primary-100 text-primary-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            ? 'border-[#5865f2] bg-[#5865f2]/20 text-white'
+                            : 'border-[#202225] bg-[#2f3136] text-[#b9bbbe] hover:border-[#36393f]'
                         }`}
                       >
                         {period === '3_months' ? '3 Months' : 
@@ -1205,7 +1329,7 @@ export default function PackagesPage() {
                   </div>
                   {selectedPeriod === 'custom' && (
                     <div className="mt-2">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Number of Months</label>
+                      <label className="block text-xs font-medium text-[#8e9297] mb-1">Number of Months</label>
                       <input
                         type="number"
                         min="1"
@@ -1227,16 +1351,16 @@ export default function PackagesPage() {
                             }
                           }
                         }}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-3 py-2 text-sm border border-[#36393f] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       />
                       {customMonths > 12 && (
-                        <p className="mt-1 text-xs text-green-600 font-medium">✓ 10% discount applied</p>
+                        <p className="mt-1 text-xs text-[#23a55a] font-medium">✓ 10% discount applied</p>
                       )}
                       {customMonths === 12 && (
-                        <p className="mt-1 text-xs text-green-600 font-medium">✓ 7.5% discount applied</p>
+                        <p className="mt-1 text-xs text-[#23a55a] font-medium">✓ 7.5% discount applied</p>
                       )}
                       {customMonths >= 6 && customMonths < 12 && (
-                        <p className="mt-1 text-xs text-green-600 font-medium">✓ 4% discount applied</p>
+                        <p className="mt-1 text-xs text-[#23a55a] font-medium">✓ 4% discount applied</p>
                       )}
                     </div>
                   )}
@@ -1254,43 +1378,43 @@ export default function PackagesPage() {
                     const finalPrice = showProratedCredit ? upgradePriceInfo.final_price : subscription.discountedPrice;
 
                     return (
-                      <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+                      <div className="mt-3 p-3 bg-[#2f3136] rounded-lg border border-[#202225]">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-gray-600">New Package Price:</span>
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm text-[#8e9297]">New Package Price:</span>
+                          <span className="text-sm font-medium text-[#b9bbbe]">
                             {formatCurrency(subscription.discountedPrice, 'USD')}
                           </span>
                         </div>
                         {subscription.discountPercent > 0 && (
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-600">Period Discount ({subscription.discountPercent}%):</span>
-                            <span className="text-sm font-medium text-green-600">
+                            <span className="text-sm text-[#8e9297]">Period Discount ({subscription.discountPercent}%):</span>
+                            <span className="text-sm font-medium text-[#23a55a]">
                               -{formatCurrency(subscription.originalPrice - subscription.discountedPrice, 'USD')}
                             </span>
                           </div>
                         )}
                         {showProratedCredit && (
                           <>
-                            <div className="flex items-center justify-between mb-1 mt-2 pt-2 border-t border-gray-200">
-                              <span className="text-sm text-gray-600">Prorated Credit ({upgradePriceInfo.remaining_days} days remaining):</span>
-                              <span className="text-sm font-medium text-blue-600">
+                            <div className="flex items-center justify-between mb-1 mt-2 pt-2 border-t border-[#202225]">
+                              <span className="text-sm text-[#8e9297]">Prorated Credit ({upgradePriceInfo.remaining_days} days remaining):</span>
+                              <span className="text-sm font-medium text-[#5865f2]">
                                 -{formatCurrency(upgradePriceInfo.prorated_credit, 'USD')}
                               </span>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-[#8e9297] mt-1">
                               Credit from remaining subscription time
                             </div>
                           </>
                         )}
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-200 mt-2">
-                          <span className="text-base font-semibold text-gray-900">Final Price:</span>
-                          <span className="text-xl font-bold text-primary-600">
+                        <div className="flex items-center justify-between pt-2 border-t border-[#202225] mt-2">
+                          <span className="text-base font-semibold text-white">Final Price:</span>
+                          <span className="text-xl font-bold text-[#5865f2]">
                             {selectedGateway === 'stripe'
                               ? formatCurrency(finalPrice, 'USD')
                               : formatCurrency(convertUSDToNPR(finalPrice), 'NPR')}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-[#8e9297] mt-1">
                           {subscription.months} month{subscription.months !== 1 ? 's' : ''} • {formatCurrency(subscription.monthlyPrice, 'USD')}/month
                         </p>
                       </div>
@@ -1307,7 +1431,7 @@ export default function PackagesPage() {
                       ? formatCurrency(pendingPayment.item.price, 'USD')
                       : formatCurrency(convertUSDToNPR(pendingPayment.item.price), 'NPR')}
                   </span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-[#8e9297]">
                     {selectedGateway === 'stripe' 
                       ? `(≈ ${formatCurrency(convertUSDToNPR(pendingPayment.item.price), 'NPR')})`
                       : `(≈ ${formatCurrency(pendingPayment.item.price, 'USD')})`}
@@ -1317,12 +1441,12 @@ export default function PackagesPage() {
             </div>
 
             {/* Payment Methods */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-4">
               <label 
                 className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${
                   selectedGateway === 'esewa' 
-                    ? 'border-primary-500 bg-primary-50 shadow-md' 
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    ? 'border-[#5865f2] bg-[#5865f2]/20 shadow-md' 
+                    : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f] hover:shadow-sm'
                 }`}
               >
                 <input
@@ -1331,26 +1455,26 @@ export default function PackagesPage() {
                   value="esewa"
                   checked={selectedGateway === 'esewa'}
                   onChange={(e) => setSelectedGateway(e.target.value as 'esewa' | 'stripe')}
-                  className="mt-1 mr-4 w-5 h-5 text-primary-600 focus:ring-primary-500"
+                  className="mt-1 mr-4 w-5 h-5 text-[#5865f2] focus:ring-[#5865f2]"
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-lg font-semibold text-gray-900">eSewa</span>
-                    <span className="text-xs font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">NPR</span>
+                    <span className="text-lg font-semibold text-white">eSewa</span>
+                    <span className="text-xs font-medium bg-[#5865f2]/20 text-[#5865f2] px-3 py-1 rounded-full border border-[#5865f2]/30">NPR</span>
                   </div>
-                  <p className="text-sm text-gray-600">Pay with eSewa wallet (Nepalese Rupees)</p>
-                  <p className="text-xs text-gray-500 mt-1">Includes 13% VAT</p>
+                  <p className="text-sm text-[#b9bbbe]">Pay with eSewa wallet (Nepalese Rupees)</p>
+                  <p className="text-xs text-[#8e9297] mt-1">Includes 13% VAT</p>
                 </div>
                 {selectedGateway === 'esewa' && (
-                  <Check className="w-5 h-5 text-primary-600 ml-2" />
+                  <Check className="w-5 h-5 text-[#5865f2] ml-2" />
                 )}
               </label>
 
               <label 
                 className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${
                   selectedGateway === 'stripe' 
-                    ? 'border-primary-500 bg-primary-50 shadow-md' 
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    ? 'border-[#5865f2] bg-[#5865f2]/20 shadow-md' 
+                    : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f] hover:shadow-sm'
                 }`}
               >
                 <input
@@ -1359,18 +1483,18 @@ export default function PackagesPage() {
                   value="stripe"
                   checked={selectedGateway === 'stripe'}
                   onChange={(e) => setSelectedGateway(e.target.value as 'esewa' | 'stripe')}
-                  className="mt-1 mr-4 w-5 h-5 text-primary-600 focus:ring-primary-500"
+                  className="mt-1 mr-4 w-5 h-5 text-[#5865f2] focus:ring-[#5865f2]"
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-lg font-semibold text-gray-900">Stripe</span>
-                    <span className="text-xs font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full">USD</span>
+                    <span className="text-lg font-semibold text-white">Stripe</span>
+                    <span className="text-xs font-medium bg-[#23a55a]/20 text-[#23a55a] px-3 py-1 rounded-full border border-[#23a55a]/30">USD</span>
                   </div>
-                  <p className="text-sm text-gray-600">Pay with credit/debit card (US Dollars)</p>
-                  <p className="text-xs text-gray-500 mt-1">Visa, Mastercard, Amex accepted</p>
+                  <p className="text-sm text-[#b9bbbe]">Pay with credit/debit card (US Dollars)</p>
+                  <p className="text-xs text-[#8e9297] mt-1">Visa, Mastercard, Amex accepted</p>
                 </div>
                 {selectedGateway === 'stripe' && (
-                  <Check className="w-5 h-5 text-primary-600 ml-2" />
+                  <Check className="w-5 h-5 text-[#5865f2] ml-2" />
                 )}
               </label>
             </div>
@@ -1382,14 +1506,14 @@ export default function PackagesPage() {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
                 }}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-3 border-2 border-[#36393f] rounded-lg text-[#b9bbbe] font-medium hover:bg-[#36393f] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmPayment}
                 disabled={createPackagePaymentMutation.isPending || createFeaturePaymentMutation.isPending}
-                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg"
+                className="flex-1 px-4 py-3 bg-[#5865f2] text-white rounded-lg font-medium hover:bg-[#4752c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg"
               >
                 {(createPackagePaymentMutation.isPending || createFeaturePaymentMutation.isPending) ? (
                   <>
@@ -1401,6 +1525,160 @@ export default function PackagesPage() {
                     <CreditCard className="w-5 h-5 mr-2" />
                     Continue to Payment
                   </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-Renewal Credentials Modal */}
+      {showCredentialModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-[#2f3136] rounded-xl shadow-2xl max-w-lg w-full p-6 animate-slideUp">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-white">Auto-Renewal Setup</h2>
+              <button
+                onClick={() => {
+                  setShowCredentialModal(false);
+                  setPendingAutoRenew(null);
+                  setAutoRenewCredentials({
+                    payment_method: 'esewa',
+                    esewa_username: '',
+                    stripe_card_token: '',
+                    card_last4: '',
+                    card_brand: '',
+                  });
+                }}
+                className="text-gray-400 hover:text-[#8e9297] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-[#b9bbbe] mb-4">
+                To enable auto-renewal, please provide your payment credentials. Your package will be automatically renewed when it expires.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[#b9bbbe] mb-2">Payment Method</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAutoRenewCredentials({ ...autoRenewCredentials, payment_method: 'esewa' })}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                      autoRenewCredentials.payment_method === 'esewa'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-[#202225] hover:border-[#36393f]'
+                    }`}
+                  >
+                    <div className="font-semibold">eSewa</div>
+                    <div className="text-xs text-[#8e9297]">NPR</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoRenewCredentials({ ...autoRenewCredentials, payment_method: 'stripe' })}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                      autoRenewCredentials.payment_method === 'stripe'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-[#202225] hover:border-[#36393f]'
+                    }`}
+                  >
+                    <div className="font-semibold">Stripe</div>
+                    <div className="text-xs text-[#8e9297]">USD</div>
+                  </button>
+                </div>
+              </div>
+
+              {autoRenewCredentials.payment_method === 'esewa' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[#b9bbbe] mb-2">eSewa Username</label>
+                  <input
+                    type="text"
+                    value={autoRenewCredentials.esewa_username}
+                    onChange={(e) => setAutoRenewCredentials({ ...autoRenewCredentials, esewa_username: e.target.value })}
+                    placeholder="Enter your eSewa username"
+                    className="w-full px-4 py-2 border border-[#36393f] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-[#8e9297]">Your eSewa account will be used for automatic payments</p>
+                </div>
+              )}
+
+              {autoRenewCredentials.payment_method === 'stripe' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[#b9bbbe] mb-2">Card Information</label>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Card Number"
+                      className="w-full px-4 py-2 border border-[#36393f] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      maxLength={19}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                        const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                        e.target.value = formatted;
+                        // In a real implementation, you'd use Stripe Elements to tokenize the card
+                        // For now, we'll just store a placeholder
+                        setAutoRenewCredentials({
+                          ...autoRenewCredentials,
+                          stripe_card_token: value,
+                          card_last4: value.slice(-4),
+                          card_brand: value.startsWith('4') ? 'visa' : value.startsWith('5') ? 'mastercard' : 'unknown',
+                        });
+                      }}
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="MM/YY"
+                        className="px-4 py-2 border border-[#36393f] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        maxLength={5}
+                      />
+                      <input
+                        type="text"
+                        placeholder="CVC"
+                        className="px-4 py-2 border border-[#36393f] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        maxLength={4}
+                      />
+                    </div>
+                    <p className="text-xs text-[#8e9297]">
+                      Your card will be securely stored and used for automatic renewals
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCredentialModal(false);
+                  setPendingAutoRenew(null);
+                  setAutoRenewCredentials({
+                    payment_method: 'esewa',
+                    esewa_username: '',
+                    stripe_card_token: '',
+                    card_last4: '',
+                    card_brand: '',
+                  });
+                }}
+                className="flex-1 px-4 py-3 border-2 border-[#36393f] rounded-lg text-[#b9bbbe] font-medium hover:bg-[#36393f] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCredentials}
+                disabled={toggleAutoRenewMutation.isPending}
+                className="flex-1 px-4 py-3 bg-[#5865f2] text-white rounded-lg font-medium hover:bg-[#4752c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {toggleAutoRenewMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save & Enable'
                 )}
               </button>
             </div>

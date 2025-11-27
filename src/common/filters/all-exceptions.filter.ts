@@ -25,16 +25,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
       details: typeof message === 'object' ? (message as any).error : null,
     };
 
-    // Log error details for debugging
-    console.error('Exception caught:', {
-      status,
-      message: typeof message === 'string' ? message : (message as any).message,
-      error: exception instanceof Error ? exception.message : 'Unknown error',
-      stack: exception instanceof Error ? exception.stack : undefined,
-      path: request.url,
-      method: request.method,
-      body: request.body,
-    });
+    // Log error details for debugging - make it very visible
+    console.error('\n❌ ========== EXCEPTION CAUGHT ==========');
+    console.error(`📍 Path: ${request.method} ${request.url}`);
+    console.error(`📊 Status: ${status}`);
+    console.error(`💬 Message: ${typeof message === 'string' ? message : (message as any).message || 'Unknown error'}`);
+    console.error(`🔴 Error: ${exception instanceof Error ? exception.message : 'Unknown error'}`);
+    if (exception instanceof Error && exception.stack) {
+      console.error(`📚 Stack Trace:\n${exception.stack}`);
+    }
+    if (request.body && Object.keys(request.body).length > 0) {
+      console.error(`📦 Request Body:`, JSON.stringify(request.body, null, 2));
+    }
+    console.error('==========================================\n');
 
     response.status(status).json(errorResponse);
   }

@@ -53,6 +53,9 @@ export class Role {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  @Column({ type: 'int', nullable: true })
+  hierarchy_level: number | null;
+
   @CreateDateColumn()
   created_at: Date;
 
