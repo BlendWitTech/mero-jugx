@@ -266,9 +266,10 @@ export default function OrganizationDashboardLayout() {
               <p className="text-xs text-[#b9bbbe] truncate">#{user?.id}</p>
             </div>
             <Link
-              to="/profile"
+              to={orgSlug ? `/org/${orgSlug}/profile` : '/profile'}
               className="p-1.5 text-[#b9bbbe] hover:text-white hover:bg-[#393c43] rounded transition-colors"
               onClick={(e) => e.stopPropagation()}
+              title="Profile Settings"
             >
               <Cog className="h-4 w-4" />
             </Link>

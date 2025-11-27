@@ -4,7 +4,9 @@ import {
   ForbiddenException,
   ConflictException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -138,6 +140,48 @@ export class UsersService {
 
     // Update user
     Object.assign(user, dto);
+    await this.userRepository.save(user);
+
+    return user;
+  }
+
+  async changePassword(
+    userId: string,
+    organizationId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<User> {
+    // Verify user is member of organization
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify current password
+    if (!user.password || !(await bcrypt.compare(currentPassword, user.password))) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.password_changed_at = new Date();
+
     await this.userRepository.save(user);
 
     return user;

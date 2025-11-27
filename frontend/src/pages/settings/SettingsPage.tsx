@@ -31,17 +31,16 @@ export default function SettingsPage() {
   });
 
   const isOrganizationOwner = organization?.current_user_role?.is_organization_owner || false;
-  const [preferenceScope, setPreferenceScope] = useState<'personal' | 'organization'>('personal');
 
   const { data: notificationPreferences, isLoading: isLoadingPrefs } = useQuery({
-    queryKey: ['notification-preferences', preferenceScope],
+    queryKey: ['notification-preferences', 'organization'],
     queryFn: async () => {
       const response = await api.get('/notifications/preferences', {
-        params: { scope: preferenceScope },
+        params: { scope: 'organization' },
       });
       return response.data;
     },
-    enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    enabled: _hasHydrated && isAuthenticated && !!accessToken && isOrganizationOwner,
   });
 
   const updateNotificationPreferencesMutation = useMutation({
@@ -53,7 +52,7 @@ export default function SettingsPage() {
     }) => {
       const response = await api.put('/notifications/preferences', {
         ...data,
-        scope: preferenceScope,
+        scope: 'organization',
       });
       return response.data;
     },
@@ -251,59 +250,46 @@ export default function SettingsPage() {
           {/* Notifications Tab */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">
-              {isLoadingPrefs ? (
+              {!isOrganizationOwner ? (
+                <div className="bg-[#2f3136] rounded-lg p-6 border border-[#202225]">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-6 w-6 text-[#faa61a]" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Access Restricted</h3>
+                      <p className="text-sm text-[#b9bbbe] mt-1">
+                        Only organization owners can manage organization notification preferences.
+                      </p>
+                      <p className="text-sm text-[#b9bbbe] mt-2">
+                        You can manage your personal notification preferences in your <Link to="/profile" className="text-[#5865f2] hover:text-[#4752c4] underline">Profile</Link> page.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : isLoadingPrefs ? (
                 <div className="bg-[#2f3136] rounded-lg p-6 border border-[#202225] animate-pulse">
                   <div className="h-64 bg-[#36393f] rounded"></div>
                 </div>
               ) : (
                 <>
-                  {isOrganizationOwner && (
-                    <div className="bg-[#2f3136] rounded-lg p-6 border border-[#202225]">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-white">Preference Scope</h3>
-                          <p className="text-sm text-[#b9bbbe] mt-1">
-                            Choose whether to manage personal or organization-level preferences
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex space-x-4">
-                        <button
-                          onClick={() => setPreferenceScope('personal')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            preferenceScope === 'personal'
-                              ? 'bg-[#5865f2] text-white'
-                              : 'bg-[#393c43] text-[#b9bbbe] hover:bg-[#404249]'
-                          }`}
-                        >
-                          Personal Preferences
-                        </button>
-                        <button
-                          onClick={() => setPreferenceScope('organization')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            preferenceScope === 'organization'
-                              ? 'bg-[#5865f2] text-white'
-                              : 'bg-[#393c43] text-[#b9bbbe] hover:bg-[#404249]'
-                          }`}
-                        >
-                          Organization Preferences
-                        </button>
-                      </div>
-                      {preferenceScope === 'organization' && (
-                        <div className="mt-4 p-3 bg-[#5865f2]/10 border border-[#5865f2]/20 rounded-lg">
-                          <p className="text-sm text-[#b9bbbe]">
-                            <strong className="text-white">Organization-level preferences:</strong> These settings apply to all notifications sent to the organization. Only organization owners can manage these preferences.
-                          </p>
-                        </div>
-                      )}
+                  <div className="bg-[#2f3136] rounded-lg p-6 border border-[#202225]">
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-white">Organization Notification Preferences</h3>
+                      <p className="text-sm text-[#b9bbbe] mt-1">
+                        These settings apply to all notifications sent to the organization. Only organization owners can manage these preferences.
+                      </p>
                     </div>
-                  )}
+                    <div className="p-3 bg-[#5865f2]/10 border border-[#5865f2]/20 rounded-lg">
+                      <p className="text-sm text-[#b9bbbe]">
+                        <strong className="text-white">Note:</strong> Personal notification preferences can be managed in your <Link to="/profile" className="text-[#5865f2] hover:text-[#4752c4] underline">Profile</Link> page.
+                      </p>
+                    </div>
+                  </div>
 
                   <div className="bg-[#2f3136] rounded-lg p-6 border border-[#202225]">
                     <div className="flex items-center mb-6">
                       <Bell className="h-6 w-6 text-[#5865f2] mr-3" />
                       <h2 className="text-xl font-semibold text-white">
-                        {preferenceScope === 'organization' ? 'Organization Notification Preferences' : 'Personal Notification Preferences'}
+                        Organization Notification Preferences
                       </h2>
                     </div>
                     <div className="space-y-6">

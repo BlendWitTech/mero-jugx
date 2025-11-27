@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
-import { Package, Check, Loader2, CreditCard, X, Calendar, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Package, Check, Loader2, CreditCard, X, Calendar, ChevronDown, ChevronUp, Sparkles, Globe, Edit2, Save } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import {
@@ -45,6 +45,8 @@ export default function PackagesPage() {
     card_last4: '',
     card_brand: '',
   });
+  const [isEditingSlug, setIsEditingSlug] = useState(false);
+  const [newSlug, setNewSlug] = useState('');
 
   // Format date helper
   const formatDate = (dateString: string | null | undefined) => {
@@ -287,6 +289,45 @@ export default function PackagesPage() {
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
+
+  const { data: organization, isLoading: isLoadingOrganization } = useQuery({
+    queryKey: ['organization'],
+    queryFn: async () => {
+      const response = await api.get('/organizations/me');
+      return response.data;
+    },
+    enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    onSuccess: (data) => {
+      if (data?.slug && !isEditingSlug) {
+        setNewSlug(data.slug);
+      }
+    },
+  });
+
+  // Update slug mutation
+  const updateSlugMutation = useMutation({
+    mutationFn: async (slug: string) => {
+      const response = await api.put('/organizations/me/slug', { slug });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+      queryClient.setQueryData(['organization'], data);
+      setIsEditingSlug(false);
+      toast.success('Organization URL updated successfully');
+      // Update auth store
+      const authStore = useAuthStore.getState();
+      if (authStore.organization) {
+        authStore.setOrganization({ ...authStore.organization, slug: data.slug });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to update organization URL');
+    },
+  });
+
+  const canEditSlug = currentPackage?.package?.slug && 
+    ['basic', 'platinum', 'diamond'].includes(currentPackage.package.slug);
 
   // Create payment mutation for package upgrade
   const createPackagePaymentMutation = useMutation({
@@ -776,8 +817,8 @@ export default function PackagesPage() {
                           {totalPrice === 0 
                             ? 'Free' 
                             : isNepal
-                              ? `${formatCurrency(convertUSDToNPR(totalPrice), 'NPR')} (≈ ${formatCurrency(totalPrice, 'USD')})`
-                              : `${formatCurrency(totalPrice, 'USD')} (≈ ${formatCurrency(convertUSDToNPR(totalPrice), 'NPR')})`}
+                              ? `${formatCurrency(convertUSDToNPR(totalPrice), 'NPR')} (${formatCurrency(totalPrice, 'USD')})`
+                              : `${formatCurrency(totalPrice, 'USD')} (${formatCurrency(convertUSDToNPR(totalPrice), 'NPR')})`}
                         </p>
                         {totalPrice > 0 && (
                           <p className="text-xs text-[#8e9297]">per month</p>
@@ -919,6 +960,107 @@ export default function PackagesPage() {
             </div>
           )}
 
+          {/* Organization URL Editor */}
+          {canEditSlug && organization && (
+            <div className="card mb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-[#5865f2]/20 rounded-lg">
+                  <Globe className="h-5 w-5 text-[#5865f2]" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-white">Organization URL</h2>
+                  <p className="text-sm text-[#8e9297] mt-1">
+                    Customize your organization's URL slug
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#b9bbbe] mb-2">
+                    Current URL
+                  </label>
+                  <div className="flex items-center gap-2 p-3 bg-[#202225] rounded-lg border border-[#36393f]">
+                    <span className="text-sm text-[#8e9297]">https://yourdomain.com/org/</span>
+                    <span className="text-sm font-medium text-white">{organization.slug || 'your-slug'}</span>
+                  </div>
+                </div>
+
+                {isEditingSlug ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-[#b9bbbe] mb-2">
+                        New URL Slug
+                      </label>
+                      <input
+                        type="text"
+                        value={newSlug}
+                        onChange={(e) => {
+                          const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+                          setNewSlug(value);
+                        }}
+                        placeholder="your-organization-slug"
+                        className="w-full px-4 py-2 bg-[#202225] border border-[#36393f] rounded-lg text-white placeholder-[#8e9297] focus:outline-none focus:ring-2 focus:ring-[#5865f2] focus:border-transparent"
+                        disabled={updateSlugMutation.isPending}
+                      />
+                      <p className="mt-1 text-xs text-[#8e9297]">
+                        Only lowercase letters, numbers, and hyphens. Must be 3-50 characters.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (newSlug.length >= 3 && newSlug.length <= 50 && newSlug !== organization.slug) {
+                            updateSlugMutation.mutate(newSlug);
+                          } else if (newSlug === organization.slug) {
+                            toast.error('Please enter a different slug');
+                          } else {
+                            toast.error('Slug must be between 3 and 50 characters');
+                          }
+                        }}
+                        disabled={updateSlugMutation.isPending || newSlug.length < 3 || newSlug.length > 50 || newSlug === organization.slug}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#5865f2] text-white rounded-lg hover:bg-[#4752c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {updateSlugMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingSlug(false);
+                          setNewSlug(organization.slug || '');
+                        }}
+                        disabled={updateSlugMutation.isPending}
+                        className="px-4 py-2 bg-[#393c43] text-[#b9bbbe] rounded-lg hover:bg-[#404249] transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsEditingSlug(true);
+                      setNewSlug(organization.slug || '');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#393c43] text-[#b9bbbe] rounded-lg hover:bg-[#404249] transition-colors"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Edit URL
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Other Available Packages - Only show if user can upgrade */}
           {canUpgradePackage && packages && packages.length > 0 && (
             <div className="mb-4">
@@ -929,7 +1071,7 @@ export default function PackagesPage() {
                    String(currentPackageId) !== String(pkg.id) &&
                    Number(currentPackageId) !== Number(pkg.id));
               }).length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {packages.filter((pkg: any) => {
                     const currentPackageId = currentPackage?.package?.id;
                     return currentPackageId !== undefined && 
@@ -947,7 +1089,7 @@ export default function PackagesPage() {
                   return (
                     <div
                       key={pkg.id}
-                      className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-xl ${
+                      className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-xl flex flex-col h-full ${
                         isCurrentPackage
                           ? 'border-[#5865f2] bg-gradient-to-br from-[#5865f2]/20 to-[#5865f2]/10 shadow-lg'
                           : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f]'
@@ -959,7 +1101,7 @@ export default function PackagesPage() {
                         </div>
                       )}
                       
-                      <div className="p-6">
+                      <div className="p-6 flex flex-col flex-1">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -982,38 +1124,34 @@ export default function PackagesPage() {
                           </div>
                         </div>
 
-                        <div className="mb-4">
-                          <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-4xl font-bold text-white">
-                              {pkg.price === 0 ? (
-                                'Free'
-                              ) : (
-                                <>
-                                  {isNepal ? (
-                                    <>
-                                      {formatCurrency(convertUSDToNPR(pkg.price), 'NPR')}
-                                      <span className="text-lg font-normal text-[#8e9297] ml-1">
-                                        (≈ {formatCurrency(pkg.price, 'USD')})
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {formatCurrency(pkg.price, 'USD')}
-                                      <span className="text-lg font-normal text-[#8e9297] ml-1">
-                                        (≈ {formatCurrency(convertUSDToNPR(pkg.price), 'NPR')})
-                                      </span>
-                                    </>
-                                  )}
-                                </>
-                              )}
-                            </span>
-                          </div>
-                          {pkg.price > 0 && (
-                            <p className="text-sm text-[#8e9297]">per month</p>
+                        <div className="mb-6">
+                          {pkg.price === 0 ? (
+                            <div className="text-center py-4">
+                              <div className="text-5xl font-bold bg-gradient-to-r from-[#5865f2] to-[#4752c4] bg-clip-text text-transparent mb-2">
+                                Free
+                              </div>
+                              <p className="text-sm text-[#8e9297]">Forever</p>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 bg-gradient-to-br from-[#202225] to-[#2f3136] rounded-xl border border-[#36393f] p-4">
+                              <div className="flex items-baseline justify-center gap-2 mb-2">
+                                <span className="text-5xl font-bold bg-gradient-to-r from-[#5865f2] to-[#4752c4] bg-clip-text text-transparent">
+                                  {isNepal ? formatCurrency(convertUSDToNPR(pkg.price), 'NPR') : formatCurrency(pkg.price, 'USD')}
+                                </span>
+                              </div>
+                              <div className="text-xs text-[#8e9297] mb-1">
+                                {isNepal ? (
+                                  <span>{formatCurrency(pkg.price, 'USD')} USD</span>
+                                ) : (
+                                  <span>{formatCurrency(convertUSDToNPR(pkg.price), 'NPR')} NPR</span>
+                                )}
+                              </div>
+                              <p className="text-sm font-medium text-[#b9bbbe] mt-2">per month</p>
+                            </div>
                           )}
                         </div>
 
-                        <div className="mb-4 space-y-3">
+                        <div className="mb-4 space-y-3 flex-1">
                           <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
                             <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                             <span className="text-sm text-[#b9bbbe]">
@@ -1031,16 +1169,45 @@ export default function PackagesPage() {
                               )}
                             </span>
                           </div>
-                          {(pkg.slug === 'platinum' || pkg.slug === 'diamond') && (
-                            <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
-                              <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                              <span className="text-sm text-[#b9bbbe]">
-                                <strong>Chat System</strong> included
-                              </span>
-                            </div>
-                          )}
+                          {/* Chat System - show for all packages */}
+                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                            {pkg.slug === 'platinum' || pkg.slug === 'diamond' ? (
+                              <>
+                                <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                                <span className="text-sm text-green-500">
+                                  <strong>Chat System</strong> included
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-5 w-5 text-red-500 flex-shrink-0" />
+                                <span className="text-sm text-red-500">
+                                  <strong>Chat System</strong>
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          {/* Custom Organization URL - show for all packages */}
+                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                            {pkg.slug === 'basic' || pkg.slug === 'platinum' || pkg.slug === 'diamond' ? (
+                              <>
+                                <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                                <span className="text-sm text-green-500">
+                                  <strong>Custom Organization URL</strong>
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-5 w-5 text-red-500 flex-shrink-0" />
+                                <span className="text-sm text-red-500">
+                                  <strong>Custom Organization URL</strong>
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
+                        <div className="mt-auto pt-4">
                         {(() => {
                           // Don't show purchase button for freemium
                           if (pkg.slug === 'freemium') {
@@ -1137,6 +1304,7 @@ export default function PackagesPage() {
                             </button>
                           );
                         })()}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1209,14 +1377,14 @@ export default function PackagesPage() {
                                   <>
                                     {formatCurrency(convertUSDToNPR(feature.price), 'NPR')}
                                     <span className="text-xs font-normal text-[#8e9297] ml-1">
-                                      (≈ {formatCurrency(feature.price, 'USD')})
+                                      ({formatCurrency(feature.price, 'USD')})
                                     </span>
                                   </>
                                 ) : (
                                   <>
                                     {formatCurrency(feature.price, 'USD')}
                                     <span className="text-xs font-normal text-[#8e9297] ml-1">
-                                      (≈ {formatCurrency(convertUSDToNPR(feature.price), 'NPR')})
+                                      ({formatCurrency(convertUSDToNPR(feature.price), 'NPR')})
                                     </span>
                                   </>
                                 )}
@@ -1433,8 +1601,8 @@ export default function PackagesPage() {
                   </span>
                   <span className="text-sm text-[#8e9297]">
                     {selectedGateway === 'stripe' 
-                      ? `(≈ ${formatCurrency(convertUSDToNPR(pendingPayment.item.price), 'NPR')})`
-                      : `(≈ ${formatCurrency(pendingPayment.item.price, 'USD')})`}
+                      ? `(${formatCurrency(convertUSDToNPR(pendingPayment.item.price), 'NPR')})`
+                      : `(${formatCurrency(pendingPayment.item.price, 'USD')})`}
                   </span>
                 </div>
               )}

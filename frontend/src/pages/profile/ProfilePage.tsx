@@ -21,6 +21,11 @@ import {
   Download,
   Trash2,
   Loader2,
+  Bell,
+  Eye,
+  EyeOff,
+  QrCode,
+  Key,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -32,7 +37,17 @@ const profileSchema = z.object({
   avatar_url: z.string().url('Invalid URL').optional().or(z.literal('')),
 });
 
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Current password is required'),
+  new_password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirm_password: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.new_password === data.confirm_password, {
+  message: "Passwords don't match",
+  path: ['confirm_password'],
+});
+
 type ProfileFormData = z.infer<typeof profileSchema>;
+type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
@@ -42,6 +57,11 @@ export default function ProfilePage() {
   const { isOrganizationOwner, hasPermission } = usePermissions();
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+  const [showMfaManage, setShowMfaManage] = useState(false);
+  const [showNotificationPrefs, setShowNotificationPrefs] = useState(false);
+  const [showPassword, setShowPassword] = useState({ current: false, new: false, confirm: false });
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['user-profile'],
@@ -65,6 +85,15 @@ export default function ProfilePage() {
       phone: profile?.phone || '',
       avatar_url: profile?.avatar_url || user?.avatar_url || '',
     },
+  });
+
+  const {
+    register: registerPassword,
+    handleSubmit: handlePasswordSubmit,
+    formState: { errors: passwordErrors },
+    reset: resetPassword,
+  } = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema),
   });
 
   // Update form when profile data loads
@@ -149,6 +178,79 @@ export default function ProfilePage() {
       setIsDownloading(false);
     }
   };
+
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: ChangePasswordFormData) => {
+      const response = await api.put('/users/me/change-password', {
+        current_password: data.current_password,
+        new_password: data.new_password,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      resetPassword();
+      setShowChangePassword(false);
+      toast.success('Password changed successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to change password');
+    },
+  });
+
+  const onPasswordSubmit = (data: ChangePasswordFormData) => {
+    changePasswordMutation.mutate(data);
+  };
+
+  // Initialize MFA setup
+  const initializeMfaMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/mfa/setup/initialize');
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data.temp_setup_token) {
+        localStorage.setItem('mfa_setup_token', data.temp_setup_token);
+      }
+      setShowMfaSetup(true);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to initialize MFA setup');
+    },
+  });
+
+  // Personal notification preferences
+  const { data: personalNotificationPrefs, isLoading: isLoadingPersonalPrefs } = useQuery({
+    queryKey: ['notification-preferences', 'personal'],
+    queryFn: async () => {
+      const response = await api.get('/notifications/preferences', {
+        params: { scope: 'personal' },
+      });
+      return response.data;
+    },
+    enabled: _hasHydrated && isAuthenticated && !!accessToken,
+  });
+
+  const updatePersonalNotificationPrefsMutation = useMutation({
+    mutationFn: async (data: {
+      email_enabled?: boolean;
+      in_app_enabled?: boolean;
+      preferences?: Record<string, { email: boolean; in_app: boolean }>;
+    }) => {
+      const response = await api.put('/notifications/preferences', {
+        ...data,
+        scope: 'personal',
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences', 'personal'] });
+      toast.success('Notification preferences updated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update notification preferences');
+    },
+  });
 
   if (isLoading) {
     return (
@@ -373,30 +475,349 @@ export default function ProfilePage() {
               <h2 className="text-lg font-semibold text-white">Security</h2>
             </div>
             <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-[#202225]">
-                <div>
-                  <p className="text-sm font-medium text-white">Password</p>
-                  <p className="text-sm text-[#8e9297] mt-1">
-                    Last changed: {profile?.password_changed_at ? new Date(profile.password_changed_at).toLocaleDateString() : 'Never'}
-                  </p>
+              {/* Change Password */}
+              <div className="py-3 border-b border-[#202225]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Password</p>
+                    <p className="text-sm text-[#8e9297] mt-1">
+                      Last changed: {profile?.password_changed_at ? new Date(profile.password_changed_at).toLocaleDateString() : 'Never'}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowChangePassword(!showChangePassword)}
+                    className="btn btn-secondary"
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    {showChangePassword ? 'Cancel' : 'Change Password'}
+                  </button>
                 </div>
-                <button className="btn btn-secondary">
-                  <Lock className="h-4 w-4 mr-2" />
-                  Change Password
-                </button>
+                {showChangePassword && (
+                  <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="mt-4 space-y-4 p-4 bg-[#2f3136] rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-[#b9bbbe] mb-1">
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.current ? 'text' : 'password'}
+                          {...registerPassword('current_password')}
+                          className="input w-full pr-10"
+                          placeholder="Enter current password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword({ ...showPassword, current: !showPassword.current })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8e9297] hover:text-white"
+                        >
+                          {showPassword.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {passwordErrors.current_password && (
+                        <p className="mt-1 text-sm text-red-600">{passwordErrors.current_password.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#b9bbbe] mb-1">
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.new ? 'text' : 'password'}
+                          {...registerPassword('new_password')}
+                          className="input w-full pr-10"
+                          placeholder="Enter new password (min 8 characters)"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8e9297] hover:text-white"
+                        >
+                          {showPassword.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {passwordErrors.new_password && (
+                        <p className="mt-1 text-sm text-red-600">{passwordErrors.new_password.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#b9bbbe] mb-1">
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.confirm ? 'text' : 'password'}
+                          {...registerPassword('confirm_password')}
+                          className="input w-full pr-10"
+                          placeholder="Confirm new password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8e9297] hover:text-white"
+                        >
+                          {showPassword.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {passwordErrors.confirm_password && (
+                        <p className="mt-1 text-sm text-red-600">{passwordErrors.confirm_password.message}</p>
+                      )}
+                    </div>
+                    <div className="flex justify-end space-x-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowChangePassword(false);
+                          resetPassword();
+                        }}
+                        className="btn btn-secondary"
+                        disabled={changePasswordMutation.isPending}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={changePasswordMutation.isPending}
+                        className="btn btn-primary"
+                      >
+                        {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
 
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Two-Factor Authentication</p>
-                  <p className="text-sm text-[#8e9297] mt-1">
-                    {profile?.mfa_enabled ? 'Enabled' : 'Not enabled'}
-                  </p>
+              {/* Two-Factor Authentication */}
+              <div className="py-3 border-b border-[#202225]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Two-Factor Authentication</p>
+                    <p className="text-sm text-[#8e9297] mt-1">
+                      {profile?.mfa_enabled ? (
+                        <span className="flex items-center">
+                          <CheckCircle2 className="h-4 w-4 text-[#23a55a] mr-1" />
+                          Enabled
+                        </span>
+                      ) : (
+                        'Not enabled'
+                      )}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (profile?.mfa_enabled) {
+                        setShowMfaManage(!showMfaManage);
+                      } else {
+                        initializeMfaMutation.mutate();
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    disabled={initializeMfaMutation.isPending}
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    {profile?.mfa_enabled ? 'Manage 2FA' : 'Enable 2FA'}
+                  </button>
                 </div>
-                <button className="btn btn-secondary">
-                  <Shield className="h-4 w-4 mr-2" />
-                  {profile?.mfa_enabled ? 'Manage 2FA' : 'Enable 2FA'}
-                </button>
+                {showMfaSetup && initializeMfaMutation.data && (
+                  <div className="mt-4 p-4 bg-[#2f3136] rounded-lg">
+                    <p className="text-sm text-[#b9bbbe] mb-4">
+                      Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                    </p>
+                    <div className="flex justify-center mb-4">
+                      <img 
+                        src={initializeMfaMutation.data.qr_code_url} 
+                        alt="MFA QR Code" 
+                        className="w-48 h-48"
+                      />
+                    </div>
+                    <p className="text-xs text-[#8e9297] mb-4 text-center">
+                      Secret: {initializeMfaMutation.data.secret}
+                    </p>
+                    <button
+                      onClick={() => navigate('/mfa/setup')}
+                      className="btn btn-primary w-full"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Complete Setup
+                    </button>
+                  </div>
+                )}
+                {showMfaManage && profile?.mfa_enabled && (
+                  <div className="mt-4 p-4 bg-[#2f3136] rounded-lg space-y-3">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await api.get('/mfa/backup-codes');
+                          const codes = response.data.backup_codes;
+                          alert(`Your backup codes:\n\n${codes.join('\n')}\n\nSave these codes in a safe place!`);
+                        } catch (error: any) {
+                          toast.error(error.response?.data?.message || 'Failed to get backup codes');
+                        }
+                      }}
+                      className="btn btn-secondary w-full"
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      View Backup Codes
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const code = prompt('Enter your 2FA code to regenerate backup codes:');
+                        if (code) {
+                          try {
+                            const response = await api.post('/mfa/backup-codes/regenerate', { code });
+                            const codes = response.data.backup_codes;
+                            alert(`Your new backup codes:\n\n${codes.join('\n')}\n\nSave these codes in a safe place!`);
+                          } catch (error: any) {
+                            toast.error(error.response?.data?.message || 'Failed to regenerate backup codes');
+                          }
+                        }
+                      }}
+                      className="btn btn-secondary w-full"
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      Regenerate Backup Codes
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Notification Preferences */}
+              <div className="py-3">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Notification Preferences</p>
+                    <p className="text-sm text-[#8e9297] mt-1">
+                      Manage your personal notification settings
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowNotificationPrefs(!showNotificationPrefs)}
+                    className="btn btn-secondary"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    {showNotificationPrefs ? 'Hide' : 'Manage'}
+                  </button>
+                </div>
+                {showNotificationPrefs && (
+                  <div className="mt-4 p-4 bg-[#2f3136] rounded-lg space-y-4">
+                    {isLoadingPersonalPrefs ? (
+                      <div className="text-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-[#5865f2] mx-auto" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between pb-3 border-b border-[#202225]">
+                          <div>
+                            <p className="text-sm font-medium text-white">Email Notifications</p>
+                            <p className="text-xs text-[#8e9297] mt-1">Master toggle for email notifications</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={personalNotificationPrefs?.email_enabled ?? true}
+                              onChange={(e) => {
+                                updatePersonalNotificationPrefsMutation.mutate({
+                                  email_enabled: e.target.checked,
+                                  in_app_enabled: personalNotificationPrefs?.in_app_enabled ?? true,
+                                  preferences: personalNotificationPrefs?.preferences || {},
+                                });
+                              }}
+                              disabled={updatePersonalNotificationPrefsMutation.isPending}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-[#4f545c] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#5865f2]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865f2] peer-disabled:opacity-50"></div>
+                          </label>
+                        </div>
+                        <div className="flex items-center justify-between pb-3 border-b border-[#202225]">
+                          <div>
+                            <p className="text-sm font-medium text-white">In-App Notifications</p>
+                            <p className="text-xs text-[#8e9297] mt-1">Master toggle for in-app notifications</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={personalNotificationPrefs?.in_app_enabled ?? true}
+                              onChange={(e) => {
+                                updatePersonalNotificationPrefsMutation.mutate({
+                                  email_enabled: personalNotificationPrefs?.email_enabled ?? true,
+                                  in_app_enabled: e.target.checked,
+                                  preferences: personalNotificationPrefs?.preferences || {},
+                                });
+                              }}
+                              disabled={updatePersonalNotificationPrefsMutation.isPending}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-[#4f545c] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#5865f2]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865f2] peer-disabled:opacity-50"></div>
+                          </label>
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-xs font-medium text-[#8e9297] uppercase">Notification Types</p>
+                          {['user_invitations', 'role_changes', 'security_alerts'].map((type) => (
+                            <div key={type} className="p-3 bg-[#202225] rounded-lg">
+                              <p className="text-sm font-medium text-white mb-2 capitalize">
+                                {type.replace('_', ' ')}
+                              </p>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-[#b9bbbe]">Email</span>
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={personalNotificationPrefs?.preferences?.[type]?.email ?? true}
+                                      onChange={(e) => {
+                                        const prefs = personalNotificationPrefs?.preferences || {};
+                                        updatePersonalNotificationPrefsMutation.mutate({
+                                          email_enabled: personalNotificationPrefs?.email_enabled ?? true,
+                                          in_app_enabled: personalNotificationPrefs?.in_app_enabled ?? true,
+                                          preferences: {
+                                            ...prefs,
+                                            [type]: {
+                                              email: e.target.checked,
+                                              in_app: prefs[type]?.in_app ?? true,
+                                            },
+                                          },
+                                        });
+                                      }}
+                                      disabled={updatePersonalNotificationPrefsMutation.isPending}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-9 h-5 bg-[#4f545c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5865f2]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5865f2] peer-disabled:opacity-50"></div>
+                                  </label>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-[#b9bbbe]">In-App</span>
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={personalNotificationPrefs?.preferences?.[type]?.in_app ?? true}
+                                      onChange={(e) => {
+                                        const prefs = personalNotificationPrefs?.preferences || {};
+                                        updatePersonalNotificationPrefsMutation.mutate({
+                                          email_enabled: personalNotificationPrefs?.email_enabled ?? true,
+                                          in_app_enabled: personalNotificationPrefs?.in_app_enabled ?? true,
+                                          preferences: {
+                                            ...prefs,
+                                            [type]: {
+                                              email: prefs[type]?.email ?? true,
+                                              in_app: e.target.checked,
+                                            },
+                                          },
+                                        });
+                                      }}
+                                      disabled={updatePersonalNotificationPrefsMutation.isPending}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-9 h-5 bg-[#4f545c] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5865f2]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#5865f2] peer-disabled:opacity-50"></div>
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

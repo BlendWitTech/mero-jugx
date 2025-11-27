@@ -48,6 +48,18 @@ export class UsersController {
     return this.usersService.updateCurrentUser(user.userId, user.organizationId, dto);
   }
 
+  @Put('me/change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid current password' })
+  async changePassword(
+    @CurrentUser() user: any,
+    @Body() dto: { current_password: string; new_password: string },
+  ) {
+    return this.usersService.changePassword(user.userId, user.organizationId, dto.current_password, dto.new_password);
+  }
+
   @Get()
   @Permissions('users.view')
   @ApiOperation({ summary: 'List organization users' })
