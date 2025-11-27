@@ -10,7 +10,7 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       slug: '500-users',
       type: PackageFeatureType.USER_UPGRADE,
       value: 500,
-      price: 49.99,
+      price: 5.0,
       description: 'Upgrade to 500 maximum users',
       is_active: true,
     },
@@ -19,7 +19,7 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       slug: 'unlimited-users',
       type: PackageFeatureType.USER_UPGRADE,
       value: null, // null = unlimited
-      price: 99.99,
+      price: 15.0,
       description: 'Upgrade to unlimited users',
       is_active: true,
     },
@@ -28,7 +28,7 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       slug: 'unlimited-roles',
       type: PackageFeatureType.ROLE_UPGRADE,
       value: null, // null = unlimited
-      price: 29.99,
+      price: 5.0,
       description: 'Upgrade to unlimited roles',
       is_active: true,
     },
@@ -37,7 +37,7 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       slug: 'chat-system',
       type: PackageFeatureType.SUPPORT,
       value: null, // null = unlimited
-      price: 49.99,
+      price: 5.0,
       description: 'Enable team chat, group messaging, audio and video calls',
       is_active: true,
     },
@@ -52,7 +52,10 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       await featureRepository.save(featureRepository.create(feature));
       console.log(`✓ Seeded package feature: ${feature.name}`);
     } else {
-      console.log(`- Package feature already exists: ${feature.name}`);
+      // Update existing feature with new price
+      existingFeature.price = feature.price;
+      await featureRepository.save(existingFeature);
+      console.log(`✓ Updated package feature: ${feature.name} (price: $${feature.price})`);
     }
   }
 }

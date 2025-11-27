@@ -1,120 +1,206 @@
 # Email Setup Guide
 
-This project supports multiple email sending methods:
+## Overview
 
-## Development Mode
+Mero Jugx supports two email service options: **SMTP** (traditional) and **Resend** (API-based). This guide covers both setups.
 
-### Option 1: Resend API (Recommended for Development)
+## Option 1: SMTP (Traditional)
 
-Resend is a modern email API service that's easy to set up and use in development.
+### Gmail Setup
 
-1. **Add Resend API Key to `.env` file:**
+1. Enable 2-Step Verification: https://myaccount.google.com/security
+2. Generate App Password:
+   - Go to: https://myaccount.google.com/apppasswords
+   - Select "Mail" and "Other (Custom name)"
+   - Enter "Mero Jugx"
+   - Copy the 16-character password
+
+3. Configure `.env`:
    ```env
-   RESEND_API_KEY=re_fWJxXubs_FJyYxLzVNWTUN98s12HjASGG
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-16-char-app-password
+   SMTP_FROM=noreply@mero-jugx.com
+   SMTP_FROM_NAME=Mero Jugx
+   ```
+
+### Other SMTP Providers
+
+#### Outlook/Hotmail
+```env
+SMTP_HOST=smtp-mail.outlook.com
+SMTP_PORT=587
+SMTP_SECURE=false
+```
+
+#### SendGrid
+```env
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+```
+
+#### Mailgun
+```env
+SMTP_HOST=smtp.mailgun.org
+SMTP_PORT=587
+SMTP_USER=your-mailgun-username
+SMTP_PASSWORD=your-mailgun-password
+```
+
+## Option 2: Resend (Recommended)
+
+### Setup
+
+1. Sign up: https://resend.com
+2. Get API key from dashboard
+3. Verify domain (optional, for better deliverability)
+4. Configure `.env`:
+   ```env
+   RESEND_API_KEY=re_xxxxxxxxxxxxx
    SMTP_FROM=noreply@yourdomain.com
-   SMTP_FROM_NAME=Your App Name
+   SMTP_FROM_NAME=Mero Jugx
    ```
 
-2. **Install Resend package:**
-   ```bash
-   npm install resend
+### Advantages
+
+- Better deliverability
+- Email analytics
+- Simpler configuration
+- No SMTP server management
+
+## Email Types
+
+### 1. Email Verification
+
+**Trigger**: User registration  
+**Template**: Welcome email with verification link  
+**Link Format**: `{FRONTEND_URL}/verify-email?token={token}`
+
+### 2. Password Reset
+
+**Trigger**: User requests password reset  
+**Template**: Password reset email with reset link  
+**Link Format**: `{FRONTEND_URL}/reset-password?token={token}`
+
+### 3. Invitation
+
+**Trigger**: User invites another user  
+**Template**: Invitation email with acceptance link  
+**Link Format**: `{FRONTEND_URL}/accept-invitation?token={token}`
+
+### 4. Notifications
+
+**Trigger**: Various system events  
+**Templates**: Custom based on notification type  
+**Examples**:
+- User added to organization
+- Role changed
+- Package upgraded
+- Security alerts
+
+## Testing Email
+
+### Test Email Sending
+
+```bash
+# Check email service logs
+# Backend console will show email sending status
+```
+
+### Verify Configuration
+
+1. Register a new user
+2. Check email inbox (and spam folder)
+3. Verify email link works
+4. Check email formatting
+
+### Common Issues
+
+#### Gmail Not Sending
+
+- **Issue**: "Less secure app" error
+- **Solution**: Use App Password (not regular password)
+- **Issue**: Rate limiting
+- **Solution**: Use Resend or dedicated SMTP service
+
+#### Emails in Spam
+
+- **Solution**: Verify domain (SPF, DKIM records)
+- **Solution**: Use Resend with domain verification
+- **Solution**: Configure proper FROM address
+
+#### SMTP Connection Failed
+
+- **Check**: SMTP host and port
+- **Check**: Firewall rules
+- **Check**: Credentials
+- **Check**: TLS/SSL settings
+
+## Production Setup
+
+### Domain Verification
+
+For production, verify your domain:
+
+1. **SPF Record**: Add to DNS
+   ```
+   v=spf1 include:_spf.resend.com ~all
    ```
 
-3. The email service will automatically use Resend if:
-   - `NODE_ENV=development`
-   - `RESEND_API_KEY` is set in environment variables
+2. **DKIM Record**: Add to DNS (provided by Resend)
 
-### Option 2: SMTP (Traditional)
+3. **DMARC Record**: Add to DNS
+   ```
+   v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com
+   ```
 
-If you prefer to use SMTP in development:
+### Email Templates
+
+Customize email templates in:
+- `src/auth/auth.service.ts` (verification, password reset)
+- `src/invitations/invitations.service.ts` (invitations)
+- `src/notifications/notifications.service.ts` (notifications)
+
+### Monitoring
+
+Monitor email delivery:
+- Resend dashboard (if using Resend)
+- SMTP server logs
+- Application logs
+- Bounce/complaint handling
+
+## Best Practices
+
+1. **Use Resend** for better deliverability
+2. **Verify domain** for production
+3. **Monitor bounce rates**
+4. **Handle unsubscribes** (for marketing emails)
+5. **Rate limiting** to prevent abuse
+6. **Email queue** for high volume
+7. **Retry logic** for failed sends
+8. **Logging** for debugging
+
+## Environment Variables Summary
 
 ```env
+# SMTP Configuration
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM=noreply@yourdomain.com
-SMTP_FROM_NAME=Your App Name
+SMTP_FROM=noreply@mero-jugx.com
+SMTP_FROM_NAME=Mero Jugx
+
+# Resend Configuration (Alternative)
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+
+# Application URLs (for email links)
+FRONTEND_URL=http://localhost:3001
+APP_URL=http://localhost:3000
 ```
-
-### Option 3: Console Logging (Fallback)
-
-If neither Resend nor SMTP is configured in development mode, emails will be logged to the console for debugging purposes.
-
-## Production Mode
-
-In production, you **must** configure either:
-- `RESEND_API_KEY` (recommended)
-- OR SMTP credentials (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`)
-
-## Email Types Supported
-
-The system sends the following types of emails:
-
-1. **Email Verification** - Sent when users register
-2. **Password Reset** - Sent when users request password reset
-3. **Invitations** - Sent when users are invited to join an organization
-4. **Access Revoked** - Sent when user access is revoked
-5. **MFA Enabled** - Sent when MFA is enabled for an organization
-6. **Data Transferred** - Sent when data ownership is transferred
-
-## Resend Setup
-
-1. Sign up at [resend.com](https://resend.com)
-2. Get your API key from the dashboard
-3. Add it to your `.env` file as `RESEND_API_KEY`
-4. **Verify a Domain** (Required for sending to any email address):
-   - Go to Resend Dashboard → Domains → Add Domain
-   - Enter your domain (e.g., `mero-jugx.com` or `dev.mero-jugx.com`)
-   - Add the DNS records provided by Resend to your domain's DNS settings:
-     - **SPF Record**: `v=spf1 include:resend.com ~all`
-     - **DKIM Record**: (provided by Resend)
-     - **DMARC Record**: `v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com`
-   - Wait for verification (usually takes a few minutes)
-5. Update `SMTP_FROM` in your `.env` to use your verified domain:
-   ```env
-   SMTP_FROM=noreply@yourdomain.com
-   ```
-
-### ⚠️ Important: Localhost Development Limitation
-
-**You cannot verify `localhost` as a domain.** Here are your options:
-
-#### Option A: Use a Real Domain (Recommended)
-- Verify a domain you own (even if it's just for development)
-- Use a subdomain like `dev.yourdomain.com` or `test.yourdomain.com`
-- This allows you to send emails to any recipient
-
-#### Option B: Use Resend Test Domain (Limited)
-- When using `onboarding@resend.dev`, you can **only send to your own email address** (the one registered with Resend)
-- This is a Resend limitation for the test domain
-- To send to other recipients, you **must** verify a real domain
-
-#### Option C: Console Logging (Development Only)
-- If neither Resend nor SMTP is configured, emails will be logged to console
-- Useful for development when you don't need actual email delivery
-
-## Troubleshooting
-
-### Resend Not Working
-
-- Check that `RESEND_API_KEY` is set correctly in `.env`
-- Verify the API key is valid in Resend dashboard
-- Check that your "From" email is verified in Resend
-- Look for error messages in the console logs
-
-### SMTP Not Working
-
-- Verify SMTP credentials are correct
-- Check firewall/network settings
-- For Gmail, use an "App Password" instead of your regular password
-- Ensure `SMTP_SECURE` matches your server's SSL/TLS configuration
-
-### Emails Not Sending
-
-- Check console logs for error messages
-- Verify environment variables are loaded correctly
-- In development, emails may be logged to console instead of sent
-- Check that `NODE_ENV` is set correctly
 

@@ -1,0 +1,1352 @@
+{
+  "info": {
+    "name": "Mero Jugx API",
+    "description": "Complete API collection for Mero Jugx - Organization-based authentication and user management system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "organization_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register Organization",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_name\": \"Acme Corp\",\n  \"organization_email\": \"contact@acme.com\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"email\": \"john@acme.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/organization/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "organization", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh_token);",
+                  "    pm.collectionVariables.set('organization_id', jsonData.organization.id);",
+                  "    pm.collectionVariables.set('user_id', jsonData.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@acme.com\",\n  \"password\": \"SecurePassword123!\",\n  \"organization_id\": \"{{organization_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login?organization_id={{organization_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"],
+              "query": [{"key": "organization_id", "value": "{{organization_id}}", "disabled": true}]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/verify-email?token=VERIFICATION_TOKEN",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-email"],
+              "query": [{"key": "token", "value": "VERIFICATION_TOKEN"}]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"RESET_TOKEN\",\n  \"new_password\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "reset-password"]
+            }
+          }
+        },
+        {
+          "name": "Verify MFA",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password\",\n  \"mfa_code\": \"123456\",\n  \"organization_id\": \"{{organization_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-mfa",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-mfa"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Current User",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"avatar_url\": \"https://example.com/avatar.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"OldPassword123!\",\n  \"new_password\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "List Organization Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users?page=1&limit=10&search=john",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": "john", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":id"],
+              "variable": [{"key": "id", "value": "{{user_id}}"}]
+            }
+          }
+        },
+        {
+          "name": "Update User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"email\": \"newemail@example.com\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":id"],
+              "variable": [{"key": "id", "value": "{{user_id}}"}]
+            }
+          }
+        },
+        {
+          "name": "Revoke User Access",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Violation of terms\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/:id/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":id", "revoke"],
+              "variable": [{"key": "id", "value": "{{user_id}}"}]
+            }
+          }
+        },
+        {
+          "name": "Download User Data",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/me/download-data",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me", "download-data"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "Get Current Organization",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations/me",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me"]
+            }
+          }
+        },
+        {
+          "name": "List User Organizations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations",
+              "host": ["{{base_url}}"],
+              "path": ["organizations"]
+            }
+          }
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Name\",\n  \"email\": \"newemail@example.com\",\n  \"phone\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Organization Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"settings\": {}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/settings",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Get Organization Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/stats",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Switch Organization",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"{{organization_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/switch",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "switch"]
+            }
+          }
+        },
+        {
+          "name": "Update Organization Slug",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"new-slug\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/slug",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "slug"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["roles"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles/:id",
+              "host": ["{{base_url}}"],
+              "path": ["roles", ":id"],
+              "variable": [{"key": "id", "value": "1"}]
+            }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager\",\n  \"slug\": \"manager\",\n  \"description\": \"Manager role\",\n  \"permissions\": [\"users.view\", \"users.edit\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Manager\",\n  \"permissions\": [\"users.view\", \"users.edit\", \"roles.view\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles/:id",
+              "host": ["{{base_url}}"],
+              "path": ["roles", ":id"],
+              "variable": [{"key": "id", "value": "1"}]
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/roles/:id",
+              "host": ["{{base_url}}"],
+              "path": ["roles", ":id"],
+              "variable": [{"key": "id", "value": "1"}]
+            }
+          }
+        },
+        {
+          "name": "Get Permissions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles/permissions",
+              "host": ["{{base_url}}"],
+              "path": ["roles", "permissions"]
+            }
+          }
+        },
+        {
+          "name": "Get Role Usage Counts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles/usage-counts",
+              "host": ["{{base_url}}"],
+              "path": ["roles", "usage-counts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Packages",
+      "item": [
+        {
+          "name": "List Packages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/packages",
+              "host": ["{{base_url}}"],
+              "path": ["packages"]
+            }
+          }
+        },
+        {
+          "name": "List Package Features",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/packages/features",
+              "host": ["{{base_url}}"],
+              "path": ["packages", "features"]
+            }
+          }
+        },
+        {
+          "name": "Get Package by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/packages/:id",
+              "host": ["{{base_url}}"],
+              "path": ["packages", ":id"],
+              "variable": [{"key": "id", "value": "1"}]
+            }
+          }
+        },
+        {
+          "name": "Get Current Organization Package",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/package",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "package"]
+            }
+          }
+        },
+        {
+          "name": "Upgrade Package",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/package",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "package"]
+            }
+          }
+        },
+        {
+          "name": "Purchase Feature",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feature_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/features",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "features"]
+            }
+          }
+        },
+        {
+          "name": "Remove Feature",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/features/:id",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "features", ":id"],
+              "variable": [{"key": "id", "value": "1"}]
+            }
+          }
+        },
+        {
+          "name": "Configure Auto-Renewal",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true,\n  \"credentials\": {\n    \"payment_method\": \"stripe\",\n    \"stripe_card_token\": \"tok_xxx\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/package/auto-renew",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "package", "auto-renew"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Upgrade Price",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": 3,\n  \"period\": \"1_year\",\n  \"custom_months\": 12\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/package/calculate-upgrade-price",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "package", "calculate-upgrade-price"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gateway\": \"stripe\",\n  \"payment_type\": \"package_upgrade\",\n  \"amount\": 100.00,\n  \"description\": \"Upgrade to Platinum\",\n  \"package_id\": 3,\n  \"period\": \"1_year\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments",
+              "host": ["{{base_url}}"],
+              "path": ["payments"]
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": \"uuid\",\n  \"transaction_id\": \"txn_xxx\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/verify",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/payments/:id",
+              "host": ["{{base_url}}"],
+              "path": ["payments", ":id"],
+              "variable": [{"key": "id", "value": "payment_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/payments?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["payments"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Create Chat",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"direct\",\n  \"member_ids\": [\"user_uuid\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chats",
+              "host": ["{{base_url}}"],
+              "path": ["chats"]
+            }
+          }
+        },
+        {
+          "name": "List Chats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/chats?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["chats"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Chat by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/chats/:id",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id"],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Update Chat",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chats/:id",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id"],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Delete Chat",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/chats/:id",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id"],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Add Member to Chat",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"member_ids\": [\"user_uuid\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chats/:id/members",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id", "members"],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Remove Member from Chat",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/chats/:id/members/:memberId",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id", "members", ":memberId"],
+              "variable": [
+                {"key": "id", "value": "chat_uuid"},
+                {"key": "memberId", "value": "member_uuid"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Leave Chat",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/chats/:id/leave",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id", "leave"],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hello!\",\n  \"message_type\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chats/:id/messages",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id", "messages"],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/chats/:id/messages?page=1&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id", "messages"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "50"}
+              ],
+              "variable": [{"key": "id", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Delete Message",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/chats/:id/messages/:messageId",
+              "host": ["{{base_url}}"],
+              "path": ["chats", ":id", "messages", ":messageId"],
+              "variable": [
+                {"key": "id", "value": "chat_uuid"},
+                {"key": "messageId", "value": "message_uuid"}
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calls",
+      "item": [
+        {
+          "name": "Start Call",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"call_type\": \"video\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/calls/chats/:chatId",
+              "host": ["{{base_url}}"],
+              "path": ["calls", "chats", ":chatId"],
+              "variable": [{"key": "chatId", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Get Active Call",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/calls/chats/:chatId/active",
+              "host": ["{{base_url}}"],
+              "path": ["calls", "chats", ":chatId", "active"],
+              "variable": [{"key": "chatId", "value": "chat_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Join Call",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/calls/:id/join",
+              "host": ["{{base_url}}"],
+              "path": ["calls", ":id", "join"],
+              "variable": [{"key": "id", "value": "call_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Leave Call",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/calls/:id/leave",
+              "host": ["{{base_url}}"],
+              "path": ["calls", ":id", "leave"],
+              "variable": [{"key": "id", "value": "call_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "End Call",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/calls/:id/end",
+              "host": ["{{base_url}}"],
+              "path": ["calls", ":id", "end"],
+              "variable": [{"key": "id", "value": "call_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Update Media Settings",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio_enabled\": true,\n  \"video_enabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/calls/:id/media",
+              "host": ["{{base_url}}"],
+              "path": ["calls", ":id", "media"],
+              "variable": [{"key": "id", "value": "call_uuid"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/notifications?page=1&limit=20&unread_only=false",
+              "host": ["{{base_url}}"],
+              "path": ["notifications"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "unread_only", "value": "false"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/notifications/unread-count",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "Get Notification Preferences",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/notifications/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Get Notification by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/notifications/:id",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", ":id"],
+              "variable": [{"key": "id", "value": "notification_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/notifications/:id/read",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", ":id", "read"],
+              "variable": [{"key": "id", "value": "notification_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{base_url}}/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/notifications/:id",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", ":id"],
+              "variable": [{"key": "id", "value": "notification_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email_enabled\": true,\n  \"in_app_enabled\": true,\n  \"preferences\": {\n    \"user_invitations\": {\n      \"email\": true,\n      \"in_app\": true\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notifications/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "preferences"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFA",
+      "item": [
+        {
+          "name": "Check MFA Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/mfa/check",
+              "host": ["{{base_url}}"],
+              "path": ["mfa", "check"]
+            }
+          }
+        },
+        {
+          "name": "Initialize MFA Setup",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/mfa/setup/initialize",
+              "host": ["{{base_url}}"],
+              "path": ["mfa", "setup", "initialize"]
+            }
+          }
+        },
+        {
+          "name": "Verify MFA Setup",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mfa/setup/verify",
+              "host": ["{{base_url}}"],
+              "path": ["mfa", "setup", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Get Backup Codes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/mfa/backup-codes",
+              "host": ["{{base_url}}"],
+              "path": ["mfa", "backup-codes"]
+            }
+          }
+        },
+        {
+          "name": "Regenerate Backup Codes",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/mfa/backup-codes/regenerate",
+              "host": ["{{base_url}}"],
+              "path": ["mfa", "backup-codes", "regenerate"]
+            }
+          }
+        },
+        {
+          "name": "Disable MFA",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mfa/disable",
+              "host": ["{{base_url}}"],
+              "path": ["mfa", "disable"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invitations",
+      "item": [
+        {
+          "name": "Create Invitation",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"role_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations",
+              "host": ["{{base_url}}"],
+              "path": ["invitations"]
+            }
+          }
+        },
+        {
+          "name": "List Invitations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invitations?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["invitations"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invitation by Token",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/invitations/token/:token",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "token", ":token"],
+              "variable": [{"key": "token", "value": "invitation_token"}]
+            }
+          }
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Doe\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations/accept/:token",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "accept", ":token"],
+              "variable": [{"key": "token", "value": "invitation_token"}]
+            }
+          }
+        },
+        {
+          "name": "Delete Invitation",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/invitations/:id",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", ":id"],
+              "variable": [{"key": "id", "value": "invitation_uuid"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/audit-logs?page=1&limit=20&action=user.created",
+              "host": ["{{base_url}}"],
+              "path": ["audit-logs"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "action", "value": "user.created", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Audit Log Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/audit-logs/stats",
+              "host": ["{{base_url}}"],
+              "path": ["audit-logs", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Viewable Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/audit-logs/viewable-users",
+              "host": ["{{base_url}}"],
+              "path": ["audit-logs", "viewable-users"]
+            }
+          }
+        },
+        {
+          "name": "Get Audit Log by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/audit-logs/:id",
+              "host": ["{{base_url}}"],
+              "path": ["audit-logs", ":id"],
+              "variable": [{"key": "id", "value": "audit_log_uuid"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/documents?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "documents"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Document by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/documents/:id",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "documents", ":id"],
+              "variable": [{"key": "id", "value": "document_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Download Document",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/documents/:id/download",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "documents", ":id", "download"],
+              "variable": [{"key": "id", "value": "document_uuid"}]
+            }
+          }
+        },
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "file", "type": "file", "src": []},
+                {"key": "title", "value": "Document Title", "type": "text"},
+                {"key": "description", "value": "Document description", "type": "text"}
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/me/documents",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "documents"]
+            }
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/organizations/me/documents/:id",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "me", "documents", ":id"],
+              "variable": [{"key": "id", "value": "document_uuid"}]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

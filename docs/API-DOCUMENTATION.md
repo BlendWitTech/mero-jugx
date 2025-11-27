@@ -4,111 +4,104 @@
 
 ```
 Development: http://localhost:3000/api/v1
-Production: https://your-domain.com/api/v1
+Production: https://yourdomain.com/api/v1
 ```
 
 ## Authentication
 
-Most endpoints require authentication via JWT Bearer token.
-
-### Getting a Token
-
-1. Register an organization or login
-2. Receive access token and refresh token
-3. Include access token in Authorization header:
+All protected endpoints require a JWT token in the Authorization header:
 
 ```
-Authorization: Bearer {access_token}
+Authorization: Bearer <access_token>
 ```
 
-### Token Refresh
+## Response Format
 
-Access tokens expire after 15 minutes. Use the refresh token to get a new access token:
-
-```http
-POST /api/v1/auth/refresh
-Content-Type: application/json
-
+### Success Response
+```json
 {
-  "refresh_token": "your_refresh_token"
+  "data": { ... },
+  "message": "Success message"
 }
 ```
 
-## API Endpoints
+### Error Response
+```json
+{
+  "statusCode": 400,
+  "message": "Error message",
+  "error": "Bad Request"
+}
+```
 
-### Authentication (`/api/v1/auth`)
+## Endpoints
+
+### Authentication (`/auth`)
 
 #### Register Organization
 ```http
-POST /api/v1/auth/organization/register
+POST /auth/organization/register
 Content-Type: application/json
 
 {
-  "organization": {
-    "name": "Acme Corp",
-    "slug": "acme-corp",
-    "email": "contact@acme.com"
-  },
-  "user": {
-    "email": "admin@acme.com",
-    "password": "SecurePassword123!",
-    "first_name": "John",
-    "last_name": "Doe"
-  }
+  "organization_name": "Acme Corp",
+  "organization_email": "contact@acme.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john@acme.com",
+  "password": "SecurePassword123!"
 }
 ```
 
 **Response**: `201 Created`
 ```json
 {
-  "organization": { ... },
-  "user": { ... },
-  "tokens": {
-    "access_token": "...",
-    "refresh_token": "..."
-  }
+  "message": "Organization registered successfully",
+  "user_id": "uuid",
+  "organization_id": "uuid"
 }
 ```
 
 #### Login
 ```http
-POST /api/v1/auth/login?organization_id={org_id}
+POST /auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "password123"
+  "email": "john@acme.com",
+  "password": "SecurePassword123!",
+  "organization_id": "uuid" // Optional
 }
 ```
 
 **Response**: `200 OK`
 ```json
 {
+  "access_token": "jwt_token",
+  "refresh_token": "refresh_token",
   "user": { ... },
-  "organization": { ... },
-  "tokens": {
-    "access_token": "...",
-    "refresh_token": "..."
-  },
-  "requires_mfa": false
+  "organization": { ... }
+}
+```
+
+#### Refresh Token
+```http
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "refresh_token"
 }
 ```
 
 #### Verify Email
 ```http
-GET /api/v1/auth/verify-email?token={verification_token}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "message": "Email verified successfully"
-}
+GET /auth/verify-email?token=verification_token
 ```
 
 #### Forgot Password
 ```http
-POST /api/v1/auth/forgot-password
+POST /auth/forgot-password
 Content-Type: application/json
 
 {
@@ -116,408 +109,601 @@ Content-Type: application/json
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "Password reset email sent"
-}
-```
-
 #### Reset Password
 ```http
-POST /api/v1/auth/reset-password
+POST /auth/reset-password
 Content-Type: application/json
 
 {
   "token": "reset_token",
-  "new_password": "NewSecurePassword123!"
+  "new_password": "NewPassword123!"
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "Password reset successfully"
-}
-```
-
-#### Refresh Token
+#### Verify MFA
 ```http
-POST /api/v1/auth/refresh
+POST /auth/verify-mfa
 Content-Type: application/json
 
 {
-  "refresh_token": "your_refresh_token"
-}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "access_token": "new_access_token",
-  "refresh_token": "new_refresh_token"
-}
-```
-
-#### Verify MFA and Login
-```http
-POST /api/v1/auth/verify-mfa
-Content-Type: application/json
-
-{
-  "token": "temporary_token_from_login",
-  "code": "123456"
-}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "user": { ... },
-  "organization": { ... },
-  "tokens": {
-    "access_token": "...",
-    "refresh_token": "..."
-  }
+  "email": "user@example.com",
+  "password": "password",
+  "mfa_code": "123456",
+  "organization_id": "uuid"
 }
 ```
 
 #### Logout
 ```http
-POST /api/v1/auth/logout
-Authorization: Bearer {access_token}
+POST /auth/logout
+Authorization: Bearer <token>
+```
+
+### Users (`/users`)
+
+#### Get Current User
+```http
+GET /users/me
+Authorization: Bearer <token>
+```
+
+#### Update Current User
+```http
+PUT /users/me
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "token": "access_token_to_revoke"
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "+1234567890",
+  "avatar_url": "https://..."
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "Logged out successfully"
-}
-```
-
-### Organizations (`/api/v1/organizations`)
-
-#### List Organizations
+#### Change Password
 ```http
-GET /api/v1/organizations
-Authorization: Bearer {access_token}
+PUT /users/me/change-password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "current_password": "OldPassword123!",
+  "new_password": "NewPassword123!"
+}
+```
+
+#### List Organization Users
+```http
+GET /users?page=1&limit=10&search=john
+Authorization: Bearer <token>
 ```
 
 **Query Parameters**:
 - `page`: Page number (default: 1)
 - `limit`: Items per page (default: 10)
-- `search`: Search term
-- `status`: Filter by status
+- `search`: Search term (name/email)
 
-**Response**: `200 OK`
-```json
-{
-  "data": [ ... ],
-  "meta": {
-    "total": 100,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 10
-  }
-}
-```
-
-#### Get Organization
+#### Get User by ID
 ```http
-GET /api/v1/organizations/{id}
-Authorization: Bearer {access_token}
+GET /users/:id
+Authorization: Bearer <token>
 ```
 
-**Response**: `200 OK`
-```json
+#### Update User (Admin)
+```http
+PUT /users/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
 {
-  "id": "uuid",
-  "name": "Acme Corp",
-  "slug": "acme-corp",
-  "email": "contact@acme.com",
-  ...
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "newemail@example.com",
+  "status": "active"
 }
+```
+
+#### Revoke User Access
+```http
+POST /users/:id/revoke
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "reason": "Violation of terms"
+}
+```
+
+#### Download User Data (GDPR)
+```http
+GET /users/me/download-data
+Authorization: Bearer <token>
+```
+
+### Organizations (`/organizations`)
+
+#### Get Current Organization
+```http
+GET /organizations/me
+Authorization: Bearer <token>
+```
+
+#### List User Organizations
+```http
+GET /organizations
+Authorization: Bearer <token>
 ```
 
 #### Update Organization
 ```http
-PATCH /api/v1/organizations/{id}
-Authorization: Bearer {access_token}
+PUT /organizations/me
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "name": "Updated Name",
+  "name": "New Name",
+  "email": "newemail@example.com",
   "phone": "+1234567890"
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "id": "uuid",
-  "name": "Updated Name",
-  ...
-}
-```
-
-#### Delete Organization
+#### Update Organization Settings
 ```http
-DELETE /api/v1/organizations/{id}
-Authorization: Bearer {access_token}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "message": "Organization deleted successfully"
-}
-```
-
-### Users (`/api/v1/users`)
-
-#### List Users
-```http
-GET /api/v1/users
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters**:
-- `page`: Page number
-- `limit`: Items per page
-- `search`: Search term
-- `status`: Filter by status
-- `organization_id`: Filter by organization
-
-**Response**: `200 OK`
-```json
-{
-  "data": [ ... ],
-  "meta": { ... }
-}
-```
-
-#### Get User
-```http
-GET /api/v1/users/{id}
-Authorization: Bearer {access_token}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "id": "uuid",
-  "email": "user@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  ...
-}
-```
-
-#### Update User
-```http
-PATCH /api/v1/users/{id}
-Authorization: Bearer {access_token}
+PUT /organizations/me/settings
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "first_name": "Jane",
-  "phone": "+1234567890"
+  "settings": { ... }
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "id": "uuid",
-  "first_name": "Jane",
-  ...
-}
-```
-
-#### Delete User
+#### Get Organization Statistics
 ```http
-DELETE /api/v1/users/{id}
-Authorization: Bearer {access_token}
+GET /organizations/me/stats
+Authorization: Bearer <token>
 ```
 
-**Response**: `200 OK`
-```json
+#### Switch Organization
+```http
+PUT /organizations/switch
+Authorization: Bearer <token>
+Content-Type: application/json
+
 {
-  "message": "User deleted successfully"
+  "organization_id": "uuid"
 }
 ```
 
-### Roles (`/api/v1/roles`)
+**Response**: Returns new access and refresh tokens
+
+#### Update Organization Slug
+```http
+PUT /organizations/me/slug
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "slug": "new-slug"
+}
+```
+
+**Note**: Only available for Basic, Platinum, and Diamond packages
+
+### Roles (`/roles`)
 
 #### List Roles
 ```http
-GET /api/v1/roles
-Authorization: Bearer {access_token}
+GET /roles?page=1&limit=10
+Authorization: Bearer <token>
 ```
 
-**Query Parameters**:
-- `organization_id`: Filter by organization
-- `is_active`: Filter by active status
-
-**Response**: `200 OK`
-```json
-{
-  "data": [ ... ]
-}
+#### Get Role by ID
+```http
+GET /roles/:id
+Authorization: Bearer <token>
 ```
 
 #### Create Role
 ```http
-POST /api/v1/roles
-Authorization: Bearer {access_token}
+POST /roles
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
   "name": "Manager",
   "slug": "manager",
   "description": "Manager role",
-  "permission_ids": [1, 2, 3]
-}
-```
-
-**Response**: `201 Created`
-```json
-{
-  "id": 1,
-  "name": "Manager",
-  ...
+  "permissions": ["users.view", "users.edit"]
 }
 ```
 
 #### Update Role
 ```http
-PATCH /api/v1/roles/{id}
-Authorization: Bearer {access_token}
+PUT /roles/:id
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
   "name": "Senior Manager",
-  "permission_ids": [1, 2, 3, 4]
-}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "id": 1,
-  "name": "Senior Manager",
-  ...
+  "permissions": ["users.view", "users.edit", "roles.view"]
 }
 ```
 
 #### Delete Role
 ```http
-DELETE /api/v1/roles/{id}
-Authorization: Bearer {access_token}
+DELETE /roles/:id
+Authorization: Bearer <token>
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "Role deleted successfully"
-}
-```
-
-### Invitations (`/api/v1/invitations`)
-
-#### List Invitations
+#### Get Permissions
 ```http
-GET /api/v1/invitations
-Authorization: Bearer {access_token}
+GET /roles/permissions
+Authorization: Bearer <token>
 ```
 
-**Query Parameters**:
-- `organization_id`: Filter by organization
-- `status`: Filter by status (pending, accepted, expired, cancelled)
-
-**Response**: `200 OK`
-```json
-{
-  "data": [ ... ]
-}
-```
-
-#### Create Invitation
+#### Get Role Usage Counts
 ```http
-POST /api/v1/invitations
-Authorization: Bearer {access_token}
+GET /roles/usage-counts
+Authorization: Bearer <token>
+```
+
+### Packages (`/packages`)
+
+#### List Packages
+```http
+GET /packages
+Authorization: Bearer <token>
+```
+
+#### List Package Features
+```http
+GET /packages/features
+Authorization: Bearer <token>
+```
+
+#### Get Package by ID
+```http
+GET /packages/:id
+Authorization: Bearer <token>
+```
+
+#### Get Current Organization Package
+```http
+GET /organizations/me/package
+Authorization: Bearer <token>
+```
+
+#### Upgrade Package
+```http
+PUT /organizations/me/package
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "email": "newuser@example.com",
-  "role_id": 2,
-  "message": "Welcome to our organization!"
+  "package_id": 2
 }
 ```
 
-**Response**: `201 Created`
-```json
-{
-  "id": "uuid",
-  "email": "newuser@example.com",
-  "token": "invitation_token",
-  ...
-}
-```
-
-#### Accept Invitation
+#### Purchase Feature
 ```http
-POST /api/v1/invitations/{id}/accept
-Authorization: Bearer {access_token}
-```
+POST /organizations/me/features
+Authorization: Bearer <token>
+Content-Type: application/json
 
-**Response**: `200 OK`
-```json
 {
-  "message": "Invitation accepted successfully",
-  "membership": { ... }
+  "feature_id": 1
 }
 ```
 
-#### Cancel Invitation
+#### Remove Feature
 ```http
-DELETE /api/v1/invitations/{id}
-Authorization: Bearer {access_token}
+DELETE /organizations/me/features/:id
+Authorization: Bearer <token>
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "Invitation cancelled successfully"
-}
-```
-
-### MFA (`/api/v1/mfa`)
-
-#### Setup MFA
+#### Configure Auto-Renewal
 ```http
-POST /api/v1/mfa/setup
-Authorization: Bearer {access_token}
-```
+PUT /organizations/me/package/auto-renew
+Authorization: Bearer <token>
+Content-Type: application/json
 
-**Response**: `200 OK`
-```json
 {
-  "secret": "base32_secret",
-  "qr_code": "data:image/png;base64,...",
-  "backup_codes": ["code1", "code2", ...]
+  "enabled": true,
+  "credentials": {
+    "payment_method": "stripe",
+    "stripe_card_token": "..."
+  }
 }
 ```
+
+#### Calculate Upgrade Price
+```http
+POST /organizations/me/package/calculate-upgrade-price
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "package_id": 3,
+  "period": "1_year",
+  "custom_months": 12
+}
+```
+
+### Payments (`/payments`)
+
+#### Create Payment
+```http
+POST /payments
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "gateway": "stripe",
+  "payment_type": "package_upgrade",
+  "amount": 100.00,
+  "description": "Upgrade to Platinum",
+  "package_id": 3,
+  "period": "1_year"
+}
+```
+
+**Response**: Returns payment form data or redirect URL
+
+#### Verify Payment
+```http
+POST /payments/verify
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "payment_id": "uuid",
+  "transaction_id": "txn_xxx"
+}
+```
+
+#### Get Payment by ID
+```http
+GET /payments/:id
+Authorization: Bearer <token>
+```
+
+#### List Payments
+```http
+GET /payments?page=1&limit=10
+Authorization: Bearer <token>
+```
+
+### Chat (`/chats`)
+
+#### Create Chat
+```http
+POST /chats
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "type": "direct",
+  "member_ids": ["user_uuid"]
+}
+```
+
+**Group Chat**:
+```json
+{
+  "type": "group",
+  "name": "Team Chat",
+  "description": "Team discussion",
+  "member_ids": ["user1_uuid", "user2_uuid"]
+}
+```
+
+#### List Chats
+```http
+GET /chats?page=1&limit=20
+Authorization: Bearer <token>
+```
+
+#### Get Chat by ID
+```http
+GET /chats/:id
+Authorization: Bearer <token>
+```
+
+#### Update Chat
+```http
+PUT /chats/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "description": "Updated description"
+}
+```
+
+#### Delete Chat
+```http
+DELETE /chats/:id
+Authorization: Bearer <token>
+```
+
+#### Add Member to Chat
+```http
+POST /chats/:id/members
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "member_ids": ["user_uuid"]
+}
+```
+
+#### Remove Member from Chat
+```http
+DELETE /chats/:id/members/:memberId
+Authorization: Bearer <token>
+```
+
+#### Leave Chat
+```http
+POST /chats/:id/leave
+Authorization: Bearer <token>
+```
+
+#### Send Message
+```http
+POST /chats/:id/messages
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "Hello!",
+  "message_type": "TEXT"
+}
+```
+
+#### Get Messages
+```http
+GET /chats/:id/messages?page=1&limit=50
+Authorization: Bearer <token>
+```
+
+#### Delete Message
+```http
+DELETE /chats/:id/messages/:messageId
+Authorization: Bearer <token>
+```
+
+### Calls (`/calls`)
+
+#### Start Call
+```http
+POST /calls/chats/:chatId
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "call_type": "video"
+}
+```
+
+#### Get Active Call
+```http
+GET /calls/chats/:chatId/active
+Authorization: Bearer <token>
+```
+
+#### Join Call
+```http
+POST /calls/:id/join
+Authorization: Bearer <token>
+```
+
+#### Leave Call
+```http
+POST /calls/:id/leave
+Authorization: Bearer <token>
+```
+
+#### End Call
+```http
+POST /calls/:id/end
+Authorization: Bearer <token>
+```
+
+#### Update Media Settings
+```http
+PUT /calls/:id/media
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "audio_enabled": true,
+  "video_enabled": false
+}
+```
+
+### Notifications (`/notifications`)
+
+#### List Notifications
+```http
+GET /notifications?page=1&limit=20&unread_only=false
+Authorization: Bearer <token>
+```
+
+#### Get Unread Count
+```http
+GET /notifications/unread-count
+Authorization: Bearer <token>
+```
+
+#### Get Notification Preferences
+```http
+GET /notifications/preferences
+Authorization: Bearer <token>
+```
+
+#### Get Notification by ID
+```http
+GET /notifications/:id
+Authorization: Bearer <token>
+```
+
+#### Mark Notification as Read
+```http
+PUT /notifications/:id/read
+Authorization: Bearer <token>
+```
+
+#### Mark All as Read
+```http
+PUT /notifications/read-all
+Authorization: Bearer <token>
+```
+
+#### Delete Notification
+```http
+DELETE /notifications/:id
+Authorization: Bearer <token>
+```
+
+#### Update Preferences
+```http
+PUT /notifications/preferences
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "email_enabled": true,
+  "in_app_enabled": true,
+  "preferences": {
+    "user_invitations": { "email": true, "in_app": true }
+  }
+}
+```
+
+### MFA (`/mfa`)
+
+#### Check MFA Status
+```http
+GET /mfa/check
+Authorization: Bearer <token>
+```
+
+#### Initialize MFA Setup
+```http
+POST /mfa/setup/initialize
+Authorization: Bearer <token>
+```
+
+**Response**: Returns QR code data and secret
 
 #### Verify MFA Setup
 ```http
-POST /api/v1/mfa/verify
-Authorization: Bearer {access_token}
+POST /mfa/setup/verify
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
@@ -525,219 +711,210 @@ Content-Type: application/json
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "MFA enabled successfully"
-}
+#### Get Backup Codes
+```http
+GET /mfa/backup-codes
+Authorization: Bearer <token>
+```
+
+#### Regenerate Backup Codes
+```http
+POST /mfa/backup-codes/regenerate
+Authorization: Bearer <token>
 ```
 
 #### Disable MFA
 ```http
-POST /api/v1/mfa/disable
-Authorization: Bearer {access_token}
+DELETE /mfa/disable
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "password": "user_password"
+  "code": "123456"
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "MFA disabled successfully"
-}
-```
+### Invitations (`/invitations`)
 
-### Packages (`/api/v1/packages`)
-
-#### List Packages
+#### Create Invitation
 ```http
-GET /api/v1/packages
-Authorization: Bearer {access_token}
-```
-
-**Response**: `200 OK`
-```json
-{
-  "data": [ ... ]
-}
-```
-
-#### Upgrade Package
-```http
-POST /api/v1/packages/upgrade
-Authorization: Bearer {access_token}
+POST /invitations
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "package_id": 2,
-  "organization_id": "uuid"
+  "email": "newuser@example.com",
+  "role_id": 2
 }
 ```
 
-**Response**: `200 OK`
-```json
-{
-  "message": "Package upgraded successfully",
-  "organization": { ... }
-}
-```
-
-### Notifications (`/api/v1/notifications`)
-
-#### List Notifications
+#### List Invitations
 ```http
-GET /api/v1/notifications
-Authorization: Bearer {access_token}
+GET /invitations?page=1&limit=10
+Authorization: Bearer <token>
 ```
 
-**Query Parameters**:
-- `read`: Filter by read status (true/false)
-- `organization_id`: Filter by organization
-
-**Response**: `200 OK`
-```json
-{
-  "data": [ ... ]
-}
-```
-
-#### Mark as Read
+#### Get Invitation by Token
 ```http
-PATCH /api/v1/notifications/{id}/read
-Authorization: Bearer {access_token}
+GET /invitations/token/:token
 ```
 
-**Response**: `200 OK`
-```json
+#### Accept Invitation
+```http
+POST /invitations/accept/:token
+Content-Type: application/json
+
 {
-  "message": "Notification marked as read"
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "password": "SecurePassword123!"
 }
 ```
 
-### Audit Logs (`/api/v1/audit-logs`)
+#### Delete Invitation
+```http
+DELETE /invitations/:id
+Authorization: Bearer <token>
+```
+
+### Audit Logs (`/audit-logs`)
 
 #### List Audit Logs
 ```http
-GET /api/v1/audit-logs
-Authorization: Bearer {access_token}
+GET /audit-logs?page=1&limit=20&action=user.created
+Authorization: Bearer <token>
 ```
 
-**Query Parameters**:
-- `organization_id`: Filter by organization
-- `user_id`: Filter by user
-- `action`: Filter by action
-- `start_date`: Start date filter
-- `end_date`: End date filter
-- `page`: Page number
-- `limit`: Items per page
+#### Get Audit Log Statistics
+```http
+GET /audit-logs/stats
+Authorization: Bearer <token>
+```
 
-**Response**: `200 OK`
-```json
+#### Get Viewable Users
+```http
+GET /audit-logs/viewable-users
+Authorization: Bearer <token>
+```
+
+#### Get Audit Log by ID
+```http
+GET /audit-logs/:id
+Authorization: Bearer <token>
+```
+
+### Documents (`/organizations/me/documents`)
+
+#### List Documents
+```http
+GET /organizations/me/documents?page=1&limit=10
+Authorization: Bearer <token>
+```
+
+#### Get Document by ID
+```http
+GET /organizations/me/documents/:id
+Authorization: Bearer <token>
+```
+
+#### Download Document
+```http
+GET /organizations/me/documents/:id/download
+Authorization: Bearer <token>
+```
+
+#### Upload Document
+```http
+POST /organizations/me/documents
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
 {
-  "data": [ ... ],
-  "meta": { ... }
+  "file": <file>,
+  "title": "Document Title",
+  "description": "Document description"
 }
 ```
 
-## Error Responses
-
-### Standard Error Format
-
-```json
-{
-  "statusCode": 400,
-  "message": "Validation failed",
-  "error": "Bad Request",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Email must be a valid email"
-    }
-  ]
-}
+#### Delete Document
+```http
+DELETE /organizations/me/documents/:id
+Authorization: Bearer <token>
 ```
 
-### Common Status Codes
+## WebSocket Events
 
-- `200 OK` - Success
-- `201 Created` - Resource created
-- `400 Bad Request` - Invalid request
-- `401 Unauthorized` - Authentication required
-- `403 Forbidden` - Insufficient permissions
-- `404 Not Found` - Resource not found
-- `409 Conflict` - Resource conflict
-- `429 Too Many Requests` - Rate limit exceeded
-- `500 Internal Server Error` - Server error
+### Connection
+```javascript
+socket.connect('ws://localhost:3000', {
+  query: {
+    organizationId: 'org_uuid',
+    token: 'jwt_token'
+  }
+});
+```
+
+### Events
+
+#### Client → Server
+
+- `message:send`: Send message
+- `call:offer`: Initiate call
+- `call:answer`: Answer call
+- `call:ice-candidate`: ICE candidate
+- `call:end`: End call
+- `call:reject`: Reject call
+
+#### Server → Client
+
+- `message:new`: New message received
+- `message:updated`: Message updated
+- `message:deleted`: Message deleted
+- `call:incoming`: Incoming call
+- `call:answered`: Call answered
+- `call:ended`: Call ended
+- `notification:new`: New notification
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Not Found |
+| 409 | Conflict |
+| 422 | Validation Error |
+| 500 | Internal Server Error |
 
 ## Rate Limiting
 
-API endpoints are rate-limited:
-- **Default**: 10 requests per minute per IP
-- **Authentication endpoints**: Stricter limits apply
-
-Rate limit headers:
-```
-X-RateLimit-Limit: 10
-X-RateLimit-Remaining: 9
-X-RateLimit-Reset: 1234567890
-```
-
-## Interactive API Documentation
-
-When the server is running, visit:
-```
-http://localhost:3000/api/docs
-```
-
-This provides an interactive Swagger UI where you can:
-- Explore all endpoints
-- Test API calls
-- View request/response schemas
-- See authentication requirements
+- **Limit**: 10 requests per minute
+- **Headers**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
 ## Pagination
 
-List endpoints support pagination:
+All list endpoints support pagination:
 
-**Query Parameters**:
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 10, max: 100)
+```
+GET /endpoint?page=1&limit=20
+```
 
-**Response Format**:
+**Response**:
 ```json
 {
-  "data": [ ... ],
-  "meta": {
-    "total": 100,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 10,
-    "hasNextPage": true,
-    "hasPreviousPage": false
-  }
+  "data": [...],
+  "total": 100,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 5
 }
 ```
 
-## Filtering & Searching
+## Interactive Documentation
 
-Many list endpoints support filtering:
-
-- `search`: Full-text search across relevant fields
-- `status`: Filter by status enum values
-- `organization_id`: Filter by organization
-- `created_at`: Date range filtering
-
-## Sorting
-
-Sorting is supported via query parameters:
-- `sort`: Field to sort by
-- `order`: Sort order (asc, desc)
-
-Example:
+Swagger UI is available at:
 ```
-GET /api/v1/users?sort=created_at&order=desc
+http://localhost:3000/api/docs
 ```
 

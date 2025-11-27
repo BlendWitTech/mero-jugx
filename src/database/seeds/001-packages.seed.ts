@@ -23,7 +23,7 @@ export async function seedPackages(dataSource: DataSource): Promise<void> {
       base_user_limit: 25,
       base_role_limit: 2,
       additional_role_limit: 3,
-      price: 29.99,
+      price: 10.0,
       is_active: true,
       sort_order: 2,
     },
@@ -34,7 +34,7 @@ export async function seedPackages(dataSource: DataSource): Promise<void> {
       base_user_limit: 50,
       base_role_limit: 2,
       additional_role_limit: 5,
-      price: 79.99,
+      price: 20.0,
       is_active: true,
       sort_order: 3,
     },
@@ -45,7 +45,7 @@ export async function seedPackages(dataSource: DataSource): Promise<void> {
       base_user_limit: 100,
       base_role_limit: 2,
       additional_role_limit: 8,
-      price: 199.99,
+      price: 35.0,
       is_active: true,
       sort_order: 4,
     },
@@ -60,7 +60,10 @@ export async function seedPackages(dataSource: DataSource): Promise<void> {
       await packageRepository.save(packageRepository.create(pkg));
       console.log(`✓ Seeded package: ${pkg.name}`);
     } else {
-      console.log(`- Package already exists: ${pkg.name}`);
+      // Update existing package with new price
+      existingPackage.price = pkg.price;
+      await packageRepository.save(existingPackage);
+      console.log(`✓ Updated package: ${pkg.name} (price: $${pkg.price})`);
     }
   }
 }

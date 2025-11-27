@@ -1,251 +1,40 @@
-# Environment Setup Guide
+# Environment Setup
 
-Complete guide for setting up your development environment and configuring all environment variables for Mero Jugx.
+## Overview
 
-## 📋 Table of Contents
+This guide covers setting up the development and production environments for Mero Jugx.
 
-1. [Prerequisites](#prerequisites)
-2. [Installation](#installation)
-3. [Environment Configuration](#environment-configuration)
-4. [Environment Variables Template](#environment-variables-template)
-5. [Verification](#verification)
-6. [Troubleshooting](#troubleshooting)
+## Prerequisites
 
----
+- Node.js 20.x or higher
+- PostgreSQL 14+ (default port 5433)
+- Redis 6+ (default port 6379)
+- npm or yarn
 
-## 📦 Prerequisites
+## Environment Variables
 
-Before starting, ensure you have:
+Create a `.env` file in the root directory with the following variables:
 
-- **Node.js** 18.x or higher
-- **npm** 9.x or higher (comes with Node.js)
-- **PostgreSQL** 12.x or higher
-- **Git** (for version control)
-- **Code Editor** (VS Code recommended)
-
----
-
-## 🚀 Installation
-
-### Step 1: Install Node.js
-
-**Windows:**
-1. Download Node.js from [nodejs.org](https://nodejs.org/)
-2. Run the installer
-3. Verify installation:
-```bash
-node --version
-npm --version
-```
-
-**macOS:**
-```bash
-# Using Homebrew
-brew install node
-
-# Or download from nodejs.org
-```
-
-**Linux:**
-```bash
-# Ubuntu/Debian
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Verify
-node --version
-npm --version
-```
-
-### Step 2: Install PostgreSQL
-
-**Windows:**
-1. Download PostgreSQL from [postgresql.org](https://www.postgresql.org/download/windows/)
-2. Run the installer
-3. Remember the postgres user password
-4. Verify installation:
-```bash
-psql --version
-```
-
-**macOS:**
-```bash
-# Using Homebrew
-brew install postgresql@15
-brew services start postgresql@15
-
-# Verify
-psql --version
-```
-
-**Linux:**
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-
-# Start PostgreSQL
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Verify
-psql --version
-```
-
-### Step 3: Create Database
-
-```bash
-# Connect to PostgreSQL
-sudo -u postgres psql
-
-# Create database and user
-CREATE DATABASE mero_jugx;
-CREATE USER mero_jugx_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE mero_jugx TO mero_jugx_user;
-
-# Exit
-\q
-```
-
-### Step 4: Install Redis (Optional)
-
-Redis is optional but recommended for production. For development, you can skip this.
-
-**Windows:**
-Download from: https://github.com/microsoftarchive/redis/releases
-
-**macOS:**
-```bash
-brew install redis
-brew services start redis
-```
-
-**Linux:**
-```bash
-sudo apt install redis-server
-sudo systemctl start redis
-sudo systemctl enable redis
-```
-
-### Step 5: Clone Repository
-
-```bash
-# Clone the repository
-git clone <repository-url> mero-jugx
-cd mero-jugx
-```
-
-### Step 6: Install Dependencies
-
-**Backend Dependencies:**
-```bash
-# Install backend dependencies
-npm install
-```
-
-**Frontend Dependencies:**
-```bash
-# Install frontend dependencies
-cd frontend
-npm install
-cd ..
-```
-
----
-
-## ⚙️ Environment Configuration
-
-### Create .env File
-
-Create a `.env` file in the root directory:
-
-```bash
-# Copy example if exists
-cp .env.example .env
-
-# Or create new file
-touch .env
-```
-
-### Configure Environment Variables
-
-See [Environment Variables Template](#environment-variables-template) below for complete configuration.
-
-**Minimum Required Variables:**
+### Application Configuration
 
 ```env
-# Database
-DB_HOST=localhost
-DB_PORT=5433
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=mero_jugx
-
-# JWT
-JWT_SECRET=your-secret-key-here
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=your-refresh-secret
-JWT_REFRESH_EXPIRES_IN=7d
-
 # Application
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3001
-
-# Email (Resend or SMTP)
-RESEND_API_KEY=your-resend-api-key
-```
-
-### Important Notes
-
-1. **JWT Secrets**: Use strong, random strings in production
-2. **Database Password**: Use the password you set when creating the database user
-3. **Email**: For development, consider using services like Mailtrap or MailHog
-4. **Frontend URL**: Must match your frontend dev server URL
-
----
-
-## 📝 Environment Variables Template
-
-Complete template for `.env` file with all required and optional variables.
-
-### Quick Start
-
-Copy this template to create your `.env` file:
-
-```bash
-# Copy this content to .env file
-# Update values as needed for your environment
-```
-
-### Complete Template
-
-```env
-# ============================================
-# MERO JUGX - Environment Configuration
-# ============================================
-# Copy this file to .env and update with your values
-# NEVER commit .env file to version control!
-
-# ============================================
-# Application Configuration
-# ============================================
 NODE_ENV=development
 PORT=3000
 API_PREFIX=api
 API_VERSION=v1
 FRONTEND_URL=http://localhost:3001
+APP_URL=http://localhost:3000
 
-# Database Auto-Initialization (Optional)
-# Set to 'true' to automatically run migrations and seeds on app startup
-# Recommended: false (run manually using npm run db:init or setup scripts)
+# Auto-initialize database on startup (optional)
 AUTO_INIT_DB=false
+```
 
-# ============================================
-# Database Configuration
-# ============================================
-# Note: If using Docker (docker-compose.yml), use port 5433
-# If using local PostgreSQL, use port 5432 (default)
+### Database Configuration
+
+```env
+# PostgreSQL
+DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5433
 DB_USER=postgres
@@ -253,351 +42,314 @@ DB_PASSWORD=postgres
 DB_NAME=mero_jugx
 DB_SYNCHRONIZE=false
 DB_LOGGING=true
+```
 
-# ============================================
-# JWT Configuration
-# ============================================
-# IMPORTANT: Change these in production!
-JWT_SECRET=your-development-jwt-secret-key-change-in-production
+### Redis Configuration
+
+```env
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+```
+
+### JWT Configuration
+
+```env
+# JWT Secrets (CHANGE IN PRODUCTION!)
+JWT_SECRET=your-super-secret-jwt-key-change-this
 JWT_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=your-development-refresh-secret-key-change-in-production
+JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this
 JWT_REFRESH_EXPIRES_IN=7d
+```
 
-# ============================================
-# Email Configuration
-# ============================================
-# Option 1: Resend (Recommended for production)
-RESEND_API_KEY=your-resend-api-key-here
+### Email Configuration
 
-# Option 2: SMTP (Alternative)
+```env
+# SMTP (Option 1: Traditional SMTP)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM=noreply@mero-jugx.local
+SMTP_FROM=noreply@mero-jugx.com
 SMTP_FROM_NAME=Mero Jugx
 
-# ============================================
-# eSewa Payment Gateway Configuration
-# ============================================
-# For Development (Test Credentials)
-# Documentation: https://developer.esewa.com.np/pages/Epay
-# Test Credentials: https://developer.esewa.com.np/pages/Test-credentials
+# Resend (Option 2: Resend API - Recommended)
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+```
+
+**Note**: For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password.
+
+### Payment Gateways
+
+#### Stripe Configuration
+
+```env
+# Stripe Test Mode
+STRIPE_TEST_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+STRIPE_TEST_SECRET_KEY=sk_test_xxxxxxxxxxxxx
+
+# Stripe Production
+STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxxxxxxx
+STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxx
+```
+
+#### eSewa Configuration
+
+```env
+# eSewa Test Mode (RC Environment)
 ESEWA_TEST_MERCHANT_ID=EPAYTEST
 ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q
 ESEWA_TEST_API_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form
 ESEWA_TEST_VERIFY_URL=https://rc.esewa.com.np/api/epay/transaction/status
 
-# Mock Mode (for development when eSewa UAT is not accessible)
-# Set to 'true' to use local mock payment page instead of redirecting to eSewa
-ESEWA_USE_MOCK_MODE=false
-
-# For Production (Live Credentials)
-# Get these from eSewa after merchant registration
-ESEWA_MERCHANT_ID=your-production-merchant-id
-ESEWA_SECRET_KEY=your-production-secret-key
+# eSewa Production
+ESEWA_MERCHANT_ID=your-merchant-id
+ESEWA_SECRET_KEY=your-secret-key
 ESEWA_API_URL=https://epay.esewa.com.np/api/epay/main/v2/form
 ESEWA_VERIFY_URL=https://esewa.com.np/api/epay/transaction/status
 
-# ============================================
-# Stripe Payment Gateway Configuration
-# ============================================
-# For Development (Test Mode)
-# Get test keys from: https://dashboard.stripe.com/test/apikeys
-STRIPE_TEST_PUBLISHABLE_KEY=pk_test_your_test_publishable_key_here
-STRIPE_TEST_SECRET_KEY=sk_test_your_test_secret_key_here
+# Mock Mode (bypasses eSewa for development)
+ESEWA_USE_MOCK_MODE=false
+```
 
-# For Production (Live Mode)
-# Get live keys from: https://dashboard.stripe.com/apikeys
-STRIPE_PUBLISHABLE_KEY=pk_live_your_live_publishable_key_here
-STRIPE_SECRET_KEY=sk_live_your_live_secret_key_here
+### Currency Configuration
 
-# Webhook Secret (for verifying webhook signatures)
-# Get from: https://dashboard.stripe.com/webhooks
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
-
-# ============================================
-# Currency Configuration
-# ============================================
+```env
+# Currency Exchange Rate
 NPR_TO_USD_RATE=0.0075
 DEFAULT_CURRENCY=USD
 NEPAL_COUNTRY_CODE=NP
-
-# ============================================
-# Redis Configuration (Optional)
-# ============================================
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-
-# ============================================
-# Rate Limiting
-# ============================================
-THROTTLE_TTL=60
-THROTTLE_LIMIT=10
-
-# ============================================
-# File Upload Configuration
-# ============================================
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=10485760
-ALLOWED_FILE_TYPES=pdf,doc,docx,jpg,jpeg,png
 ```
 
-### Variable Descriptions
+### File Upload
 
-#### Application
-- `NODE_ENV`: Environment mode (`development` or `production`)
-- `AUTO_INIT_DB`: Auto-initialize database on startup (`true` or `false`, default: `false`)
-- `PORT`: Backend server port (default: 3000)
-- `FRONTEND_URL`: Frontend application URL
-
-#### Database
-- `DB_HOST`: PostgreSQL host (default: localhost)
-- `DB_PORT`: PostgreSQL port (5433 for Docker, 5432 for local)
-- `DB_USER`: Database username
-- `DB_PASSWORD`: Database password
-- `DB_NAME`: Database name
-
-#### JWT
-- `JWT_SECRET`: Secret key for access tokens (change in production!)
-- `JWT_EXPIRES_IN`: Access token expiration (default: 15m)
-- `JWT_REFRESH_SECRET`: Secret key for refresh tokens
-- `JWT_REFRESH_EXPIRES_IN`: Refresh token expiration (default: 7d)
-
-#### Email
-- `RESEND_API_KEY`: Resend API key (recommended)
-- `SMTP_*`: SMTP configuration (alternative to Resend)
-
-#### eSewa
-- `ESEWA_TEST_MERCHANT_ID`: Test merchant ID (EPAYTEST)
-- `ESEWA_TEST_SECRET_KEY`: Test secret key
-- `ESEWA_USE_MOCK_MODE`: Enable mock mode for development
-- `ESEWA_MERCHANT_ID`: Production merchant ID
-- `ESEWA_SECRET_KEY`: Production secret key
-
-#### Stripe
-- `STRIPE_TEST_SECRET_KEY`: Stripe test secret key
-- `STRIPE_TEST_PUBLISHABLE_KEY`: Stripe test publishable key
-- `STRIPE_SECRET_KEY`: Stripe live secret key
-- `STRIPE_PUBLISHABLE_KEY`: Stripe live publishable key
-- `STRIPE_WEBHOOK_SECRET`: Webhook signature secret
-
-#### Currency
-- `NPR_TO_USD_RATE`: Exchange rate (default: 0.0075)
-- `DEFAULT_CURRENCY`: Default currency (USD)
-- `NEPAL_COUNTRY_CODE`: Nepal country code (NP)
-
-### Getting API Keys
-
-#### eSewa
-1. Visit: https://developer.esewa.com.np/
-2. Register as a merchant
-3. Get test credentials from: https://developer.esewa.com.np/pages/Test-credentials
-4. For production, contact eSewa support
-
-#### Stripe
-1. Sign up: https://dashboard.stripe.com/register
-2. Get test keys: https://dashboard.stripe.com/test/apikeys
-3. Get live keys: https://dashboard.stripe.com/apikeys
-4. Set up webhooks: https://dashboard.stripe.com/webhooks
-
-#### Resend (Email)
-1. Sign up: https://resend.com/
-2. Get API key from dashboard
-3. Verify domain for production
-
-### Security Notes
-
-1. **Never commit `.env` file** to version control
-2. **Use strong secrets** in production
-3. **Rotate keys regularly**
-4. **Use different keys** for development and production
-5. **Keep keys secure** and limit access
-
----
-
-## ✅ Verification
-
-### Step 1: Database Setup
-
-```bash
-# Run database migrations
-npm run migration:run
-
-# Run seed data
-npm run seed:run
-
-# Or reset database (WARNING: Deletes all data!)
-npm run db:reset
+```env
+# File Upload Limits
+MAX_FILE_SIZE=5242880
+UPLOAD_DEST=./uploads
 ```
 
-### Step 2: Start Development Servers
+### Logging
 
-**Option 1: Using Setup Scripts**
-
-**Windows:**
-```bash
-scripts\start-dev.bat
+```env
+LOG_LEVEL=debug
 ```
 
-**Linux/Mac:**
+## Initial Setup Steps
+
+### 1. Clone Repository
+
 ```bash
-chmod +x scripts/start-dev.sh
-./scripts/start-dev.sh
+git clone <repository-url>
+cd mero-jugx
 ```
 
-**Option 2: Manual Start**
+### 2. Install Dependencies
 
-**Terminal 1 - Backend:**
 ```bash
-npm run start:dev
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-### Step 3: Verify Installation
-
-**Check Backend:**
-- Open: http://localhost:3000/api/v1
-- API Docs: http://localhost:3000/api/docs
-
-**Check Frontend:**
-- Open: http://localhost:3001
-
-**Test API:**
-```bash
-# Test health endpoint (if available)
-curl http://localhost:3000/api/v1
-
-# Or use the Swagger UI
-# Visit: http://localhost:3000/api/docs
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Port Already in Use
-
-**Error**: `EADDRINUSE: address already in use`
-
-**Solution:**
-```bash
-# Find process using port
-# Windows
-netstat -ano | findstr :3000
-
-# Linux/Mac
-lsof -i :3000
-
-# Kill process or change PORT in .env
-```
-
-### Database Connection Error
-
-**Error**: `connect ECONNREFUSED`
-
-**Solutions:**
-- Verify PostgreSQL is running
-- Check database credentials in `.env`
-- Verify database exists
-- Check firewall settings
-- See [Database Guide](./DATABASE-GUIDE.md) for detailed troubleshooting
-
-### Module Not Found
-
-**Error**: `Cannot find module`
-
-**Solution:**
-```bash
-# Delete node_modules and reinstall
-rm -rf node_modules package-lock.json
+# Backend
 npm install
 
 # Frontend
 cd frontend
-rm -rf node_modules package-lock.json
 npm install
+cd ..
 ```
 
-### Migration Errors
+### 3. Setup Database
 
-**Error**: Migration fails
-
-**Solutions:**
-- Check database connection
-- Verify migrations table exists
-- Try resetting database: `npm run db:reset`
-- See [Database Guide](./DATABASE-GUIDE.md) for detailed troubleshooting
-
-### Permission Denied (Linux/Mac)
-
-**Error**: Permission denied errors
-
-**Solution:**
 ```bash
-# Fix npm permissions
-sudo chown -R $(whoami) ~/.npm
-sudo chown -R $(whoami) /usr/local/lib/node_modules
+# Create PostgreSQL database
+createdb mero_jugx
+
+# Or using psql
+psql -U postgres
+CREATE DATABASE mero_jugx;
+\q
 ```
 
----
+### 4. Setup Redis
 
-## 🛠️ Development Tools
+```bash
+# Start Redis (if not running)
+redis-server
 
-### Database Management
+# Or using Docker
+docker run -d -p 6379:6379 redis:alpine
+```
 
-**pgAdmin** (GUI):
-- Download: https://www.pgadmin.org/
-- Connect using your database credentials
+### 5. Configure Environment
 
-**DBeaver** (Cross-platform):
-- Download: https://dbeaver.io/
-- Supports PostgreSQL
+```bash
+# Copy and edit .env file
+cp .env.example .env
+# Edit .env with your configuration
+```
 
-**VS Code Extension**:
-- Install "PostgreSQL" extension
-- Connect directly from VS Code
+### 6. Initialize Database
 
-### API Testing
+```bash
+# Run migrations
+npm run migration:run
 
-**Swagger UI**:
-- Available at: http://localhost:3000/api/docs
-- Interactive API testing
+# Run seeds
+npm run seed:run
 
-**Postman**:
-- Import OpenAPI spec from Swagger
-- Create collections for testing
+# Or reset database (drops all, runs migrations and seeds)
+npm run db:reset
+```
 
-**REST Client** (VS Code):
-- Create `.http` files
-- Test APIs directly in VS Code
+### 7. Start Development Servers
 
-### Email Testing (Development)
+```bash
+# Terminal 1: Backend
+npm run start:dev
 
-**Mailtrap**:
-- Free email testing service
-- Update SMTP settings to use Mailtrap
+# Terminal 2: Frontend
+cd frontend
+npm run dev
+```
 
-**MailHog**:
-- Local email testing server
-- Install: `go get github.com/mailhog/MailHog`
+## Production Setup
 
----
+### Environment Variables
 
-## 📚 Additional Resources
+For production, ensure:
+- `NODE_ENV=production`
+- Strong JWT secrets (use secure random strings)
+- Production database credentials
+- Production payment gateway keys
+- Secure SMTP/Resend configuration
+- `AUTO_INIT_DB=false` (run migrations manually)
 
-- [Database Guide](./DATABASE-GUIDE.md) - Database setup and troubleshooting
-- [Payment Testing Guide](./PAYMENT-TESTING-GUIDE.md) - Payment gateway setup
-- [Email Setup](./EMAIL-SETUP.md) - Email service configuration
-- [Developer Guide](../DEVELOPER_GUIDE.md) - Complete developer setup
+### Security Checklist
 
----
+- [ ] Change all default passwords
+- [ ] Use strong JWT secrets (32+ characters)
+- [ ] Enable HTTPS
+- [ ] Set secure CORS origins
+- [ ] Use production database
+- [ ] Configure proper file permissions
+- [ ] Set up backup strategy
+- [ ] Enable rate limiting
+- [ ] Configure logging
+- [ ] Set up monitoring
 
-**Last Updated**: 2025-11-22
+### Database Setup
+
+```bash
+# Production database initialization
+npm run migration:run
+npm run seed:run
+```
+
+### Build for Production
+
+```bash
+# Backend
+npm run build
+
+# Frontend
+cd frontend
+npm run build
+cd ..
+```
+
+### Start Production Server
+
+```bash
+npm run start:prod
+```
+
+## Docker Setup (Optional)
+
+### docker-compose.yml
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: mero_jugx
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+### Start with Docker
+
+```bash
+docker-compose up -d
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+- Verify PostgreSQL is running: `pg_isready`
+- Check connection string in `.env`
+- Verify database exists: `psql -l`
+- Check firewall rules
+
+### Redis Connection Issues
+
+- Verify Redis is running: `redis-cli ping`
+- Check Redis host/port in `.env`
+- Verify Redis password if set
+
+### Port Already in Use
+
+- Change `PORT` in `.env` for backend
+- Change port in `vite.config.ts` for frontend
+
+### Migration Issues
+
+- Check migration status: `npm run migration:show`
+- Revert last migration: `npm run migration:revert`
+- Reset database: `npm run db:reset` (⚠️ deletes all data)
+
+## Environment-Specific Configurations
+
+### Development
+
+- `NODE_ENV=development`
+- `DB_LOGGING=true`
+- `LOG_LEVEL=debug`
+- Use test payment credentials
+- Mock mode for eSewa (optional)
+
+### Staging
+
+- `NODE_ENV=production`
+- `DB_LOGGING=false`
+- `LOG_LEVEL=info`
+- Use test payment credentials
+- Production-like database
+
+### Production
+
+- `NODE_ENV=production`
+- `DB_LOGGING=false`
+- `LOG_LEVEL=warn`
+- Production payment credentials
+- Production database
+- Monitoring enabled
+
