@@ -322,6 +322,6 @@ if (-not (Test-Path frontend/.env)) {
 
 Write-Host ""
 Write-Host "Reset and initialization complete!" -ForegroundColor Green
-Write-Host "You can now run 'npm run run' to start the development servers." -ForegroundColor Yellow
+Write-Host "You can now run 'npm run dev' to start the development servers." -ForegroundColor Yellow
 Write-Host ""
 
