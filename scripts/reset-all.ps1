@@ -88,7 +88,7 @@ if (-not $envFileExists) {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
     Write-Host ""
 }
-else {
+if ($envFileExists) {
     $oldErrorAction = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     npm run db:reset 2>&1 | Out-Null
