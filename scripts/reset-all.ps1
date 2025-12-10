@@ -96,14 +96,14 @@ if ($envExists) {
         $dbResetSuccess = $false
     }
     
-    if ($dbResetSuccess) {
+    if ($dbResetSuccess -eq $true) {
         Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
     }
-    else {
+    if ($dbResetSuccess -eq $false) {
         Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
     }
 }
-if (-not $envExists) {
+if ($envExists -eq $false) {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
 }
 Write-Host ""
