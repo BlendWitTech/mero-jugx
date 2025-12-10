@@ -2,22 +2,29 @@
 
 ## Current Collaborators
 
-| Username | Assigned Branches | Version-Control Access | Can Invite To |
-|----------|------------------|----------------------|---------------|
+| Username | Main Branch Access | Version-Control Access | Can Invite To |
+|----------|-------------------|----------------------|---------------|
 | saugatpahari | `development`, `testing`, `production` | All version-control branches | All version-control branches |
-| sarbaja | `production` | `version-control-production` | `version-control-production` only |
+| sarbaja | `production` only | `version-control-production` | `version-control-production` only |
+
+**Note**: Main branches (`development`, `testing`, `production`) are NOT visible to new collaborators. They only work on `version-control-*` branches.
 
 ## Access Matrix
 
-| Branch | Owner | saugatpahari | sarbaja | New Collaborators |
-|--------|-------|--------------|---------|------------------|
-| `main` | ✅ | ❌ | ❌ | ❌ |
-| `development` | ✅ | ✅ | ❌ | ❌ |
-| `testing` | ✅ | ✅ | ❌ | ❌ |
-| `production` | ✅ | ✅ | ✅ | ❌ |
-| `version-control-development` | ✅ | ✅ | ❌ | ✅ (one at a time) |
-| `version-control-testing` | ✅ | ✅ | ❌ | ✅ (one at a time) |
-| `version-control-production` | ✅ | ✅ | ✅ | ✅ (one at a time) |
+| Branch | Owner | saugatpahari | sarbaja | New Dev Collaborators | New Test Collaborators | New Prod Collaborators |
+|--------|-------|--------------|---------|---------------------|----------------------|----------------------|
+| `main` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `development` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `testing` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `production` | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| `version-control-development` | ✅ | ✅ | ❌ | ✅ (one at a time) | ❌ | ❌ |
+| `version-control-testing` | ✅ | ❌ | ❌ | ❌ | ✅ (one at a time) | ❌ |
+| `version-control-production` | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ (one at a time) |
+
+**Key Points:**
+- New collaborators CANNOT see main branches (`development`, `testing`, `production`)
+- They only see and work on their assigned `version-control-*` branch
+- Main branches are protected and only accessible to specific people
 
 ## Invitation Rules
 

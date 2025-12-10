@@ -93,12 +93,16 @@ As the owner, you can invite collaborators to any branch:
 
 ## Access Rules Summary
 
-| Who | Can Invite To | Process |
-|-----|---------------|---------|
-| Owner | Any version-control branch | Direct invitation + branch protection |
-| saugatpahari | Any version-control branch | Request → Owner approves + adds to protection |
-| sarbaja | `version-control-production` only | Request → Owner approves + adds to protection |
-| New Collaborators | None | Cannot invite others |
+| Who | Can See Main Branches | Can Work On | Can Invite To | Process |
+|-----|----------------------|-------------|---------------|---------|
+| Owner | All (`development`, `testing`, `production`) | All branches | Any version-control branch | Direct invitation + branch protection |
+| saugatpahari | `development`, `testing`, `production` | All branches | Any version-control branch | Request → Owner approves + adds to protection |
+| sarbaja | `production` only | `production` + `version-control-production` | `version-control-production` only | Request → Owner approves + adds to protection |
+| New Dev Collaborators | ❌ None | `version-control-development` only | None | Cannot see main branches |
+| New Test Collaborators | ❌ None | `version-control-testing` only | None | Cannot see main branches |
+| New Prod Collaborators | ❌ None | `version-control-production` only | None | Cannot see main branches |
+
+**Important**: New collaborators CANNOT see or access main branches. They only work on their assigned `version-control-*` branch.
 
 ## Important Notes
 

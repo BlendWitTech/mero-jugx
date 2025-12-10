@@ -30,11 +30,14 @@ main (🔒 Owner Only - Hidden)
    - ✅ Require pull request
    - ✅ Require status checks
    - ✅ **Restrict who can push** → Add: `saugatpahari` + your username
+   - ✅ **Restrict who can view** → Add: `saugatpahari` + your username (if available)
+   - **Important**: This branch should NOT be visible to new collaborators
 
 2. Add rule for `version-control-development`:
    - ✅ Require pull request
-   - ✅ **Restrict who can push** → Add: `saugatpahari` + your username
-   - This is the entry point for new development collaborators
+   - ✅ **Restrict who can push** → Add: `saugatpahari` + your username + new dev collaborators (as you add them)
+   - ✅ This is the entry point for new development collaborators
+   - ✅ New collaborators work here, NOT on `development` directly
 
 ## Step 3: Protect Testing Branch
 
@@ -42,11 +45,14 @@ main (🔒 Owner Only - Hidden)
    - ✅ Require pull request
    - ✅ Require status checks
    - ✅ **Restrict who can push** → Add: your username only
+   - ✅ **Restrict who can view** → Add: your username only (if available)
+   - **Important**: This branch should NOT be visible to new collaborators
 
 2. Add rule for `version-control-testing`:
    - ✅ Require pull request
-   - ✅ **Restrict who can push** → Add: your username only
-   - This is the entry point for new testing collaborators
+   - ✅ **Restrict who can push** → Add: your username + new test collaborators (as you add them)
+   - ✅ This is the entry point for new testing collaborators
+   - ✅ New collaborators work here, NOT on `testing` directly
 
 ## Step 4: Protect Production Branch
 
@@ -54,11 +60,14 @@ main (🔒 Owner Only - Hidden)
    - ✅ Require pull request
    - ✅ Require status checks
    - ✅ **Restrict who can push** → Add: `sarbaja` + your username
+   - ✅ **Restrict who can view** → Add: `sarbaja` + your username (if available)
+   - **Important**: This branch should NOT be visible to new collaborators
 
 2. Add rule for `version-control-production`:
    - ✅ Require pull request
-   - ✅ **Restrict who can push** → Add: `sarbaja` + your username
-   - This is the entry point for new production collaborators
+   - ✅ **Restrict who can push** → Add: `sarbaja` + your username + new prod collaborators (as you add them)
+   - ✅ This is the entry point for new production collaborators
+   - ✅ New collaborators work here, NOT on `production` directly
 
 ## Step 5: Invite Initial Collaborators
 
@@ -68,8 +77,9 @@ main (🔒 Owner Only - Hidden)
 2. Enter: `saugatpahari`
 3. Permission: **Write**
 4. After they accept, they can:
-   - Push to `development`, `testing`, `production`
+   - Push to `development`, `testing`, `production` (main branches)
    - Push to all `version-control-*` branches
+   - Merge from `version-control-*` branches to main branches
    - Invite new collaborators to any `version-control-*` branch
 
 ### Invite sarbaja
@@ -78,8 +88,9 @@ main (🔒 Owner Only - Hidden)
 2. Enter: `sarbaja`
 3. Permission: **Write**
 4. After they accept, they can:
-   - Push to `production` only
+   - Push to `production` (main branch) only
    - Push to `version-control-production` only
+   - Merge from `version-control-production` to `production`
    - Invite new collaborators to `version-control-production` only
 
 ## Step 6: Create Version-Control Branches
@@ -103,12 +114,16 @@ git checkout -b version-control-production
 git push origin version-control-production
 ```
 
-## Step 7: Hide Main Branch from Collaborators
+## Step 7: Hide Main Branches from Collaborators
 
-1. Go to: Settings → General → Features
-2. Under "Repository visibility", ensure main branch is not the default
-3. Set default branch to `development` (or one of the protected branches)
-4. Collaborators won't see main branch in their view
+1. Go to: Settings → General → Default branch
+2. Set default branch to `version-control-development` (entry point for most collaborators)
+3. **Important**: Use branch protection rules to restrict visibility:
+   - For `development`: Only allow `saugatpahari` + owner to see/push
+   - For `testing`: Only allow owner to see/push
+   - For `production`: Only allow `sarbaja` + owner to see/push
+4. New collaborators will only see their assigned `version-control-*` branch
+5. They will NOT see `development`, `testing`, or `production` branches
 
 ## Step 8: Set Up Collaborator Invitation Permissions
 
