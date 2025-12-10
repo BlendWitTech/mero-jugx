@@ -1,0 +1,90 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - development
+      - testing
+      - production
+
+jobs:
+  # Prevent PRs to main branch (only owner can merge)
+  check-main-branch:
+    name: Check Main Branch Protection
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'main'
+    steps:
+      - name: Check if user is repository owner
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          
+          if [ "$AUTHOR" != "$OWNER" ]; then
+            echo "❌ ERROR: Only the repository owner can create pull requests to 'main' branch"
+            echo "Current author: $AUTHOR"
+            echo "Repository owner: $OWNER"
+            echo ""
+            echo "Please target one of these branches instead:"
+            echo "  - development (for development features)"
+            echo "  - testing (for testing features)"
+            echo "  - production (for production-ready features)"
+            exit 1
+          fi
+          
+          echo "✅ Authorized to create PR to main branch"
+
+  # Run full CI pipeline for PRs
+  ci:
+    name: CI Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run tests
+        run: npm run test:all
+
+      - name: Run lint check
+        run: npm run lint:check
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            const body = `${emoji} CI Pipeline ${status}\n\n**Branch:** ${{ github.head_ref }}\n**Target:** ${{ github.base_ref }}\n\n[View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+

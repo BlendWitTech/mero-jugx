@@ -2,8 +2,20 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
+// Get API URL from environment, ensuring it ends with /api/v1
+const getApiBaseUrl = () => {
+  const viteApiUrl = import.meta.env.VITE_API_URL;
+  if (viteApiUrl) {
+    // If VITE_API_URL is set, use it (it should already include /api/v1)
+    // Remove trailing slash if present
+    return viteApiUrl.endsWith('/') ? viteApiUrl.slice(0, -1) : viteApiUrl;
+  }
+  // If not set, use relative URL (will use Vite proxy)
+  return '/api/v1';
+};
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -76,7 +88,7 @@ api.interceptors.response.use(
     if (isAuthEndpoint && originalRequest.url?.includes('/auth/login')) {
       const errorData = error.response?.data;
       // If it's a 200 response that got here somehow, or if it contains MFA setup info, let it through
-      if (error.response?.status === 200 || errorData?.requires_mfa_setup || errorData?.temp_setup_token) {
+      if (error.response?.status === 200 || (errorData as any)?.requires_mfa_setup || (errorData as any)?.temp_setup_token) {
         // This shouldn't happen, but if it does, return the data as if it was successful
         return Promise.resolve({ data: errorData, status: 200 });
       }
@@ -88,7 +100,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint && !isMfaSetupEndpoint) {
       // Check if MFA setup is required
       const errorData = error.response?.data;
-      if (errorData?.code === 'MFA_SETUP_REQUIRED' || errorData?.requires_mfa_setup) {
+      if ((errorData as any)?.code === 'MFA_SETUP_REQUIRED' || (errorData as any)?.requires_mfa_setup) {
         const currentPath = window.location.pathname;
         if (currentPath !== '/mfa/setup') {
           if (process.env.NODE_ENV === 'development') {
@@ -144,7 +156,12 @@ api.interceptors.response.use(
         }
 
         // Try to refresh the token (use plain axios to avoid interceptor loop)
-        const response = await axios.post('/api/v1/auth/refresh', {
+        // Use the same baseURL as the api instance
+        const baseUrl = api.defaults.baseURL || '/api/v1';
+        const refreshUrl = baseUrl.endsWith('/') 
+          ? `${baseUrl}auth/refresh`
+          : `${baseUrl}/auth/refresh`;
+        const response = await axios.post(refreshUrl, {
           refresh_token: refreshToken,
         }, {
           headers: {
@@ -212,7 +229,7 @@ api.interceptors.response.use(
     // Show user-friendly error messages for non-401 errors
     // Skip showing errors for auth endpoints (they handle their own errors)
     if (error.response?.status && error.response.status !== 401 && !isAuthEndpoint && !isMfaSetupEndpoint) {
-      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+      const errorMessage = (error.response?.data as any)?.message || error.message || 'An error occurred';
       const status = error.response.status;
       
       // Convert technical error messages to user-friendly ones

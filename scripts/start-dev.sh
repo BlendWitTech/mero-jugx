@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# Get the directory where the script is located
+# Mero Jugx - Start Development Servers (Bash)
+# This script starts both backend and frontend development servers
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
@@ -20,10 +22,10 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# Check if Docker Compose file exists and start containers
+# Check if Docker Compose file exists and start containers (only postgres and redis)
 if [ -f "docker-compose.yml" ]; then
     echo "[0/2] Starting Docker containers (PostgreSQL, Redis)..."
-    docker-compose up -d
+    docker-compose up -d postgres redis > /dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo "Docker containers started successfully."
     else
@@ -50,7 +52,7 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend
 echo "[1/2] Starting backend server (port 3000)..."
-npm run start:dev &
+nest start --watch &
 BACKEND_PID=$!
 sleep 3
 
@@ -81,4 +83,3 @@ echo ""
 
 # Wait for interrupt signal
 wait
-

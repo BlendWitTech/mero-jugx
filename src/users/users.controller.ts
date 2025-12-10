@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Post,
   Delete,
   Body,
@@ -45,6 +46,15 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User profile updated successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of organization' })
   async updateCurrentUser(@CurrentUser() user: any, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateCurrentUser(user.userId, user.organizationId, dto);
+  }
+
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Partially update current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile updated successfully' })
+  @ApiResponse({ status: 403, description: 'Not a member of organization' })
+  async patchCurrentUser(@CurrentUser() user: any, @Body() dto: Partial<UpdateUserDto>) {
     return this.usersService.updateCurrentUser(user.userId, user.organizationId, dto);
   }
 

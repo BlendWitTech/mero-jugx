@@ -1,83 +1,70 @@
 #!/bin/bash
 
-# Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+# Mero Jugx - Start Production Server
+# This script builds and starts the application in production mode
 
-cd "$PROJECT_ROOT"
+set -e
 
-echo "========================================"
-echo "  Starting Production Servers"
-echo "========================================"
-echo ""
-echo "Building and starting backend and frontend in production mode..."
+echo "🚀 Mero Jugx - Starting Production Server"
+echo "=========================================="
 echo ""
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "ERROR: .env file not found!"
-    echo "Please create a .env file with your configuration."
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo -e "${RED}❌ .env file not found. Please create it first.${NC}"
     exit 1
 fi
 
-# Function to cleanup background processes on exit
-cleanup() {
-    echo ""
-    echo "Stopping servers..."
-    kill $BACKEND_PID 2>/dev/null
-    exit
-}
+# Check NODE_ENV
+if ! grep -q "NODE_ENV=production" .env 2>/dev/null; then
+    echo -e "${YELLOW}⚠️  Warning: NODE_ENV is not set to 'production' in .env${NC}"
+    read -p "Continue anyway? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
 
-trap cleanup SIGINT SIGTERM
-
-# Build backend
-echo "[1/4] Building backend..."
-npm run build || {
-    echo "ERROR: Backend build failed!"
-    exit 1
-}
-
-# Build frontend
+# Step 1: Build backend
+echo -e "${BLUE}🔨 Building backend...${NC}"
+npm run build
+echo -e "${GREEN}✅ Backend built${NC}"
 echo ""
-echo "[2/4] Building frontend..."
+
+# Step 2: Build frontend
+echo -e "${BLUE}🔨 Building frontend...${NC}"
 cd frontend
-npm run build || {
-    echo "ERROR: Frontend build failed!"
-    cd ..
-    exit 1
-}
+npm run build
 cd ..
-
-# Run database migrations
-echo ""
-echo "[3/4] Running database migrations..."
-npm run migration:run || {
-    echo "WARNING: Migration failed. Continuing anyway..."
-}
-
-# Start backend in production mode
-echo ""
-echo "[4/4] Starting backend server (port 3000)..."
-npm run start:prod &
-BACKEND_PID=$!
-
-echo ""
-echo "========================================"
-echo "  Production servers starting..."
-echo "========================================"
-echo ""
-echo "Backend:  http://localhost:3000"
-echo "Frontend: Serve frontend/dist on port 3001"
-echo "API Docs: http://localhost:3000/api/docs"
-echo ""
-echo "To serve frontend, run:"
-echo "  cd frontend/dist && python3 -m http.server 3001"
-echo "  or"
-echo "  npx serve -s frontend/dist -l 3001"
-echo ""
-echo "Press Ctrl+C to stop the server"
+echo -e "${GREEN}✅ Frontend built${NC}"
 echo ""
 
-# Wait for user interrupt
-wait
+# Step 3: Check database connection
+echo -e "${BLUE}🗄️  Checking database connection...${NC}"
+npm run db:check || echo -e "${YELLOW}⚠️  Database check failed. Make sure database is running.${NC}"
+echo ""
 
+# Step 4: Run migrations
+echo -e "${BLUE}📦 Running database migrations...${NC}"
+npm run migration:run || echo -e "${YELLOW}⚠️  Migration failed. Check logs.${NC}"
+echo ""
+
+# Step 5: Start production server
+echo -e "${BLUE}🚀 Starting production server...${NC}"
+echo ""
+echo -e "${GREEN}✅ Production server starting!${NC}"
+echo ""
+echo "Server will be available at:"
+echo "  - Backend: http://localhost:3000"
+echo "  - Frontend: http://localhost:3001 (if configured)"
+echo ""
+
+# Start the server
+npm run start:prod

@@ -24,7 +24,11 @@ export default function LoginPage() {
   const [mfaCode, setMfaCode] = useState('');
   const [requiresOrgSelection, setRequiresOrgSelection] = useState(false);
   const [availableOrganizations, setAvailableOrganizations] = useState<Array<{id: string; name: string; slug: string; role: string}>>([]);
-  const [loginCredentials, setLoginCredentials] = useState<{email: string; password: string} | null>(null);
+  const [loginCredentials, setLoginCredentials] = useState<{email: string; password?: string; mfaCode?: string} | null>(null);
+  const [loginMode, setLoginMode] = useState<'email' | 'password' | 'mfa'>('email');
+  const [email, setEmail] = useState('');
+  const [mfaLoginEmail, setMfaLoginEmail] = useState('');
+  const [checkingMfa, setCheckingMfa] = useState(false);
   const setAuth = useAuthStore((state) => state.setAuth);
 
   // Handle email verification success message from navigation state
@@ -49,9 +53,96 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+
+  // Check if MFA is available for email
+  const handleEmailSubmit = async (emailValue: string) => {
+    if (!emailValue || !emailValue.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setCheckingMfa(true);
+    try {
+      const checkResult = await authService.checkMfaRequired(emailValue);
+      setEmail(emailValue);
+      setMfaLoginEmail(emailValue);
+      
+      if (checkResult.mfa_available) {
+        setLoginMode('mfa');
+        toast.success('MFA login available. Please enter your authenticator code.', { icon: '🔐' });
+      } else {
+        setLoginMode('password');
+      }
+    } catch (error: any) {
+      // If check fails, default to password login
+      setLoginMode('password');
+      setEmail(emailValue);
+    } finally {
+      setCheckingMfa(false);
+    }
+  };
+
+  // Handle MFA-only login
+  const handleMfaLogin = async () => {
+    if (!mfaLoginEmail || !mfaCode || mfaCode.length !== 6) {
+      toast.error('Please enter email and a valid 6-digit MFA code');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response: LoginResponse = await authService.loginWithMfa({
+        email: mfaLoginEmail,
+        code: mfaCode,
+      });
+
+      // Handle organization selection
+      if (response.requires_organization_selection && response.organizations) {
+        setRequiresOrgSelection(true);
+        setAvailableOrganizations(response.organizations);
+        setLoginCredentials({ email: mfaLoginEmail, mfaCode: mfaCode }); // Store email and MFA code for org selection
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle successful login
+      if (response.access_token && response.user && response.organization) {
+        const org = {
+          id: response.organization.id,
+          name: response.organization.name || '',
+          slug: response.organization.slug || '',
+        };
+        setAuth(
+          {
+            access_token: response.access_token,
+            refresh_token: response.refresh_token || '',
+          },
+          response.user,
+          org,
+        );
+        toast.success('Login successful!');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (org.slug) {
+          navigate(`/org/${org.slug}`);
+        } else {
+          navigate('/');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      toast.error('Unexpected response from server. Please try again.');
+      setIsLoading(false);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+      toast.error(errorMessage);
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -70,7 +161,6 @@ export default function LoginPage() {
       // Check multiple ways the response might indicate MFA setup is required
       if (
         response.requires_mfa_setup === true || 
-        response.requires_mfa_setup === 'true' ||
         response.temp_setup_token ||
         (response.message && response.message.includes('MFA is required'))
       ) {
@@ -170,11 +260,25 @@ export default function LoginPage() {
     
     setIsLoading(true);
     try {
-      const response: LoginResponse = await authService.login({
-        email: loginCredentials.email,
-        password: loginCredentials.password,
-        organization_id: organizationId,
-      });
+      // Check if this was an MFA login or password login
+      let response: LoginResponse;
+      if (loginCredentials.password) {
+        // Password login
+        response = await authService.login({
+          email: loginCredentials.email,
+          password: loginCredentials.password,
+          organization_id: organizationId,
+        });
+      } else if (loginCredentials.mfaCode) {
+        // MFA login
+        response = await authService.loginWithMfa({
+          email: loginCredentials.email,
+          code: loginCredentials.mfaCode,
+          organization_id: organizationId,
+        });
+      } else {
+        throw new Error('Invalid login credentials');
+      }
 
       // Handle MFA setup requirement
       if (response.requires_mfa_setup) {
@@ -205,7 +309,7 @@ export default function LoginPage() {
             refresh_token: response.refresh_token || '',
           },
           response.user,
-          { id: response.organization.id, name: response.organization.name || '' },
+          { id: response.organization.id, name: response.organization.name || '', slug: response.organization.slug || '' },
         );
         toast.success('Login successful!');
         // Small delay to ensure token is persisted to localStorage before navigation
@@ -247,7 +351,7 @@ export default function LoginPage() {
             refresh_token: response.refresh_token || '',
           },
           response.user,
-          { id: response.organization.id, name: response.organization.name || '' },
+          { id: response.organization.id, name: response.organization.name || '', slug: response.organization.slug || '' },
         );
         toast.success('Login successful!');
         // Small delay to ensure token is persisted to localStorage before navigation
@@ -370,6 +474,102 @@ export default function LoginPage() {
     );
   }
 
+  // Email + MFA login mode
+  if (loginMode === 'mfa') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#36393f] py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8">
+            <div>
+              <h2 className="text-center text-3xl font-extrabold text-white">
+                Sign in with MFA
+              </h2>
+              <p className="mt-2 text-center text-sm text-[#b9bbbe]">
+                Enter your email and authenticator code
+              </p>
+            </div>
+            <form 
+              className="mt-8 space-y-6" 
+              onSubmit={(e) => { 
+                e.preventDefault(); 
+                handleMfaLogin(); 
+              }}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="mfa-email" className="block text-sm font-medium text-[#b9bbbe]">
+                    Email address
+                  </label>
+                  <input
+                    id="mfa-email"
+                    type="email"
+                    value={mfaLoginEmail}
+                    onChange={(e) => setMfaLoginEmail(e.target.value)}
+                    className="input mt-1"
+                    placeholder="you@example.com"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="mfa-code-input" className="block text-sm font-medium text-[#b9bbbe]">
+                    Authenticator Code
+                  </label>
+                  <input
+                    id="mfa-code-input"
+                    type="text"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    className="input mt-1 text-center text-2xl tracking-widest"
+                    placeholder="000000"
+                    autoFocus
+                    disabled={isLoading}
+                  />
+                  <p className="mt-1 text-xs text-[#8e9297]">
+                    Enter the 6-digit code from your authenticator app
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <button 
+                  type="submit" 
+                  disabled={isLoading || !mfaLoginEmail || mfaCode.length !== 6} 
+                  className="btn btn-primary w-full"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
+                </button>
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMode('email');
+                    setMfaLoginEmail('');
+                    setMfaCode('');
+                  }}
+                  className="text-sm text-[#5865f2] hover:text-[#4752c4]"
+                >
+                  Back
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Email-first mode or password mode
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#36393f] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -385,63 +585,129 @@ export default function LoginPage() {
               </a>
             </p>
           </div>
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            <div className="space-y-4">
+          
+          {loginMode === 'email' ? (
+            <form 
+              className="mt-8 space-y-6" 
+              onSubmit={(e) => { 
+                e.preventDefault(); 
+                const emailInput = (e.target as HTMLFormElement).querySelector('input[type="email"]') as HTMLInputElement;
+                if (emailInput) {
+                  handleEmailSubmit(emailInput.value);
+                }
+              }}
+            >
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[#b9bbbe]">
+                <label htmlFor="email-only" className="block text-sm font-medium text-[#b9bbbe]">
                   Email address
                 </label>
                 <input
-                  id="email"
+                  id="email-only"
                   type="email"
-                  {...register('email')}
                   className="input mt-1"
                   placeholder="you@example.com"
+                  autoFocus
+                  disabled={checkingMfa}
                 />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-[#ed4245]">{errors.email.message}</p>
+                {checkingMfa && (
+                  <p className="mt-2 text-sm text-[#b9bbbe] flex items-center">
+                    <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                    Checking...
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-[#b9bbbe]">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  {...register('password')}
-                  className="input mt-1"
-                  placeholder="••••••••"
-                />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-[#ed4245]">{errors.password.message}</p>
-                )}
+                <button 
+                  type="submit" 
+                  disabled={checkingMfa} 
+                  className="btn btn-primary w-full"
+                >
+                  {checkingMfa ? (
+                    <>
+                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                      Checking...
+                    </>
+                  ) : (
+                    'Continue'
+                  )}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-[#b9bbbe]">
+                    Email address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    {...register('email')}
+                    defaultValue={email}
+                    className="input mt-1"
+                    placeholder="you@example.com"
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-[#ed4245]">{errors.email.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-[#b9bbbe]">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    {...register('password')}
+                    className="input mt-1"
+                    placeholder="••••••••"
+                  />
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-[#ed4245]">{errors.password.message}</p>
+                  )}
+                </div>
               </div>
 
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
-                <a href="/forgot-password" className="font-medium text-[#5865f2] hover:text-[#4752c4]">
-                  Forgot your password?
-                </a>
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  <a href="/forgot-password" className="font-medium text-[#5865f2] hover:text-[#4752c4]">
+                    Forgot your password?
+                  </a>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <button type="submit" disabled={isLoading} className="btn btn-primary w-full">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign in'
-                )}
-              </button>
-            </div>
-          </form>
+              <div>
+                <button type="submit" disabled={isLoading} className="btn btn-primary w-full">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
+                </button>
+              </div>
+
+              {loginMode === 'password' && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMode('email');
+                      setEmail('');
+                    }}
+                    className="text-sm text-[#5865f2] hover:text-[#4752c4]"
+                  >
+                    Back
+                  </button>
+                </div>
+              )}
+            </form>
+          )}
         </div>
       </div>
     </div>

@@ -10,13 +10,17 @@ import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpdateOrganizationSettingsDto } from './dto/update-organization-settings.dto';
 import { UpdateOrganizationSlugDto } from './dto/update-organization-slug.dto';
 import { SwitchOrganizationDto } from './dto/switch-organization.dto';
+import { OrganizationBrandingService } from './organization-branding.service';
 
 @ApiTags('organizations')
 @Controller('organizations')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly brandingService: OrganizationBrandingService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Get current organization' })
@@ -93,6 +97,39 @@ export class OrganizationsController {
       user.userId,
       user.organizationId,
       dto.slug,
+    );
+  }
+
+  @Get('me/branding')
+  @Permissions('organizations.view')
+  @ApiOperation({ summary: 'Get organization branding settings' })
+  @ApiResponse({ status: 200, description: 'Branding settings retrieved successfully' })
+  async getBranding(@CurrentUser() user: any) {
+    return this.brandingService.getBranding(user.organizationId);
+  }
+
+  @Put('me/branding')
+  @HttpCode(HttpStatus.OK)
+  @Permissions('organizations.settings')
+  @ApiOperation({ summary: 'Update organization branding settings' })
+  @ApiResponse({ status: 200, description: 'Branding settings updated successfully' })
+  @ApiResponse({ status: 403, description: 'Only organization owner can update branding' })
+  async updateBranding(
+    @CurrentUser() user: any,
+    @Body() dto: {
+      logo_url?: string;
+      favicon_url?: string;
+      primary_color?: string;
+      secondary_color?: string;
+      custom_css?: string;
+      custom_js?: string;
+      footer_text?: string;
+    },
+  ) {
+    return this.brandingService.updateBranding(
+      user.organizationId,
+      user.userId,
+      dto,
     );
   }
 }

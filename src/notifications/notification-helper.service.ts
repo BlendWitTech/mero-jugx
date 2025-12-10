@@ -261,6 +261,113 @@ export class NotificationHelperService {
   }
 
   /**
+   * Create or update a grouped chat notification
+   * Groups messages by sender in the same chat
+   */
+  async createOrUpdateGroupedChatNotification(
+    userId: string,
+    organizationId: string,
+    type: NotificationType,
+    chatId: string,
+    senderId: string,
+    senderName: string,
+    chatName: string,
+    chatType: 'direct' | 'group',
+    messageContent: string | null,
+    messageId: string,
+  ): Promise<Notification | null> {
+    // Check if in-app notifications are enabled
+    const shouldSendInApp = await this.shouldSendNotification(
+      userId,
+      organizationId,
+      type,
+      'in_app',
+    );
+
+    if (!shouldSendInApp) {
+      console.log(`[NotificationHelper] In-app notifications disabled for user ${userId}, type ${type}`);
+      return null;
+    }
+
+    // Find existing unread notification from the same sender in the same chat
+    // We need to check the data field for sender_id and chat_id
+    const allUnreadNotifications = await this.notificationRepository.find({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        type,
+        read_at: null, // Only group unread notifications
+      },
+      order: {
+        created_at: 'DESC',
+      },
+    });
+
+    // Find notification from the same sender in the same chat
+    const existingNotification = allUnreadNotifications.find(
+      (notif) =>
+        notif.data?.sender_id === senderId && notif.data?.chat_id === chatId,
+    );
+
+    if (existingNotification) {
+      // Update existing notification with incremented count
+      const currentCount = existingNotification.data?.message_count || 1;
+      const newCount = currentCount + 1;
+
+      // Update notification
+      existingNotification.title = chatType === 'group'
+        ? `New messages in ${chatName}`
+        : `${senderName} sent ${newCount} message${newCount > 1 ? 's' : ''}`;
+      
+      existingNotification.message = chatType === 'group'
+        ? `${senderName} sent ${newCount} message${newCount > 1 ? 's' : ''}`
+        : messageContent?.substring(0, 100) || 'Sent an attachment';
+
+      existingNotification.data = {
+        ...existingNotification.data,
+        message_count: newCount,
+        last_message_id: messageId,
+        last_message_content: messageContent,
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log(`[NotificationHelper] Updating existing notification ${existingNotification.id} - count: ${newCount}`);
+      return await this.notificationRepository.save(existingNotification);
+    } else {
+      // Create new notification
+      console.log(`[NotificationHelper] Creating new notification for user ${userId}, sender ${senderName}, chat ${chatId}`);
+      const notification = this.notificationRepository.create({
+        user_id: userId,
+        organization_id: organizationId,
+        type,
+        title: chatType === 'group'
+          ? `New message in ${chatName}`
+          : `New message from ${senderName}`,
+        message: chatType === 'group'
+          ? `${senderName}: ${messageContent?.substring(0, 100) || 'Sent an attachment'}`
+          : messageContent?.substring(0, 100) || 'Sent an attachment',
+        data: {
+          link: {
+            route: '/chat',
+            params: { chatId },
+          },
+          chat_id: chatId,
+          chat_name: chatName,
+          sender_id: senderId,
+          sender_name: senderName,
+          message_id: messageId,
+          message_count: 1,
+          last_message_content: messageContent,
+        },
+      });
+
+      const savedNotification = await this.notificationRepository.save(notification);
+      console.log(`[NotificationHelper] Notification created with ID: ${savedNotification.id}`);
+      return savedNotification;
+    }
+  }
+
+  /**
    * Check if email should be sent for a notification type
    */
   async shouldSendEmail(

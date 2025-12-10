@@ -1,182 +1,313 @@
 #!/bin/bash
 
-# Get the directory where the script is located
+# Mero Jugx - Interactive Setup Script (Bash)
+# This script asks whether to use manual or docker setup
+# Only runs if project is not already set up
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
-cd "$PROJECT_ROOT" || {
-    echo "ERROR: Failed to change to project root directory!"
-    exit 1
-}
+cd "$PROJECT_ROOT"
 
-echo "========================================"
-echo "  Mero Jugx - Project Setup"
-echo "========================================"
-echo ""
-echo "This script will set up your development environment."
-echo ""
-
-# Check if Node.js is installed
-if ! command -v node &> /dev/null; then
-    echo "ERROR: Node.js is not installed or not in PATH!"
-    echo "Please install Node.js from https://nodejs.org/"
-    exit 1
+# Check if project is already set up
+IS_SETUP=false
+if [ -d "node_modules" ] || [ -d "frontend/node_modules" ] || [ -d "dist" ] || [ -d "frontend/dist" ] || [ -f ".env" ] || [ -f "frontend/.env" ]; then
+    IS_SETUP=true
 fi
 
-echo "[1/5] Installing and updating backend dependencies..."
-npm install
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to install backend dependencies!"
-    exit 1
-fi
-npm update || echo "WARNING: Some packages could not be updated, but continuing..."
-
-echo ""
-echo "[2/5] Installing frontend dependencies..."
-if [ ! -d "frontend" ]; then
-    echo "ERROR: Frontend directory not found!"
-    exit 1
-fi
-cd frontend
-npm install
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to install frontend dependencies!"
-    cd ..
-    exit 1
-fi
-npm update || echo "WARNING: Some packages could not be updated, but continuing..."
-cd ..
-
-echo ""
-echo "[3/5] Checking environment configuration..."
-if [ ! -f ".env" ]; then
-    echo "WARNING: .env file not found!"
+if [ "$IS_SETUP" = true ]; then
+    echo "Mero Jugx - Setup"
+    echo "=================="
     echo ""
-    echo "Please create a .env file with the following variables:"
-    echo "  DB_HOST=localhost"
-    echo "  DB_PORT=5433"
-    echo "  DB_USER=postgres"
-    echo "  DB_PASSWORD=postgres"
-    echo "  DB_NAME=mero_jugx"
-    echo "  JWT_SECRET=your-secret-key-here-change-in-production"
-    echo "  JWT_EXPIRES_IN=15m"
-    echo "  JWT_REFRESH_SECRET=your-refresh-secret-key-here"
-    echo "  JWT_REFRESH_EXPIRES_IN=7d"
-    echo "  PORT=3000"
-    echo "  NODE_ENV=development"
-    echo "  FRONTEND_URL=http://localhost:3001"
+    echo "⚠️  Project is already set up!"
     echo ""
-    echo "See docs/ENVIRONMENT-SETUP.md for more details."
+    echo "Setup can only be run on a fresh project (without node_modules, dist, or .env files)."
     echo ""
-    read -p "Press Enter to continue..."
-else
-    echo ".env file found."
+    echo "If you want to reset the project, use: npm run reset"
+    echo ""
+    exit 1
 fi
 
+echo "Mero Jugx - Setup"
+echo "=================="
 echo ""
-echo "[4/5] Checking Docker setup..."
-if [ -f "docker-compose.yml" ]; then
-    echo "Docker Compose file found."
-    if ! command -v docker &> /dev/null; then
-        echo "WARNING: Docker is not installed or not running."
-        echo "You can install Docker from https://www.docker.com/products/docker-desktop"
+
+echo "Choose setup method:"
+echo "  1. Manual Setup (install dependencies, setup .env, initialize database)"
+echo "  2. Docker Setup (use Docker Compose for everything)"
+echo ""
+
+read -p "Enter your choice (1 or 2): " choice
+
+case $choice in
+    1)
         echo ""
-    else
-        echo "Docker is available."
-        echo "Starting Docker containers (PostgreSQL, Redis)..."
-        docker-compose up -d
+        echo "Running manual setup..."
+        echo ""
+        node scripts/run-script.js setup-manual
+        ;;
+    2)
+        echo ""
+        echo "Running Docker setup..."
+        echo ""
+        echo "Step 1: Installing dependencies..."
+        npm install
         if [ $? -ne 0 ]; then
-            echo "WARNING: Failed to start Docker containers."
-            echo "Make sure Docker is running."
-        else
-            echo "Docker containers started successfully."
-            echo "Waiting for PostgreSQL to be ready..."
-            sleep 10
+            echo "✗ Failed to install backend dependencies."
+            exit 1
         fi
-    fi
-else
-    echo "Docker Compose file not found."
-    echo "Make sure PostgreSQL is installed and running."
-fi
+        echo "✓ Backend dependencies installed"
+        echo ""
+        
+        cd frontend
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "✗ Failed to install frontend dependencies."
+            cd ..
+            exit 1
+        fi
+        cd ..
+        echo "✓ Frontend dependencies installed"
+        echo ""
+        
+        echo "Step 2: Setting up environment files..."
+        if [ ! -f .env ]; then
+            if [ -f .env.example ]; then
+                cp .env.example .env
+                echo "✓ Created .env from .env.example"
+            else
+                echo "⚠ Creating comprehensive .env file with all defaults..."
+                jwt_secret=$(openssl rand -hex 16)
+                jwt_refresh_secret=$(openssl rand -hex 16)
+                
+                cat > .env << EOF
+# ============================================
+# MERO JUGX - Environment Configuration
+# ============================================
+# All values below are defaults that allow the project to work
+
+# ============================================
+# APPLICATION
+# ============================================
+NODE_ENV=development
+PORT=3000
+API_PREFIX=api
+API_VERSION=v1
+APP_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3001
+
+# ============================================
+# DATABASE (PostgreSQL)
+# ============================================
+# For Docker setup (default):
+DB_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=mero_jugx
+
+# Database Pool Configuration
+DB_POOL_MAX=20
+DB_POOL_MIN=5
+DB_POOL_IDLE_TIMEOUT=30000
+DB_POOL_CONNECTION_TIMEOUT=2000
+DB_STATEMENT_TIMEOUT=30000
+DB_QUERY_TIMEOUT=30000
+
+# Database Options
+DB_SYNCHRONIZE=false
+DB_LOGGING=true
+
+# ============================================
+# REDIS
+# ============================================
+# For Docker setup (default):
+REDIS_HOST=localhost
+REDIS_PORT=6380
+REDIS_PASSWORD=
+
+# ============================================
+# JWT AUTHENTICATION
+# ============================================
+# IMPORTANT: These are auto-generated. Change in production!
+JWT_SECRET=$jwt_secret
+JWT_REFRESH_SECRET=$jwt_refresh_secret
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+# ============================================
+# EMAIL CONFIGURATION
+# ============================================
+# Option 1: Resend API (Recommended for development)
+RESEND_API_KEY=
+
+# Option 2: SMTP (Alternative)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@mero-jugx.com
+SMTP_FROM_NAME=Mero Jugx
+
+# ============================================
+# TWO-FACTOR AUTHENTICATION (2FA/MFA)
+# ============================================
+TOTP_ISSUER=Mero Jugx
+TOTP_ALGORITHM=SHA1
+TOTP_DIGITS=6
+TOTP_PERIOD=30
+
+# ============================================
+# RATE LIMITING
+# ============================================
+THROTTLE_TTL=60
+THROTTLE_LIMIT=10
+
+# ============================================
+# FILE UPLOAD
+# ============================================
+MAX_FILE_SIZE=5242880
+UPLOAD_DEST=./uploads
+
+# ============================================
+# LOGGING
+# ============================================
+LOG_LEVEL=debug
+LOG_DIR=./logs
+
+# ============================================
+# SENTRY ERROR TRACKING (Optional)
+# ============================================
+SENTRY_DSN=
+SENTRY_TRACES_SAMPLE_RATE=1.0
+SENTRY_PROFILES_SAMPLE_RATE=1.0
+
+# ============================================
+# CACHING
+# ============================================
+CACHE_TTL=3600
+
+# ============================================
+# PAYMENT GATEWAYS
+# ============================================
+
+# eSewa Payment Gateway (Test credentials - works out of the box)
+ESEWA_TEST_MERCHANT_ID=EPAYTEST
+ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q
+ESEWA_TEST_API_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form
+ESEWA_TEST_VERIFY_URL=https://rc.esewa.com.np/api/epay/transaction/status
+ESEWA_MERCHANT_ID=
+ESEWA_SECRET_KEY=
+ESEWA_API_URL=https://epay.esewa.com.np/api/epay/main/v2/form
+ESEWA_VERIFY_URL=https://esewa.com.np/api/epay/transaction/status
+ESEWA_USE_MOCK_MODE=false
+
+# Stripe Payment Gateway
+STRIPE_TEST_PUBLISHABLE_KEY=
+STRIPE_TEST_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# ============================================
+# CURRENCY CONFIGURATION
+# ============================================
+NPR_TO_USD_RATE=0.0075
+DEFAULT_CURRENCY=USD
+NEPAL_COUNTRY_CODE=NP
+
+# ============================================
+# SMS SERVICE (Twilio - Optional)
+# ============================================
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_NUMBER=
+
+# ============================================
+# PUSH NOTIFICATIONS (Firebase - Optional)
+# ============================================
+FIREBASE_SERVER_KEY=
+EOF
+                echo "✓ Created comprehensive .env file with all defaults"
+            fi
+        else
+            echo "✓ .env file already exists"
+        fi
+        
+        # Create frontend .env if it doesn't exist
+        if [ ! -f frontend/.env ]; then
+            if [ -f frontend/.env.example ]; then
+                cp frontend/.env.example frontend/.env
+                echo "✓ Created frontend/.env from .env.example"
+            else
+                cat > frontend/.env << 'EOF'
+# ============================================
+# MERO JUGX - Frontend Environment Configuration
+# ============================================
+# All values below are defaults that allow the project to work
+
+# API Configuration
+VITE_API_URL=http://localhost:3000/api/v1
+
+# Application
+VITE_APP_NAME=Mero Jugx
+VITE_APP_VERSION=1.0.0
+
+# Sentry Error Tracking (Optional)
+VITE_SENTRY_DSN=
+VITE_SENTRY_TRACES_SAMPLE_RATE=1.0
+
+# Currency Configuration
+VITE_NPR_TO_USD_RATE=0.0075
+VITE_DEFAULT_CURRENCY=USD
+EOF
+                echo "✓ Created frontend/.env file with all defaults"
+            fi
+        else
+            echo "✓ frontend/.env file already exists"
+        fi
+        echo ""
+        
+        echo "Step 3: Starting Docker containers (PostgreSQL and Redis only)..."
+        docker-compose up -d postgres redis
+        if [ $? -eq 0 ]; then
+            echo "✓ Docker containers started"
+            echo ""
+            echo "Waiting for containers to be ready..."
+            sleep 5
+            echo ""
+                echo "Step 4: Initializing database..."
+                echo "  This will create all tables and seed initial data"
+                npm run db:init
+                if [ $? -eq 0 ]; then
+                    echo ""
+                    echo "✓ Docker setup complete!"
+                    echo ""
+                    echo "Docker containers are running:"
+                    echo "  - PostgreSQL: localhost:5433"
+                    echo "  - Redis: localhost:6380"
+                    echo ""
+                    echo "Database initialized:"
+                    echo "  - All tables created"
+                    echo "  - All seed data populated"
+                    echo ""
+                else
+                    echo "⚠ Database initialization failed. You can run 'npm run db:init' manually."
+                fi
+        else
+            echo "✗ Docker setup failed. Make sure Docker is running."
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Invalid choice. Exiting."
+        exit 1
+        ;;
+esac
 
 echo ""
-echo "[5/5] Database setup..."
+echo "Setup complete! You can now run 'npm run dev' to start development servers."
 echo ""
-echo "Choose an option:"
-echo "  1. Initialize database (run migrations and seeds - recommended for first time)"
-echo "  2. Reset database (drop all tables and recreate with seeds)"
-echo "  3. Run migrations only"
-echo "  4. Skip database setup"
-echo ""
-read -p "Enter choice (1-4): " db_choice
 
-if [ "$db_choice" == "1" ]; then
-    echo ""
-    echo "Initializing database (running migrations and seeds if needed)..."
-    npm run db:init
-    if [ $? -ne 0 ]; then
-        echo ""
-        echo "WARNING: Database initialization failed."
-        echo "You may need to:"
-        echo "  1. Create the database manually: CREATE DATABASE mero_jugx;"
-        echo "  2. Check your .env file has correct database credentials"
-        echo "  3. Ensure PostgreSQL is running"
-        echo ""
-        echo "See docs/DATABASE-GUIDE.md for troubleshooting."
-    else
-        echo "Database initialization completed successfully!"
-    fi
-elif [ "$db_choice" == "2" ]; then
-    echo ""
-    echo "Resetting database..."
-    npm run db:reset
-    if [ $? -ne 0 ]; then
-        echo ""
-        echo "WARNING: Database reset failed."
-        echo "You may need to:"
-        echo "  1. Create the database manually: CREATE DATABASE mero_jugx;"
-        echo "  2. Check your .env file has correct database credentials"
-        echo "  3. Ensure PostgreSQL is running"
-        echo ""
-        echo "See docs/DATABASE-GUIDE.md for troubleshooting."
-    else
-        echo "Database reset completed successfully!"
-    fi
-elif [ "$db_choice" == "3" ]; then
-    echo ""
-    echo "Running migrations..."
-    npm run migration:run
-    if [ $? -ne 0 ]; then
-        echo "WARNING: Migration failed. Check your database connection."
-        echo "See docs/DATABASE-GUIDE.md for troubleshooting."
-    else
-        echo "Migrations completed successfully!"
-        echo ""
-        echo "Note: You may also want to run seeds:"
-        echo "  npm run seed:run"
-    fi
-else
-    echo "Skipping database setup."
-    echo "You can run database setup later using:"
-    echo "  npm run db:init      (recommended - runs migrations and seeds if needed)"
-    echo "  npm run db:reset     (drops all tables and recreates)"
-    echo "  npm run migration:run (runs migrations only)"
-    echo "  or"
-    echo "  ./scripts/reset-database.sh"
-fi
-
-echo ""
-echo "========================================"
-echo "  Setup Complete!"
-echo "========================================"
-echo ""
-echo "Next steps:"
-echo "  1. Make sure your .env file is configured correctly"
-echo "  2. Ensure PostgreSQL is running (or Docker containers are up)"
-echo "  3. Start development servers:"
-echo "     ./scripts/start-dev.sh"
-echo ""
-echo "Or manually:"
-echo "  Backend:  npm run start:dev"
-echo "  Frontend: cd frontend && npm run dev"
-echo ""

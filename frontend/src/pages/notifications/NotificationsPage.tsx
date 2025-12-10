@@ -1,25 +1,29 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { Bell, Check, CheckCheck, Trash2, ExternalLink, Filter, MessageSquare, AtSign, UserPlus } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, ExternalLink, Filter, MessageSquare, AtSign, UserPlus, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+type NotificationCategory = 'all' | 'messages' | 'mentions' | 'regular';
+type ReadFilter = 'all' | 'unread' | 'read';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const [page, setPage] = useState(1);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [category, setCategory] = useState<NotificationCategory>('all');
+  const [readFilter, setReadFilter] = useState<ReadFilter>('all');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['notifications', page, filter],
+    queryKey: ['notifications', page, readFilter],
     queryFn: async () => {
-      const params: any = { page, limit: 20 };
-      if (filter === 'unread') {
+      const params: any = { page, limit: 100 }; // Get more to readFilter by category
+      if (readFilter === 'unread') {
         params.read_status = 'unread';
-      } else if (filter === 'read') {
+      } else if (readFilter === 'read') {
         params.read_status = 'read';
       }
       const response = await api.get('/notifications', { params });
@@ -28,6 +32,49 @@ export default function NotificationsPage() {
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
     staleTime: 0,
   });
+
+  // Categorize and filter notifications
+  const categorizedNotifications = useMemo(() => {
+    let notifications = data?.notifications || [];
+    
+    // Apply read status filter first
+    if (readFilter === 'unread') {
+      notifications = notifications.filter((n: any) => !n.read_at);
+    } else if (readFilter === 'read') {
+      notifications = notifications.filter((n: any) => !!n.read_at);
+    }
+    
+    // Then categorize
+    const messages = notifications.filter((n: any) => 
+      n.type === 'chat.message' || 
+      n.type === 'chat.unread' || 
+      n.type === 'chat.initiated' ||
+      n.type === 'chat.group_added'
+    );
+    
+    const mentions = notifications.filter((n: any) => 
+      n.type === 'chat.mention'
+    );
+    
+    const regular = notifications.filter((n: any) => 
+      n.type !== 'chat.message' && 
+      n.type !== 'chat.unread' && 
+      n.type !== 'chat.initiated' &&
+      n.type !== 'chat.mention' &&
+      n.type !== 'chat.group_added'
+    );
+
+    switch (category) {
+      case 'messages':
+        return messages;
+      case 'mentions':
+        return mentions;
+      case 'regular':
+        return regular;
+      default:
+        return notifications;
+    }
+  }, [data?.notifications, category, readFilter]);
   
   // Fetch unread count separately
   const { data: unreadCountData, refetch: refetchUnreadCount } = useQuery({
@@ -49,10 +96,10 @@ export default function NotificationsPage() {
       return response.data;
     },
     onMutate: async ({ notificationId, read }) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', page, filter] });
-      const previousData = queryClient.getQueryData(['notifications', page, filter]);
+      await queryClient.cancelQueries({ queryKey: ['notifications', page, readFilter] });
+      const previousData = queryClient.getQueryData(['notifications', page, readFilter]);
       
-      queryClient.setQueryData(['notifications', page, filter], (old: any) => {
+      queryClient.setQueryData(['notifications', page, readFilter], (old: any) => {
         if (!old) return old;
         const updatedNotifications = old.notifications?.map((n: any) => {
           if (n.id === notificationId) {
@@ -61,7 +108,7 @@ export default function NotificationsPage() {
           return n;
         }) || [];
         
-        if (filter === 'unread' && read) {
+        if (readFilter === 'unread' && read) {
           return {
             ...old,
             notifications: updatedNotifications.filter((n: any) => !n.read_at),
@@ -70,7 +117,7 @@ export default function NotificationsPage() {
           };
         }
         
-        if (filter === 'read' && !read) {
+        if (readFilter === 'read' && !read) {
           return {
             ...old,
             notifications: updatedNotifications.filter((n: any) => n.read_at),
@@ -107,7 +154,7 @@ export default function NotificationsPage() {
     },
     onError: (_err, _variables, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(['notifications', page, filter], context.previousData);
+        queryClient.setQueryData(['notifications', page, readFilter], context.previousData);
       }
     },
     onSuccess: () => {
@@ -123,10 +170,10 @@ export default function NotificationsPage() {
       return response.data;
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', page, filter] });
+      await queryClient.cancelQueries({ queryKey: ['notifications', page, readFilter] });
       await queryClient.cancelQueries({ queryKey: ['notification-unread-count'] });
       
-      const previousData = queryClient.getQueryData(['notifications', page, filter]);
+      const previousData = queryClient.getQueryData(['notifications', page, readFilter]);
       const previousCount = queryClient.getQueryData(['notification-unread-count']);
       
       // Optimistically set unread count to 0
@@ -135,8 +182,8 @@ export default function NotificationsPage() {
         read_count: (previousCount as any)?.read_count || 0,
       }));
       
-      if (filter === 'unread') {
-        queryClient.setQueryData(['notifications', page, filter], (old: any) => {
+      if (readFilter === 'unread') {
+        queryClient.setQueryData(['notifications', page, readFilter], (old: any) => {
           if (!old) return old;
           return {
             ...old,
@@ -146,7 +193,7 @@ export default function NotificationsPage() {
           };
         });
       } else {
-        queryClient.setQueryData(['notifications', page, filter], (old: any) => {
+        queryClient.setQueryData(['notifications', page, readFilter], (old: any) => {
           if (!old) return old;
           return {
             ...old,
@@ -164,7 +211,7 @@ export default function NotificationsPage() {
     },
     onError: (_err, _variables, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(['notifications', page, filter], context.previousData);
+        queryClient.setQueryData(['notifications', page, readFilter], context.previousData);
       }
       if (context?.previousCount) {
         queryClient.setQueryData(['notification-unread-count'], context.previousCount);
@@ -180,7 +227,7 @@ export default function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notification-unread-count'] });
       await refetchUnreadCount();
-      await queryClient.refetchQueries({ queryKey: ['notifications', page, filter] });
+      await queryClient.refetchQueries({ queryKey: ['notifications', page, readFilter] });
       toast.success('All notifications marked as read');
     },
   });
@@ -190,17 +237,17 @@ export default function NotificationsPage() {
       await api.delete(`/notifications/${notificationId}`);
     },
     onMutate: async (notificationId) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', page, filter] });
-      const previousData = queryClient.getQueryData(['notifications', page, filter]);
+      await queryClient.cancelQueries({ queryKey: ['notifications', page, readFilter] });
+      const previousData = queryClient.getQueryData(['notifications', page, readFilter]);
       
       let wasUnread = false;
-      queryClient.setQueryData(['notifications', page, filter], (old: any) => {
+      queryClient.setQueryData(['notifications', page, readFilter], (old: any) => {
         if (!old) return old;
         const notification = old.notifications?.find((n: any) => n.id === notificationId);
         wasUnread = notification && !notification.read_at;
         return {
           ...old,
-          notifications: old.notifications?.filter((n: any) => n.id !== notificationId) || [],
+          notifications: old.notifications?.readFilter((n: any) => n.id !== notificationId) || [],
           unread_count: wasUnread 
             ? Math.max(0, (old.unread_count || 0) - 1)
             : old.unread_count || 0,
@@ -224,13 +271,13 @@ export default function NotificationsPage() {
     },
     onError: (_err, _variables, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(['notifications', page, filter], context.previousData);
+        queryClient.setQueryData(['notifications', page, readFilter], context.previousData);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notification-unread-count'] });
-      queryClient.refetchQueries({ queryKey: ['notifications', page, filter] });
+      queryClient.refetchQueries({ queryKey: ['notifications', page, readFilter] });
       toast.success('Notification deleted');
     },
   });
@@ -290,9 +337,20 @@ export default function NotificationsPage() {
     }
   };
 
-  const notifications = data?.notifications || [];
+  const notifications = categorizedNotifications;
   const unreadCount = unreadCountData?.unread_count || data?.unread_count || 0;
   const readCount = unreadCountData?.read_count || data?.read_count || 0;
+
+  // Get counts per category
+  const allNotifications = data?.notifications || [];
+  const messagesCount = allNotifications.readFilter((n: any) => 
+    n.type === 'chat.message' || n.type === 'chat.unread' || n.type === 'chat.initiated' || n.type === 'chat.group_added'
+  ).length;
+  const mentionsCount = allNotifications.readFilter((n: any) => n.type === 'chat.mention').length;
+  const regularCount = allNotifications.readFilter((n: any) => 
+    n.type !== 'chat.message' && n.type !== 'chat.unread' && n.type !== 'chat.initiated' && 
+    n.type !== 'chat.mention' && n.type !== 'chat.group_added'
+  ).length;
 
   return (
     <div className="w-full p-6">
@@ -324,14 +382,64 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {/* Filters */}
+      {/* Category Tabs (Discord-like) */}
+      <div className="card mb-4">
+        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-thin">
+          <button
+            onClick={() => setCategory('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+              category === 'all'
+                ? 'bg-[#5865f2] text-white'
+                : 'text-[#b9bbbe] hover:bg-[#393c43]'
+            }`}
+          >
+            <Hash className="h-4 w-4" />
+            All
+          </button>
+          <button
+            onClick={() => setCategory('messages')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+              category === 'messages'
+                ? 'bg-[#5865f2] text-white'
+                : 'text-[#b9bbbe] hover:bg-[#393c43]'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Messages {messagesCount > 0 && `(${messagesCount})`}
+          </button>
+          <button
+            onClick={() => setCategory('mentions')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+              category === 'mentions'
+                ? 'bg-[#5865f2] text-white'
+                : 'text-[#b9bbbe] hover:bg-[#393c43]'
+            }`}
+          >
+            <AtSign className="h-4 w-4" />
+            Mentions {mentionsCount > 0 && `(${mentionsCount})`}
+          </button>
+          <button
+            onClick={() => setCategory('regular')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+              category === 'regular'
+                ? 'bg-[#5865f2] text-white'
+                : 'text-[#b9bbbe] hover:bg-[#393c43]'
+            }`}
+          >
+            <Bell className="h-4 w-4" />
+            Other {regularCount > 0 && `(${regularCount})`}
+          </button>
+        </div>
+      </div>
+
+      {/* Read Status Filters */}
       <div className="card mb-6">
         <div className="flex items-center space-x-4">
           <Filter className="h-5 w-5 text-[#8e9297]" />
           <button
-            onClick={() => setFilter('all')}
+            onClick={() => setReadFilter('all')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'all'
+              readFilter === 'all'
                 ? 'bg-[#5865f2] text-white'
                 : 'text-[#b9bbbe] hover:bg-[#393c43]'
             }`}
@@ -339,9 +447,9 @@ export default function NotificationsPage() {
             All
           </button>
           <button
-            onClick={() => setFilter('unread')}
+            onClick={() => setReadFilter('unread')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'unread'
+              readFilter === 'unread'
                 ? 'bg-[#5865f2] text-white'
                 : 'text-[#b9bbbe] hover:bg-[#393c43]'
             }`}
@@ -349,9 +457,9 @@ export default function NotificationsPage() {
             Unread ({unreadCount})
           </button>
           <button
-            onClick={() => setFilter('read')}
+            onClick={() => setReadFilter('read')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'read'
+              readFilter === 'read'
                 ? 'bg-[#5865f2] text-white'
                 : 'text-[#b9bbbe] hover:bg-[#393c43]'
             }`}
@@ -383,10 +491,12 @@ export default function NotificationsPage() {
             <Bell className="h-16 w-16 mx-auto mb-4 text-[#8e9297]" />
             <p className="text-lg font-medium text-white mb-2">No notifications</p>
             <p className="text-[#8e9297]">
-              {filter === 'unread'
+              {readFilter === 'unread'
                 ? "You're all caught up! No unread notifications."
-                : filter === 'read'
+                : readFilter === 'read'
                 ? 'No read notifications yet.'
+                : category !== 'all'
+                ? `No ${category} notifications found.`
                 : "You don't have any notifications yet."}
             </p>
           </div>

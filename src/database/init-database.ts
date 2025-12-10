@@ -13,7 +13,13 @@ config();
 
 /**
  * Initialize database - runs migrations and seeds if needed
- * This is safe to run on every startup as it checks if migrations/seeds are already applied
+ * 
+ * This function:
+ * 1. Creates all database tables by running migrations
+ * 2. Seeds initial data (packages, permissions, roles, package features, role templates)
+ * 
+ * This is safe to run on every startup as it checks if migrations/seeds are already applied.
+ * Used by: npm run db:init, setup scripts
  */
 export async function initializeDatabase(): Promise<void> {
   try {

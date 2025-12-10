@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { chatService, Chat, Message } from '../services/chatService';
-import { usePermissions } from '../hooks/usePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Socket } from 'socket.io-client';
 import { Send, X, Users, User, Minimize2, ChevronRight, ChevronLeft, Phone, Video } from 'lucide-react';
@@ -22,6 +21,21 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
   const { organization, accessToken, user: currentUser } = useAuthStore();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Deduplicate messages before rendering to prevent duplicate keys
+  const uniqueMessages = useMemo(() => {
+    const messageMap = new Map<string, Message>();
+    messages.forEach((m) => {
+      if (m && m.id) {
+        messageMap.set(m.id, m);
+      }
+    });
+    return Array.from(messageMap.values()).sort((a, b) => {
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return aTime - bTime;
+    });
+  }, [messages]);
   const [messageText, setMessageText] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [chat, setChat] = useState<Chat | null>(null);
@@ -33,6 +47,8 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
     offer?: RTCSessionDescriptionInit;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Store handler in ref to persist through re-renders
+  const messageHandlerRef = useRef<((data: { message: Message; chat_id: string }) => void) | null>(null);
 
   // Check if organization has chat access
   const { data: currentPackage } = useQuery({
@@ -111,16 +127,202 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
     const ws = chatService.connect(organization.id, accessToken);
     setSocket(ws);
 
-    // Join chat room
-    ws.emit('chat:join', { chat_id: chat.id });
-
-    // WebSocket event handlers
-    ws.on('message:new', (data: { message: Message; chat_id: string }) => {
-      if (chat.id === data.chat_id) {
-        setMessages((prev) => [...prev, data.message]);
-        scrollToBottom();
+    // Wait for socket to be connected before joining
+    const joinChat = () => {
+      if (ws.connected) {
+        console.log('[ChatWindow] Socket already connected, joining chat room:', chat.id);
+        ws.emit('chat:join', { chat_id: chat.id });
+      } else {
+        console.log('[ChatWindow] Socket not connected, waiting for connect event');
+        const connectHandler = () => {
+          console.log('[ChatWindow] Socket connected, joining chat room:', chat.id);
+          ws.emit('chat:join', { chat_id: chat.id });
+          ws.off('connect', connectHandler); // Remove this one-time handler
+        };
+        ws.on('connect', connectHandler);
       }
-    });
+    };
+
+    // Join chat room
+    joinChat();
+    
+    // WebSocket event handlers
+    const handleNewMessage = (data: { message: Message; chat_id: string }) => {
+      console.log('[ChatWindow] Received message:new event', { 
+        chat_id: data.chat_id, 
+        message_id: data.message.id, 
+        current_chat_id: chat.id,
+        message_content: data.message.content?.substring(0, 50),
+        socket_connected: ws.connected
+      });
+      if (chat.id === data.chat_id) {
+        // Update query cache first (source of truth)
+        queryClient.setQueryData(['messages', chat.id], (old: any) => {
+          if (!old) {
+            return {
+              messages: [data.message],
+              total: 1,
+              page: 1,
+              limit: 50,
+            };
+          }
+          
+          // Check if message already exists - use Map for efficient deduplication
+          const existingMessages = old.messages || [];
+          const messageMap = new Map<string, Message>();
+          
+          // Add all existing messages to map
+          existingMessages.forEach((m: Message) => {
+            if (m && m.id) {
+              messageMap.set(m.id, m);
+            }
+          });
+          
+          // Check if new message already exists
+          if (messageMap.has(data.message.id)) {
+            console.log('[ChatWindow] Message already in cache, skipping');
+            return old;
+          }
+          
+          console.log('[ChatWindow] Adding message to cache');
+          // Add new message to map (this automatically handles duplicates)
+          messageMap.set(data.message.id, data.message);
+          
+          // Convert to array and sort by created_at
+          const updatedMessages = Array.from(messageMap.values()).sort((a: Message, b: Message) => {
+            const aTime = new Date(a.created_at || 0).getTime();
+            const bTime = new Date(b.created_at || 0).getTime();
+            return aTime - bTime;
+          });
+          
+          return {
+            ...old,
+            messages: updatedMessages,
+            total: updatedMessages.length,
+          };
+        });
+        
+        // Don't update local state here - let the useEffect handle it from query cache
+        // This prevents race conditions and ensures single source of truth
+        
+        // Use requestAnimationFrame to ensure state update happens before scroll
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+        
+        // Mark message as delivered if it's not from current user
+        if (data.message.sender_id !== currentUser?.id && ws.connected) {
+          ws.emit('message:delivered', { message_ids: [data.message.id] });
+          console.log('[ChatWindow] Marked message as delivered:', data.message.id);
+        }
+        
+        // Mark as read since user is viewing this chat
+        // Also call backend to mark messages as read
+        if (organization?.id && chat.id === data.chat_id) {
+          // Update cache optimistically
+          queryClient.setQueryData(['chats', organization.id], (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              chats: old.chats.map((c: any) =>
+                c.id === data.chat_id
+                  ? { ...c, unread_count: 0, last_message: data.message }
+                  : c
+              ),
+            };
+          });
+          
+          // Mark message as read via WebSocket
+          if (data.message.sender_id !== currentUser?.id && ws.connected) {
+            ws.emit('message:read', { chat_id: chat.id, message_ids: [data.message.id] });
+            console.log('[ChatWindow] Marked message as read:', data.message.id);
+          }
+          
+          // Call backend to mark messages as read (since user is viewing the chat)
+          // This ensures unread_count is properly updated in the database
+          chatService.getMessages(organization.id, chat.id, { limit: 1 }).catch((error) => {
+            console.error('[ChatWindow] Error marking messages as read:', error);
+          });
+        }
+      } else {
+        console.log('[ChatWindow] Message for different chat (expected:', chat.id, 'got:', data.chat_id, '), ignoring');
+      }
+    };
+
+    // Store handler in ref so it persists through re-renders
+    messageHandlerRef.current = handleNewMessage;
+
+    // Also try to join on reconnect and re-attach listeners
+    const reconnectHandler = () => {
+      console.log('[ChatWindow] Socket reconnected, joining chat room:', chat.id);
+      ws.emit('chat:join', { chat_id: chat.id });
+      // Re-attach message listener after reconnect using ref
+      if (messageHandlerRef.current) {
+        // Remove any existing listener first
+        ws.off('message:new');
+        ws.on('message:new', messageHandlerRef.current);
+        console.log('[ChatWindow] Re-attached message:new listener after reconnect');
+      }
+    };
+    ws.on('connect', reconnectHandler);
+
+    console.log('[ChatWindow] Attaching message:new listener for chat:', chat.id, 'socket connected:', ws.connected, 'socket ID:', ws.id);
+    ws.on('message:new', handleNewMessage);
+    
+    // Listen for message delivery status updates
+    const handleMessageDelivered = (data: { message_ids: string[]; delivered_to: string; delivered_at: string }) => {
+      console.log('[ChatWindow] Message delivered:', data);
+      // Update message read status in cache
+      queryClient.setQueryData(['messages', chat.id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          messages: old.messages.map((m: Message) => {
+            if (data.message_ids.includes(m.id) && m.sender_id === currentUser?.id) {
+              return {
+                ...m,
+                read_status: {
+                  ...m.read_status,
+                  delivered_at: data.delivered_at,
+                },
+              };
+            }
+            return m;
+          }),
+        };
+      });
+    };
+    ws.on('message:delivered', handleMessageDelivered);
+    
+    // Listen for message read status updates
+    const handleMessageRead = (data: { message_ids: string[]; read_by: string; read_at: string }) => {
+      console.log('[ChatWindow] Message read:', data);
+      // Update message read status in cache
+      queryClient.setQueryData(['messages', chat.id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          messages: old.messages.map((m: Message) => {
+            if (data.message_ids.includes(m.id) && m.sender_id === currentUser?.id) {
+              return {
+                ...m,
+                read_status: {
+                  ...m.read_status,
+                  read_at: data.read_at,
+                },
+              };
+            }
+            return m;
+          }),
+        };
+      });
+    };
+    ws.on('message:read', handleMessageRead);
+    
+    // Also listen for messages immediately if socket is already connected
+    if (ws.connected) {
+      console.log('[ChatWindow] Socket already connected, listener should be active');
+    }
 
     // Call event handlers
     ws.on('call:incoming', (data: { 
@@ -153,28 +355,117 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
     });
 
     return () => {
-      ws.emit('chat:leave', { chat_id: chat.id });
-      ws.off('message:new');
+      console.log('[ChatWindow] Cleaning up WebSocket listeners for chat:', chat?.id);
+      if (chat?.id && ws.connected) {
+        ws.emit('chat:leave', { chat_id: chat.id });
+      }
+      
+      // Refresh chats list to get accurate unread counts from backend
+      if (chat?.id && organization?.id) {
+        // Invalidate to refetch from backend
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['chats', organization.id] });
+        }, 100);
+      }
+      
+      // Remove event listeners but don't disconnect the socket
+      // The socket is shared with ChatManager
+      if (messageHandlerRef.current) {
+        ws.off('message:new', messageHandlerRef.current);
+      }
+      ws.off('connect', reconnectHandler);
+      ws.off('message:delivered');
+      ws.off('message:read');
       ws.off('call:incoming');
       ws.off('call:rejected');
       ws.off('call:ended');
       ws.off('error');
+      messageHandlerRef.current = null;
     };
-  }, [organization?.id, accessToken, chat?.id]);
+  }, [organization?.id, accessToken, chat?.id, queryClient, currentUser?.id]);
 
-  // Load messages
+  // Load messages - backend automatically marks messages as read when getMessages is called
   const { data: messagesData } = useQuery({
     queryKey: ['messages', chat?.id],
     queryFn: async () => {
       if (!organization?.id || !chat?.id) return { messages: [], total: 0, page: 1, limit: 50 };
-      return await chatService.getMessages(organization.id, chat.id, { limit: 50 });
+      const result = await chatService.getMessages(organization.id, chat.id, { limit: 50 });
+      // The backend automatically marks messages as read when getMessages is called
+      // Update the query cache to reflect unread_count = 0
+      if (organization?.id && chat?.id) {
+        queryClient.setQueryData(['chats', organization.id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            chats: old.chats.map((c: any) =>
+              c.id === chat.id
+                ? { ...c, unread_count: 0 }
+                : c
+            ),
+          };
+        });
+      }
+      return result;
     },
     enabled: !!chat?.id && !!organization?.id,
+    // Refetch when chat window opens to ensure messages are marked as read
+    refetchOnMount: true,
   });
 
+  // Mark messages as read when chat window opens
   useEffect(() => {
-    if (messagesData) {
-      setMessages(messagesData.messages);
+    if (!chat?.id || !organization?.id) return;
+    
+    // The backend getMessages call above already marks messages as read
+    // But we also explicitly call it here to ensure it happens even if cache exists
+    const markAsRead = async () => {
+      try {
+        // Call getMessages with minimal params to trigger backend mark-as-read
+        // This ensures messages are marked as read even if query cache exists
+        await chatService.getMessages(organization.id, chat.id, { limit: 1 });
+        
+        // Update cache to reflect unread_count = 0
+        queryClient.setQueryData(['chats', organization.id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            chats: old.chats.map((c: any) =>
+              c.id === chat.id
+                ? { ...c, unread_count: 0 }
+                : c
+            ),
+          };
+        });
+      } catch (error) {
+        console.error('[ChatWindow] Error marking messages as read:', error);
+      }
+    };
+    
+    // Mark as read when chat window opens
+    markAsRead();
+  }, [chat?.id, organization?.id, queryClient]);
+
+  useEffect(() => {
+    if (messagesData && messagesData.messages) {
+      // Use messages from query cache as source of truth
+      // Deduplicate by ID using Map to ensure uniqueness
+      const messageMap = new Map<string, Message>();
+      messagesData.messages.forEach((m: Message) => {
+        if (m && m.id) {
+          messageMap.set(m.id, m);
+        }
+      });
+      
+      // Convert to array and sort by created_at
+      const uniqueMessages = Array.from(messageMap.values()).sort((a, b) => {
+        const aTime = new Date(a.created_at || 0).getTime();
+        const bTime = new Date(b.created_at || 0).getTime();
+        return aTime - bTime;
+      });
+      
+      // Always set messages from query cache (it's the source of truth)
+      // This ensures we don't have duplicates from WebSocket + query cache
+      setMessages(uniqueMessages);
       scrollToBottom();
     }
   }, [messagesData]);
@@ -498,15 +789,13 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
       ) : (
         /* Messages */
         <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin scrollbar-thumb-[#202225] scrollbar-track-transparent">
-          {messages.length === 0 ? (
+          {uniqueMessages.length === 0 ? (
             <div className="text-center text-[#8e9297] py-8">
               No messages yet. Start the conversation!
             </div>
           ) : (
-            messages.map((message) => {
+            uniqueMessages.map((message) => {
               const isOwn = message.sender_id === currentUser?.id;
-              const sender = message.sender || chat.members?.find((m: any) => m.user_id === message.sender_id)?.user;
-              const senderName = sender ? `${sender.first_name} ${sender.last_name}`.trim() : 'Unknown';
 
               return (
                 <div
@@ -514,9 +803,6 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
                   className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                    {!isOwn && (
-                      <p className="text-xs text-[#8e9297] mb-1 px-2">{senderName}</p>
-                    )}
                     <div
                       className={`rounded-lg px-3 py-2 ${
                         isOwn
@@ -525,6 +811,24 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                      {isOwn && (
+                        <div className="flex items-center justify-end mt-1">
+                          {message.read_status?.read_at ? (
+                            <svg className="w-4 h-4 text-blue-300" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" transform="translate(4 0)" />
+                            </svg>
+                          ) : message.read_status?.delivered_at ? (
+                            <svg className="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

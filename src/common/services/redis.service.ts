@@ -126,4 +126,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async isTokenBlacklisted(token: string): Promise<boolean> {
     return await this.exists(`blacklist:${token}`);
   }
+
+  async keys(pattern: string): Promise<string[]> {
+    if (!(await this.ensureConnected())) {
+      return [];
+    }
+    try {
+      return await this.client.keys(pattern);
+    } catch (error) {
+      console.error('Redis keys error:', error);
+      return [];
+    }
+  }
+
+  async delMultiple(keys: string[]): Promise<void> {
+    if (!(await this.ensureConnected()) || keys.length === 0) {
+      return;
+    }
+    try {
+      await this.client.del(keys);
+    } catch (error) {
+      console.error('Redis delMultiple error:', error);
+    }
+  }
 }

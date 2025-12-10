@@ -290,19 +290,21 @@ export default function PackagesPage() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 
-  const { data: organization, isLoading: isLoadingOrganization } = useQuery({
+  const { data: organization, isLoading: isLoadingOrganization } = useQuery<{ id: string; name: string; slug: string }>({
     queryKey: ['organization'],
     queryFn: async () => {
       const response = await api.get('/organizations/me');
       return response.data;
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
-    onSuccess: (data) => {
-      if (data?.slug && !isEditingSlug) {
-        setNewSlug(data.slug);
-      }
-    },
   });
+
+  // Update slug when organization data changes
+  useEffect(() => {
+    if (organization?.slug && !isEditingSlug) {
+      setNewSlug(organization.slug);
+    }
+  }, [organization?.slug, isEditingSlug]);
 
   // Update slug mutation
   const updateSlugMutation = useMutation({
@@ -996,7 +998,21 @@ export default function PackagesPage() {
                         type="text"
                         value={newSlug}
                         onChange={(e) => {
-                          const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+                          // Allow lowercase letters, numbers, and hyphens
+                          // Remove any characters that are not a-z, 0-9, or hyphen
+                          let value = e.target.value.toLowerCase();
+                          // First, remove invalid characters (keep only a-z, 0-9, and -)
+                          value = value.replace(/[^a-z0-9\-]/g, '');
+                          // Remove consecutive hyphens (replace multiple hyphens with single hyphen)
+                          // But allow typing hyphens at the end while user is typing
+                          value = value.replace(/-{2,}/g, '-');
+                          setNewSlug(value);
+                        }}
+                        onBlur={(e) => {
+                          // Clean up leading/trailing hyphens only when user finishes editing
+                          let value = e.target.value;
+                          // Remove leading and trailing hyphens
+                          value = value.replace(/^-+|-+$/g, '');
                           setNewSlug(value);
                         }}
                         placeholder="your-organization-slug"

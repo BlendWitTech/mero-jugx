@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { initializeDatabase } from './database/init-database';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -31,6 +31,21 @@ async function bootstrap() {
   const apiVersion = configService.get<string>('API_VERSION', 'v1');
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
 
+  // Prometheus metrics endpoint (no prefix, after global prefix setup)
+  try {
+    const { PrometheusService } = await import('./monitoring/prometheus.service');
+    const prometheusService = app.get(PrometheusService);
+    if (prometheusService) {
+      const httpAdapter = app.getHttpAdapter();
+      httpAdapter.get('/metrics', async (req, res) => {
+        res.set('Content-Type', 'text/plain');
+        res.send(await prometheusService.getMetrics());
+      });
+    }
+  } catch (error) {
+    console.warn('Prometheus metrics not available:', error);
+  }
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
@@ -43,12 +58,26 @@ async function bootstrap() {
     }),
   );
 
-  // Global exception filter to catch all errors
-  app.useGlobalFilters(new AllExceptionsFilter());
+  // Global exception filter is registered via APP_FILTER in AppModule
 
   // Global guards
   const reflector = app.get(Reflector);
   app.useGlobalGuards(new JwtAuthGuard(reflector));
+
+  // Security headers with Helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // CORS configuration
   app.enableCors({

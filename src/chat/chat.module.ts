@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module, forwardRef, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
@@ -9,6 +9,7 @@ import { ChatMember } from '../database/entities/chat-member.entity';
 import { Message } from '../database/entities/message.entity';
 import { MessageAttachment } from '../database/entities/message-attachment.entity';
 import { MessageReaction } from '../database/entities/message-reaction.entity';
+import { MessageReadStatus } from '../database/entities/message-read-status.entity';
 import { CallSession } from '../database/entities/call-session.entity';
 import { CallParticipant } from '../database/entities/call-participant.entity';
 import { Organization } from '../database/entities/organization.entity';
@@ -33,6 +34,7 @@ import { ChatGateway } from './chat.gateway';
       Message,
       MessageAttachment,
       MessageReaction,
+      MessageReadStatus,
       CallSession,
       CallParticipant,
       Organization,
@@ -61,5 +63,15 @@ import { ChatGateway } from './chat.gateway';
   providers: [ChatService, CallService, ChatGateway],
   exports: [ChatService, CallService, ChatGateway],
 })
-export class ChatModule {}
+export class ChatModule implements OnModuleInit {
+  constructor(
+    private chatService: ChatService,
+    private chatGateway: ChatGateway,
+  ) {}
+
+  onModuleInit() {
+    // Set gateway reference in service to avoid circular dependency
+    this.chatService.setGateway(this.chatGateway);
+  }
+}
 

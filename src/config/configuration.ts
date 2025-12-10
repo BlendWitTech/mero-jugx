@@ -70,6 +70,29 @@ export default () => ({
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'debug',
+  logDir: process.env.LOG_DIR || './logs',
+
+  // Sentry Error Tracking
+  sentry: {
+    dsn: process.env.SENTRY_DSN || '',
+    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '1.0'),
+    profilesSampleRate: parseFloat(process.env.SENTRY_PROFILES_SAMPLE_RATE || '1.0'),
+  },
+
+  // Caching
+  cache: {
+    ttl: parseInt(process.env.CACHE_TTL || '3600', 10), // 1 hour default
+  },
+
+  // Database Pool Configuration
+  databasePool: {
+    max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+    min: parseInt(process.env.DB_POOL_MIN || '5', 10),
+    idleTimeout: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000', 10),
+    connectionTimeout: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '2000', 10),
+    statementTimeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000', 10),
+    queryTimeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000', 10),
+  },
 
   // eSewa Payment Gateway
   esewa: {

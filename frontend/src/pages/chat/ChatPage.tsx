@@ -27,8 +27,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Check permissions
-  const canCreateGroup = hasPermission('chat.create_group') || currentUser?.role?.is_organization_owner;
-  const isOrganizationOwner = currentUser?.role?.is_organization_owner;
+  const { isOrganizationOwner } = usePermissions();
+  const canCreateGroup = hasPermission('chat.create_group') || isOrganizationOwner;
 
   // Check if organization has chat access (Platinum/Diamond package or chat-system feature)
   const { data: currentPackage, isLoading: isLoadingPackage } = useQuery({
@@ -65,10 +65,41 @@ export default function ChatPage() {
     // WebSocket event handlers
     ws.on('message:new', (data: { message: Message; chat_id: string }) => {
       if (selectedChat?.id === data.chat_id) {
+        // Add message to current chat
         setMessages((prev) => [...prev, data.message]);
+        // Mark as read since user is viewing this chat
+        queryClient.setQueryData(['chats', organization.id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            chats: old.chats.map((chat: any) =>
+              chat.id === data.chat_id
+                ? { ...chat, unread_count: 0, last_message: data.message }
+                : chat
+            ),
+          };
+        });
+      } else {
+        // Update unread count for other chats
+        queryClient.setQueryData(['chats', organization.id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            chats: old.chats.map((chat: any) =>
+              chat.id === data.chat_id
+                ? {
+                    ...chat,
+                    unread_count: (chat.unread_count || 0) + 1,
+                    last_message: data.message,
+                  }
+                : chat
+            ),
+          };
+        });
       }
-      // Refresh chat list
+      // Also invalidate to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['chats', organization.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', data.chat_id] });
     });
 
     ws.on('chat:new', () => {
@@ -80,18 +111,32 @@ export default function ChatPage() {
     });
 
     return () => {
-      chatService.disconnect();
+      // Don't disconnect - the socket is shared with ChatManager and ChatWindow
+      // Only remove event listeners if needed
+      ws.off('message:new');
+      ws.off('chat:new');
+      ws.off('error');
     };
   }, [organization?.id, accessToken, selectedChat?.id, queryClient]);
 
-  // Load chats
-  const { data: chatsData, isLoading: isLoadingChats } = useQuery({
+  // Load chats - only when package is loaded and we know if chat access is available
+  const { data: chatsData, isLoading: isLoadingChats, error: chatsError } = useQuery({
     queryKey: ['chats', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return { chats: [], total: 0, page: 1, limit: 50 };
-      return await chatService.getChats(organization.id, { limit: 100 });
+      try {
+        return await chatService.getChats(organization.id, { limit: 100 });
+      } catch (error: any) {
+        // If it's a 403 (no chat access) or 400 (validation/access issue), return empty chats
+        if (error.response?.status === 403 || error.response?.status === 400) {
+          console.warn('Chat access issue:', error.response?.data?.message || error.message);
+          return { chats: [], total: 0, page: 1, limit: 100 };
+        }
+        throw error;
+      }
     },
-    enabled: !!organization?.id,
+    enabled: !!organization?.id && !isLoadingPackage,
+    retry: false,
   });
 
   useEffect(() => {
@@ -190,8 +235,12 @@ export default function ChatPage() {
   });
 
   // Separate groups and direct messages
-  const groupChats = filteredChats.filter(chat => chat.type === 'group');
-  const directChats = filteredChats.filter(chat => chat.type === 'direct');
+  // Deduplicate groups by ID to prevent showing the same group twice
+  const uniqueChats = filteredChats.filter((chat, index, self) => 
+    index === self.findIndex((c) => c.id === chat.id)
+  );
+  const groupChats = uniqueChats.filter(chat => chat.type === 'group');
+  const directChats = uniqueChats.filter(chat => chat.type === 'direct');
   
   // Separate favorites
   const favoriteChats = filteredChats.filter(chat => favorites.includes(chat.id));
@@ -295,7 +344,10 @@ export default function ChatPage() {
                     key={chat.id}
                     chat={chat}
                     isSelected={selectedChat?.id === chat.id}
-                    onClick={() => setSelectedChat(chat)}
+                    onClick={() => {
+                      // Select the group chat directly
+                      setSelectedChat(chat);
+                    }}
                     onFavorite={() => toggleFavorite(chat.id)}
                     isFavorite={favorites.includes(chat.id)}
                   />
@@ -316,7 +368,10 @@ export default function ChatPage() {
                     key={chat.id}
                     chat={chat}
                     isSelected={selectedChat?.id === chat.id}
-                    onClick={() => setSelectedChat(chat)}
+                    onClick={() => {
+                      // Select the direct message directly
+                      setSelectedChat(chat);
+                    }}
                     onFavorite={() => toggleFavorite(chat.id)}
                     isFavorite={favorites.includes(chat.id)}
                   />
@@ -339,23 +394,66 @@ export default function ChatPage() {
             {/* Chat Header */}
             <div className="bg-[#2f3136] border-b border-[#202225] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-semibold">
-                  {selectedChat.name
-                    ? selectedChat.name.charAt(0).toUpperCase()
-                    : selectedChat.members?.find(m => m.user_id !== currentUser?.id)?.user?.first_name?.charAt(0).toUpperCase() || '?'}
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold">
-                    {selectedChat.name ||
-                      `${selectedChat.members?.find(m => m.user_id !== currentUser?.id)?.user?.first_name || ''} ${selectedChat.members?.find(m => m.user_id !== currentUser?.id)?.user?.last_name || ''}`.trim() ||
-                      'Unknown User'}
-                  </h3>
-                  <p className="text-sm text-[#8e9297]">
-                    {selectedChat.type === 'group' 
-                      ? `${selectedChat.members?.length || 0} members`
-                      : selectedChat.members?.find(m => m.user_id !== currentUser?.id)?.user?.email}
-                  </p>
-                </div>
+                {(() => {
+                  // Determine display name and initials for header
+                  let headerDisplayName: string;
+                  let headerInitials: string;
+                  
+                  if (selectedChat.type === 'group') {
+                    if (selectedChat.name && selectedChat.name.trim()) {
+                      headerDisplayName = selectedChat.name;
+                      headerInitials = selectedChat.name.charAt(0).toUpperCase();
+                    } else {
+                      const memberNames = selectedChat.members
+                        ?.filter((m: any) => m.user_id !== currentUser?.id && m.user)
+                        .map((m: any) => `${m.user?.first_name || ''} ${m.user?.last_name || ''}`.trim())
+                        .filter(Boolean)
+                        .slice(0, 3) || [];
+                      
+                      const totalMembers = selectedChat.members?.filter((m: any) => m.user_id !== currentUser?.id && m.user).length || 0;
+                      
+                      if (memberNames.length > 0) {
+                        // Always show it's a group, even if only 1 member
+                        if (totalMembers === 1) {
+                          headerDisplayName = `${memberNames[0]}'s Group`;
+                        } else if (totalMembers === 2) {
+                          headerDisplayName = `${memberNames[0]} & ${memberNames[1]}'s Group`;
+                        } else {
+                          headerDisplayName = `${memberNames[0]}, ${memberNames[1]} & ${totalMembers - 2} other${totalMembers - 2 !== 1 ? 's' : ''}'s Group`;
+                        }
+                        headerInitials = memberNames[0].charAt(0).toUpperCase();
+                      } else {
+                        const memberCount = selectedChat.members?.length || 0;
+                        headerDisplayName = memberCount > 0 
+                          ? `Group (${memberCount} member${memberCount !== 1 ? 's' : ''})`
+                          : `Unnamed Group (${selectedChat.id.slice(0, 8)})`;
+                        headerInitials = 'G';
+                      }
+                    }
+                  } else {
+                    const otherMember = selectedChat.members?.find((m: any) => m.user_id !== currentUser?.id);
+                    headerDisplayName = otherMember 
+                      ? `${otherMember.user?.first_name || ''} ${otherMember.user?.last_name || ''}`.trim() || otherMember.user?.email || 'Unknown User'
+                      : 'Unknown User';
+                    headerInitials = headerDisplayName.charAt(0).toUpperCase();
+                  }
+                  
+                  return (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-semibold">
+                        {headerInitials || '?'}
+                      </div>
+                      <div>
+                        <h3 className="text-white font-semibold">{headerDisplayName}</h3>
+                        <p className="text-sm text-[#8e9297]">
+                          {selectedChat.type === 'group' 
+                            ? `${selectedChat.members?.length || 0} members`
+                            : selectedChat.members?.find(m => m.user_id !== currentUser?.id)?.user?.email}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div className="flex items-center gap-2">
                 <button className="p-2 rounded-lg hover:bg-[#393c43] text-[#b9bbbe] transition-colors">
@@ -454,9 +552,48 @@ export default function ChatPage() {
 
 function ChatListItem({ chat, isSelected, onClick, onFavorite, isFavorite }: any) {
   const { user: currentUser } = useAuthStore();
-  const otherMember = chat.members?.find((m: any) => m.user_id !== currentUser?.id);
-  const displayName = chat.name || 
-    (otherMember ? `${otherMember.user?.first_name} ${otherMember.user?.last_name}`.trim() : 'Unknown');
+  
+  // Determine display name based on chat type
+  let displayName: string;
+  if (chat.type === 'group') {
+    // For group chats, use name or generate from members
+    if (chat.name && chat.name.trim()) {
+      displayName = chat.name;
+    } else {
+      // Generate name from member names (excluding current user)
+      const memberNames = chat.members
+        ?.filter((m: any) => m.user_id !== currentUser?.id && m.user)
+        .map((m: any) => `${m.user?.first_name || ''} ${m.user?.last_name || ''}`.trim())
+        .filter(Boolean)
+        .slice(0, 3) || [];
+      
+      const totalMembers = chat.members?.filter((m: any) => m.user_id !== currentUser?.id && m.user).length || 0;
+      
+      if (memberNames.length > 0) {
+        // Always show it's a group, even if only 1 member
+        if (totalMembers === 1) {
+          displayName = `${memberNames[0]}'s Group`;
+        } else if (totalMembers === 2) {
+          displayName = `${memberNames[0]} & ${memberNames[1]}'s Group`;
+        } else {
+          displayName = `${memberNames[0]}, ${memberNames[1]} & ${totalMembers - 2} other${totalMembers - 2 !== 1 ? 's' : ''}'s Group`;
+        }
+      } else {
+        // If no member names available, use chat ID as fallback to make it unique
+        const memberCount = chat.members?.length || 0;
+        displayName = memberCount > 0 
+          ? `Group (${memberCount} member${memberCount !== 1 ? 's' : ''})`
+          : `Unnamed Group (${chat.id.slice(0, 8)})`;
+      }
+    }
+  } else {
+    // For direct messages, use other member's name
+    const otherMember = chat.members?.find((m: any) => m.user_id !== currentUser?.id);
+    displayName = otherMember 
+      ? `${otherMember.user?.first_name || ''} ${otherMember.user?.last_name || ''}`.trim() || otherMember.user?.email || 'Unknown User'
+      : 'Unknown User';
+  }
+  
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
@@ -513,13 +650,13 @@ function CreateGroupModal({ onClose, onSuccess }: any) {
   });
 
   const createGroupMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string; user_ids: string[] }) => {
+    mutationFn: async (data: { name: string; description?: string; member_ids: string[] }) => {
       if (!organization?.id) throw new Error('No organization');
       return await chatService.createChat(organization.id, {
         type: 'group',
         name: data.name,
         description: data.description,
-        user_ids: data.user_ids,
+        member_ids: data.member_ids,
       });
     },
     onSuccess: () => {
@@ -556,7 +693,7 @@ function CreateGroupModal({ onClose, onSuccess }: any) {
     createGroupMutation.mutate({
       name: groupName,
       description: description || undefined,
-      user_ids: selectedMembers,
+      member_ids: selectedMembers,
     });
   };
 

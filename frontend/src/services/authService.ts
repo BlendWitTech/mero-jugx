@@ -7,6 +7,12 @@ export interface LoginCredentials {
   organization_id?: string;
 }
 
+export interface LoginWithMfaCredentials {
+  email: string;
+  code: string;
+  organization_id?: string;
+}
+
 export interface RegisterOrganizationData {
   name: string;
   email: string;
@@ -77,6 +83,27 @@ export const authService = {
       temp_token: tempToken,
       code,
     });
+    return response.data;
+  },
+
+  async loginWithMfa(credentials: LoginWithMfaCredentials): Promise<LoginResponse> {
+    const url = credentials.organization_id
+      ? `/auth/login-with-mfa?organization_id=${credentials.organization_id}`
+      : '/auth/login-with-mfa';
+    try {
+      const response = await api.post(url, {
+        email: credentials.email,
+        code: credentials.code,
+        organization_id: credentials.organization_id,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw error;
+    }
+  },
+
+  async checkMfaRequired(email: string) {
+    const response = await api.post('/auth/check-mfa-required', { email });
     return response.data;
   },
 

@@ -174,5 +174,29 @@ export class ChatController {
   ) {
     return this.chatService.deleteMessage(userId, organizationId, messageId);
   }
+
+  @Put(':id/archive')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Archive or unarchive a chat' })
+  @ApiResponse({ status: 200, description: 'Chat archived/unarchived successfully' })
+  async archiveChat(
+    @CurrentUser('id') userId: string,
+    @CurrentOrganization('id') organizationId: string,
+    @Param('id') chatId: string,
+    @Body() dto: { archive: boolean },
+  ) {
+    return this.chatService.archiveChat(userId, organizationId, chatId, dto.archive);
+  }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: 'Export chat history' })
+  @ApiResponse({ status: 200, description: 'Chat exported successfully' })
+  async exportChat(
+    @CurrentUser('id') userId: string,
+    @CurrentOrganization('id') organizationId: string,
+    @Param('id') chatId: string,
+  ) {
+    return this.chatService.exportChat(userId, organizationId, chatId);
+  }
 }
 

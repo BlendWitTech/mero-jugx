@@ -30,6 +30,7 @@ import { RedisService } from '../common/services/redis.service';
 import { RegisterOrganizationDto } from './dto/register-organization.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyMfaLoginDto } from './dto/verify-mfa-login.dto';
+import { LoginWithMfaDto } from './dto/login-with-mfa.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -187,16 +188,22 @@ export class AuthService {
           await this.emailVerificationRepository.save(emailVerification);
 
           const verificationUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001')}/verify-email?token=${verificationToken}`;
-          await this.emailService.sendEmail(
-            ownerUser.email,
-            'Verify Your Email Address',
-            `
-              <h2>Welcome to ${dto.name}!</h2>
-              <p>Please verify your email address by clicking the link below:</p>
-              <p><a href="${verificationUrl}">Verify Email</a></p>
-              <p>This link will expire in 24 hours.</p>
-            `,
-          );
+          try {
+            await this.emailService.sendEmail(
+              ownerUser.email,
+              'Verify Your Email Address',
+              `
+                <h2>Welcome to ${dto.name}!</h2>
+                <p>Please verify your email address by clicking the link below:</p>
+                <p><a href="${verificationUrl}">Verify Email</a></p>
+                <p>This link will expire in 24 hours.</p>
+              `,
+            );
+          } catch (emailError) {
+            // Log email error but don't fail registration
+            console.error('[AuthService] Failed to send verification email:', emailError);
+            console.warn('[AuthService] Organization registration will continue despite email error');
+          }
         }
       } else {
         // New user - check if email already exists
@@ -326,22 +333,28 @@ export class AuthService {
 
       // Send organization creation notification email to organization email
       const orgVerificationUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001')}/verify-email?token=${orgVerificationToken}`;
-      await this.emailService.sendOrganizationCreatedEmail(
-        savedOrganization.email,
-        savedOrganization.name,
-        ownerFullName,
-        ownerUser.email,
-        organizationDetails,
-        orgVerificationUrl,
-        {
-          name: pkg.name,
-          description: pkg.description,
-          base_user_limit: pkg.base_user_limit,
-          base_role_limit: pkg.base_role_limit,
-          // Convert price from decimal (string) to number if it exists
-          price: pkg.price !== null && pkg.price !== undefined ? Number(pkg.price) : null,
-        },
-      );
+      try {
+        await this.emailService.sendOrganizationCreatedEmail(
+          savedOrganization.email,
+          savedOrganization.name,
+          ownerFullName,
+          ownerUser.email,
+          organizationDetails,
+          orgVerificationUrl,
+          {
+            name: pkg.name,
+            description: pkg.description,
+            base_user_limit: pkg.base_user_limit,
+            base_role_limit: pkg.base_role_limit,
+            // Convert price from decimal (string) to number if it exists
+            price: pkg.price !== null && pkg.price !== undefined ? Number(pkg.price) : null,
+          },
+        );
+      } catch (emailError) {
+        // Log email error but don't fail registration
+        console.error('[AuthService] Failed to send organization creation email:', emailError);
+        console.warn('[AuthService] Organization registration will continue despite email error');
+      }
 
       await queryRunner.commitTransaction();
 
@@ -353,6 +366,11 @@ export class AuthService {
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
+      console.error('[AuthService] Organization registration error:', error);
+      if (error instanceof Error) {
+        console.error('[AuthService] Error message:', error.message);
+        console.error('[AuthService] Error stack:', error.stack);
+      }
       throw error;
     } finally {
       await queryRunner.release();
@@ -700,6 +718,182 @@ export class AuthService {
     };
   }
 
+  async loginWithMfa(dto: LoginWithMfaDto): Promise<any> {
+    // Find user by email
+    const user = await this.userRepository.findOne({
+      where: { email: dto.email, status: UserStatus.ACTIVE },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Email verification check - MANDATORY
+    if (!user.email_verified) {
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in. Check your inbox for the verification email.',
+      );
+    }
+
+    // Check if user has MFA enabled and set up
+    if (!user.mfa_enabled || !user.mfa_secret || !user.mfa_setup_completed_at) {
+      throw new BadRequestException(
+        '2FA is not set up for this account. Please use the regular login method with password.',
+      );
+    }
+
+    // Verify MFA code
+    let verified = false;
+
+    // Check if code is a backup code
+    if (user.mfa_backup_codes && user.mfa_backup_codes.includes(dto.code)) {
+      verified = true;
+      // Remove used backup code
+      user.mfa_backup_codes = user.mfa_backup_codes.filter((c) => c !== dto.code);
+      await this.userRepository.save(user);
+    } else {
+      // Verify TOTP code
+      verified = speakeasy.totp.verify({
+        secret: user.mfa_secret,
+        encoding: 'base32',
+        token: dto.code,
+        window: 2,
+      });
+    }
+
+    if (!verified) {
+      throw new UnauthorizedException('Invalid 2FA code');
+    }
+
+    // Get user's organizations with MFA enabled
+    const memberships = await this.memberRepository.find({
+      where: {
+        user_id: user.id,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['organization', 'role'],
+    });
+
+    // Filter to only organizations with MFA enabled and email verified
+    const mfaOrganizations = memberships.filter(
+      (m) => m.organization.mfa_enabled && m.organization.email_verified,
+    );
+
+    if (mfaOrganizations.length === 0) {
+      throw new UnauthorizedException(
+        'You are not a member of any organization with MFA enabled. Please use the regular login method.',
+      );
+    }
+
+    // If organization_id is provided, use it
+    if (dto.organization_id) {
+      const membership = mfaOrganizations.find(
+        (m) => m.organization_id === dto.organization_id,
+      );
+
+      if (!membership) {
+        throw new UnauthorizedException(
+          'You are not a member of this organization or it does not have MFA enabled',
+        );
+      }
+
+      return this.completeLogin(user, membership);
+    }
+
+    // If user has only one MFA organization, automatically use it
+    if (mfaOrganizations.length === 1) {
+      return this.completeLogin(user, mfaOrganizations[0]);
+    }
+
+    // Return organizations for user to select
+    return {
+      requires_organization_selection: true,
+      organizations: mfaOrganizations.map((m) => ({
+        id: m.organization_id,
+        name: m.organization.name,
+        slug: m.organization.slug,
+        role: m.role?.name || 'Member',
+      })),
+      message: 'Please select an organization to continue',
+    };
+  }
+
+  private async completeLogin(user: User, membership: OrganizationMember): Promise<any> {
+    // Ensure organization relation is loaded
+    if (!membership.organization) {
+      throw new UnauthorizedException('Organization not found');
+    }
+
+    // Organization email verification check - MANDATORY
+    if (!membership.organization.email_verified) {
+      throw new UnauthorizedException(
+        'Organization email address must be verified before you can access this organization. Please check the organization email inbox for the verification email.',
+      );
+    }
+
+    // Update last login
+    user.last_login_at = new Date();
+    await this.userRepository.save(user);
+
+    // Generate tokens
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      organization_id: membership.organization_id,
+      role_id: membership.role_id,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m'),
+    });
+
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+      },
+    );
+
+    // Create session
+    const sessionId = crypto.randomUUID();
+    const session = this.sessionRepository.create({
+      id: sessionId,
+      user_id: user.id,
+      organization_id: membership.organization_id,
+      refresh_token: await bcrypt.hash(refreshToken, 10),
+      expires_at: new Date(
+        Date.now() +
+          parseInt(
+            this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace('d', ''),
+          ) *
+            24 *
+            60 *
+            60 *
+            1000,
+      ),
+    });
+
+    await this.sessionRepository.save(session);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        avatar_url: user.avatar_url,
+      },
+      organization: {
+        id: membership.organization_id,
+        name: membership.organization.name,
+        slug: membership.organization.slug,
+      },
+    };
+  }
+
   async verifyEmail(token: string): Promise<{ message: string }> {
     const verification = await this.emailVerificationRepository.findOne({
       where: { token },
@@ -907,6 +1101,43 @@ export class AuthService {
     // For now, we'll just return success
     // You could also delete the session if needed
     return { message: 'Logged out successfully' };
+  }
+
+  async checkMfaRequiredForEmail(email: string): Promise<{ mfa_available: boolean; message?: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email, status: UserStatus.ACTIVE },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists for security
+      return { mfa_available: false };
+    }
+
+    // Check if user has MFA enabled and set up
+    if (!user.mfa_enabled || !user.mfa_secret || !user.mfa_setup_completed_at) {
+      return { mfa_available: false };
+    }
+
+    // Get user's organizations with MFA enabled
+    const memberships = await this.memberRepository.find({
+      where: {
+        user_id: user.id,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['organization'],
+    });
+
+    // Filter to only organizations with MFA enabled and email verified
+    const mfaOrganizations = memberships.filter(
+      (m) => m.organization.mfa_enabled && m.organization.email_verified,
+    );
+
+    return {
+      mfa_available: mfaOrganizations.length > 0,
+      message: mfaOrganizations.length > 0 
+        ? 'You can log in with email and MFA code' 
+        : 'MFA login is not available',
+    };
   }
 
   private generateSlug(name: string): string {

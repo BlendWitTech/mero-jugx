@@ -6,6 +6,7 @@ import { OrganizationsController } from './organizations.controller';
 import { DocumentsController } from './documents.controller';
 import { OrganizationsService } from './organizations.service';
 import { DocumentsService } from './documents.service';
+import { OrganizationBrandingService } from './organization-branding.service';
 import { Organization } from '../database/entities/organization.entity';
 import { OrganizationMember } from '../database/entities/organization-member.entity';
 import { OrganizationDocument } from '../database/entities/organization-document.entity';
@@ -43,7 +44,7 @@ import { AuditLogsModule } from '../audit-logs/audit-logs.module';
     AuditLogsModule,
   ],
   controllers: [OrganizationsController, DocumentsController],
-  providers: [OrganizationsService, DocumentsService],
-  exports: [OrganizationsService, DocumentsService],
+  providers: [OrganizationsService, DocumentsService, OrganizationBrandingService],
+  exports: [OrganizationsService, DocumentsService, OrganizationBrandingService],
 })
 export class OrganizationsModule {}

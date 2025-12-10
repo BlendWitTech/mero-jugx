@@ -11,6 +11,7 @@ import { Chat, ChatType, ChatStatus } from '../database/entities/chat.entity';
 import { ChatMember, ChatMemberRole, ChatMemberStatus } from '../database/entities/chat-member.entity';
 import { Message, MessageType, MessageStatus } from '../database/entities/message.entity';
 import { MessageAttachment } from '../database/entities/message-attachment.entity';
+import { MessageReadStatus } from '../database/entities/message-read-status.entity';
 import { Organization } from '../database/entities/organization.entity';
 import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
 import { User } from '../database/entities/user.entity';
@@ -29,6 +30,8 @@ import { NotificationHelperService, NotificationType } from '../notifications/no
 
 @Injectable()
 export class ChatService {
+  private chatGateway: any; // Will be set via setGateway method
+
   constructor(
     @InjectRepository(Chat)
     private chatRepository: Repository<Chat>,
@@ -38,6 +41,8 @@ export class ChatService {
     private messageRepository: Repository<Message>,
     @InjectRepository(MessageAttachment)
     private attachmentRepository: Repository<MessageAttachment>,
+    @InjectRepository(MessageReadStatus)
+    private messageReadStatusRepository: Repository<MessageReadStatus>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @InjectRepository(OrganizationMember)
@@ -54,6 +59,11 @@ export class ChatService {
     private auditLogsService: AuditLogsService,
     private notificationHelper: NotificationHelperService,
   ) {}
+
+  // Set gateway reference (called from module to avoid circular dependency)
+  setGateway(gateway: any) {
+    this.chatGateway = gateway;
+  }
 
   /**
    * Check if organization has access to chat feature
@@ -284,12 +294,19 @@ export class ChatService {
     const page = query.page || 1;
     const limit = query.limit || 20;
 
+    // Use subquery to get chat IDs where user is a member
+    const memberSubQuery = this.chatMemberRepository
+      .createQueryBuilder('cm')
+      .select('cm.chat_id')
+      .where('cm.user_id = :userId', { userId })
+      .andWhere('cm.status = :memberStatus', { memberStatus: ChatMemberStatus.ACTIVE });
+
     const queryBuilder = this.chatRepository
       .createQueryBuilder('chat')
-      .innerJoin('chat.members', 'member', 'member.user_id = :userId', { userId })
-      .where('chat.organization_id = :organizationId', { organizationId })
-      .andWhere('member.status = :memberStatus', { memberStatus: ChatMemberStatus.ACTIVE })
-      .andWhere('chat.status = :chatStatus', { chatStatus: ChatStatus.ACTIVE });
+      .where('chat.id IN (' + memberSubQuery.getQuery() + ')')
+      .andWhere('chat.organization_id = :organizationId', { organizationId })
+      .andWhere('chat.status = :chatStatus', { chatStatus: ChatStatus.ACTIVE })
+      .setParameters(memberSubQuery.getParameters());
 
     if (query.type) {
       queryBuilder.andWhere('chat.type = :type', { type: query.type });
@@ -307,7 +324,11 @@ export class ChatService {
 
     const total = await queryBuilder.getCount();
 
+    // Load chats with relations
     const chats = await queryBuilder
+      .leftJoinAndSelect('chat.members', 'members')
+      .leftJoinAndSelect('members.user', 'memberUser')
+      .leftJoinAndSelect('chat.creator', 'creator')
       .orderBy('chat.last_message_at', 'DESC')
       .addOrderBy('chat.created_at', 'DESC')
       .skip((page - 1) * limit)
@@ -679,8 +700,10 @@ export class ChatService {
       const memberUser = await this.userRepository.findOne({ where: { id: member.user_id } });
       if (!memberUser) continue;
 
-      // Check if user is online (via gateway - we'll pass this info or check separately)
-      // For now, we'll create notifications and let the gateway handle online/offline logic
+      // Always create notifications - even if user is online
+      // Online users might not have the chat open, so they need notifications
+      // The unread count badge will update in real-time via WebSocket
+      // Notifications ensure users see messages in the notification dropdown
       
       if (isMentioned) {
         // Create mention notification
@@ -705,37 +728,49 @@ export class ChatService {
           },
         );
       } else {
-        // Create unread message notification (only if user might be offline)
-        // The gateway will handle real-time delivery for online users
-        await this.notificationHelper.createNotification(
-          member.user_id,
-          organizationId,
-          NotificationType.CHAT_UNREAD,
-          chat.type === ChatType.GROUP
-            ? `New message in ${chat.name}`
-            : `New message from ${senderName}`,
-          chat.type === ChatType.GROUP
-            ? `${senderName}: ${dto.content?.substring(0, 100) || 'Sent an attachment'}`
-            : dto.content?.substring(0, 100) || 'Sent an attachment',
-          {
-            route: '/chat',
-            params: { chatId },
-          },
-          {
-            chat_id: chatId,
-            chat_name: chat.name,
-            sender_id: userId,
-            sender_name: senderName,
-            message_id: savedMessage.id,
-          },
-        );
+        // Create or update grouped unread message notification
+        // Groups messages by sender in the same chat (e.g., "Saugat sent 5 messages")
+        try {
+          const notification = await this.notificationHelper.createOrUpdateGroupedChatNotification(
+            member.user_id,
+            organizationId,
+            NotificationType.CHAT_UNREAD,
+            chatId,
+            userId,
+            senderName,
+            chat.name,
+            chat.type === ChatType.GROUP ? 'group' : 'direct',
+            dto.content || null,
+            savedMessage.id,
+          );
+          if (!notification) {
+            console.log(`[ChatService] Notification not created for user ${member.user_id} - in-app notifications may be disabled`);
+          } else {
+            console.log(`[ChatService] Notification ${notification.id ? 'created/updated' : 'failed'} for user ${member.user_id}`);
+          }
+        } catch (error) {
+          // Log error but don't fail the message send
+          console.error('Error creating/updating grouped chat notification:', error);
+        }
       }
     }
 
-    return this.messageRepository.findOne({
+    const messageWithRelations = await this.messageRepository.findOne({
       where: { id: savedMessage.id },
       relations: ['sender', 'attachments', 'reply_to'],
     });
+
+    // Broadcast message via WebSocket if gateway is available
+    if (this.chatGateway && messageWithRelations) {
+      try {
+        this.chatGateway.broadcastMessage(chatId, messageWithRelations);
+      } catch (error) {
+        // Log error but don't fail the request
+        console.error('Error broadcasting message via WebSocket:', error);
+      }
+    }
+
+    return messageWithRelations;
   }
 
   /**
@@ -781,6 +816,59 @@ export class ChatService {
       .leftJoinAndSelect('reply_to.sender', 'reply_to_sender')
       .getMany();
 
+    // Get read statuses for messages from the sender's perspective
+    // For each message, get read status for the recipient(s)
+    const messageIds = messages.map(m => m.id);
+    
+    // Get all read statuses for these messages
+    const allReadStatuses = messageIds.length > 0 
+      ? await this.messageReadStatusRepository.find({
+          where: {
+            message_id: In(messageIds),
+          },
+        })
+      : [];
+
+    // For direct chats, get read status for the other person
+    // For group chats, we could show read status for all recipients, but for now show for the first recipient
+    const messagesWithReadStatus = messages.map(message => {
+      // If this is the current user's message, get read status for the recipient(s)
+      if (message.sender_id === userId) {
+        // For direct chats, find the other member
+        if (chat.type === ChatType.DIRECT) {
+          const otherMember = chat.members.find(m => m.user_id !== userId);
+          if (otherMember) {
+            const readStatus = allReadStatuses.find(
+              rs => rs.message_id === message.id && rs.user_id === otherMember.user_id
+            );
+            return {
+              ...message,
+              read_status: readStatus ? {
+                delivered_at: readStatus.delivered_at?.toISOString() || null,
+                read_at: readStatus.read_at?.toISOString() || null,
+              } : null,
+            };
+          }
+        } else {
+          // For group chats, get read status for any recipient (we'll show if at least one person read it)
+          const readStatus = allReadStatuses.find(rs => rs.message_id === message.id);
+          return {
+            ...message,
+            read_status: readStatus ? {
+              delivered_at: readStatus.delivered_at?.toISOString() || null,
+              read_at: readStatus.read_at?.toISOString() || null,
+            } : null,
+          };
+        }
+      }
+      
+      // For messages from others, we don't show read status (they show it on their side)
+      return {
+        ...message,
+        read_status: null,
+      };
+    });
+
     // Mark as read
     const member = await this.chatMemberRepository.findOne({
       where: { chat_id: chatId, user_id: userId },
@@ -790,14 +878,176 @@ export class ChatService {
       member.last_read_at = new Date();
       member.unread_count = 0;
       await this.chatMemberRepository.save(member);
+      
+      // Mark all messages in this chat as read for this user
+      await this.markMessagesAsRead(userId, chatId, messages.map(m => m.id));
     }
 
     return {
-      messages: messages.reverse(), // Return in chronological order
+      messages: messagesWithReadStatus.reverse(), // Return in chronological order
       total,
       page,
       limit,
     };
+  }
+
+  /**
+   * Mark messages as delivered (when received via WebSocket)
+   */
+  async markMessagesAsDelivered(userId: string, messageIds: string[]): Promise<void> {
+    if (!messageIds || messageIds.length === 0) return;
+
+    // Get messages to find their senders
+    const messages = await this.messageRepository.find({
+      where: { id: In(messageIds) },
+      relations: ['sender'],
+    });
+
+    for (const message of messages) {
+      // Don't mark as delivered if user sent the message themselves
+      if (message.sender_id === userId) continue;
+
+      // Use upsert to avoid duplicate key constraint violations
+      try {
+        // Try to find existing status
+        let status = await this.messageReadStatusRepository.findOne({
+          where: { message_id: message.id, user_id: userId },
+        });
+
+        if (!status) {
+          // Create new status
+          status = this.messageReadStatusRepository.create({
+            message_id: message.id,
+            user_id: userId,
+            delivered_at: new Date(),
+          });
+        } else if (!status.delivered_at) {
+          // Update existing status
+          status.delivered_at = new Date();
+        } else {
+          // Already delivered, skip
+          continue;
+        }
+
+        await this.messageReadStatusRepository.save(status);
+      } catch (error: any) {
+        // Handle duplicate key constraint - try to update instead
+        if (error?.code === '23505' || error?.message?.includes('unique constraint')) {
+          const status = await this.messageReadStatusRepository.findOne({
+            where: { message_id: message.id, user_id: userId },
+          });
+          if (status && !status.delivered_at) {
+            status.delivered_at = new Date();
+            await this.messageReadStatusRepository.save(status);
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  /**
+   * Mark messages as read
+   */
+  async markMessagesAsRead(userId: string, chatId: string, messageIds: string[]): Promise<void> {
+    if (!messageIds || messageIds.length === 0) return;
+
+    // Get messages to find their senders
+    const messages = await this.messageRepository.find({
+      where: { id: In(messageIds) },
+      relations: ['sender'],
+    });
+
+    const readAt = new Date();
+
+    for (const message of messages) {
+      // Don't mark as read if user sent the message themselves
+      if (message.sender_id === userId) continue;
+
+      // Use upsert to avoid duplicate key constraint violations
+      try {
+        // Try to find existing status
+        let status = await this.messageReadStatusRepository.findOne({
+          where: { message_id: message.id, user_id: userId },
+        });
+
+        if (!status) {
+          // Create new status
+          status = this.messageReadStatusRepository.create({
+            message_id: message.id,
+            user_id: userId,
+            delivered_at: readAt,
+            read_at: readAt,
+          });
+        } else {
+          // Update existing status
+          if (!status.delivered_at) {
+            status.delivered_at = readAt;
+          }
+          if (!status.read_at) {
+            status.read_at = readAt;
+          }
+        }
+
+        await this.messageReadStatusRepository.save(status);
+      } catch (error: any) {
+        // Handle duplicate key constraint - try to update instead
+        if (error?.code === '23505' || error?.message?.includes('unique constraint')) {
+          const status = await this.messageReadStatusRepository.findOne({
+            where: { message_id: message.id, user_id: userId },
+          });
+          if (status) {
+            if (!status.delivered_at) {
+              status.delivered_at = readAt;
+            }
+            if (!status.read_at) {
+              status.read_at = readAt;
+            }
+            await this.messageReadStatusRepository.save(status);
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Emit read status update to sender(s) via WebSocket
+    if (this.chatGateway) {
+      const uniqueSenders = [...new Set(messages.map(m => m.sender_id))];
+      for (const senderId of uniqueSenders) {
+        this.chatGateway.server.to(`user:${senderId}`).emit('message:read', {
+          chat_id: chatId,
+          message_ids: messageIds,
+          read_by: userId,
+          read_at: readAt,
+        });
+      }
+    }
+  }
+
+  /**
+   * Get message read status for a user
+   */
+  async getMessageReadStatus(messageId: string, userId: string): Promise<MessageReadStatus | null> {
+    return await this.messageReadStatusRepository.findOne({
+      where: { message_id: messageId, user_id: userId },
+      relations: ['user'],
+    });
+  }
+
+  /**
+   * Get all read statuses for messages in a chat (for group chats)
+   */
+  async getChatMessageReadStatuses(chatId: string, messageIds: string[]): Promise<MessageReadStatus[]> {
+    if (!messageIds || messageIds.length === 0) return [];
+
+    return await this.messageReadStatusRepository.find({
+      where: {
+        message_id: In(messageIds),
+      },
+      relations: ['user'],
+    });
   }
 
   /**
@@ -837,6 +1087,96 @@ export class ChatService {
       null,
       null,
     );
+  }
+
+  /**
+   * Archive or unarchive a chat
+   */
+  async archiveChat(
+    userId: string,
+    organizationId: string,
+    chatId: string,
+    archive: boolean,
+  ): Promise<Chat> {
+    const chat = await this.findOne(userId, organizationId, chatId);
+
+    chat.status = archive ? ChatStatus.ARCHIVED : ChatStatus.ACTIVE;
+    await this.chatRepository.save(chat);
+
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      archive ? 'chat.archived' : 'chat.unarchived',
+      'chat',
+      chatId,
+      null,
+      null,
+    );
+
+    return this.findOne(userId, organizationId, chatId);
+  }
+
+  /**
+   * Export chat history
+   */
+  async exportChat(
+    userId: string,
+    organizationId: string,
+    chatId: string,
+  ): Promise<string> {
+    const chat = await this.findOne(userId, organizationId, chatId);
+
+    // Get all messages
+    const messages = await this.messageRepository.find({
+      where: {
+        chat_id: chatId,
+      },
+      relations: ['sender', 'attachments'],
+      order: {
+        created_at: 'ASC',
+      },
+    });
+
+    // Create CSV content
+    const headers = ['Date', 'Time', 'Sender', 'Message', 'Type', 'Attachments'];
+    const rows = messages.map(message => {
+      const date = new Date(message.created_at);
+      const senderName = message.sender
+        ? `${message.sender.first_name} ${message.sender.last_name}`.trim()
+        : 'Unknown';
+      const attachments = message.attachments
+        ? message.attachments.map(a => a.file_name).join('; ')
+        : '';
+
+      return [
+        date.toLocaleDateString(),
+        date.toLocaleTimeString(),
+        senderName,
+        message.content || '',
+        message.type,
+        attachments,
+      ];
+    });
+
+    const csvContent = [
+      `Chat: ${chat.name || 'Direct Chat'}`,
+      `Exported: ${new Date().toISOString()}`,
+      '',
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'chat.exported',
+      'chat',
+      chatId,
+      null,
+      { message_count: messages.length },
+    );
+
+    return csvContent;
   }
 }
 

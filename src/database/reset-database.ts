@@ -11,6 +11,17 @@ import { seedRoleTemplates } from './seeds/005-role-templates.seed';
 // Load environment variables
 config();
 
+/**
+ * Reset database - completely drops and recreates everything
+ * 
+ * This function:
+ * 1. Drops all existing tables and types
+ * 2. Clears the migrations table
+ * 3. Runs all migrations to recreate all tables fresh
+ * 4. Seeds all initial data (packages, permissions, roles, package features, role templates)
+ * 
+ * Used by: npm run db:reset, reset scripts
+ */
 async function resetDatabase() {
   try {
     console.log('📦 Connecting to database...');

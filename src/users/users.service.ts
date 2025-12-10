@@ -173,14 +173,13 @@ export class UsersService {
     }
 
     // Verify current password
-    if (!user.password || !(await bcrypt.compare(currentPassword, user.password))) {
+    if (!user.password_hash || !(await bcrypt.compare(currentPassword, user.password_hash))) {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    user.password_changed_at = new Date();
+    user.password_hash = hashedPassword;
 
     await this.userRepository.save(user);
 

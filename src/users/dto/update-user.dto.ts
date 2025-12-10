@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsEmail, MinLength, MaxLength, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserDto {
@@ -27,4 +27,9 @@ export class UpdateUserDto {
   @IsString()
   @MaxLength(500)
   avatar_url?: string;
+
+  @ApiPropertyOptional({ description: 'Onboarding completed status' })
+  @IsOptional()
+  @IsBoolean()
+  onboarding_completed?: boolean;
 }

@@ -23,6 +23,8 @@ import PaymentFailurePage from './pages/payment/PaymentFailurePage';
 import MockEsewaPage from './pages/payment/MockEsewaPage';
 import DocumentationPage from './pages/documentation/DocumentationPage';
 import ChatPage from './pages/chat/ChatPage';
+import AnalyticsPage from './pages/analytics/AnalyticsPage';
+import { OnboardingProvider } from './components/Onboarding/OnboardingProvider';
 import api from './services/api';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -130,7 +132,8 @@ function LegacyRedirect() {
 
 function App() {
   return (
-    <Routes>
+    <OnboardingProvider>
+      <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterOrganizationPage />} />
@@ -165,6 +168,7 @@ function App() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="documentation" element={<DocumentationPage />} />
         <Route path="chat" element={<ChatPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
       </Route>
 
       {/* Legacy route without slug - redirect to slug route if organization exists */}
@@ -179,7 +183,8 @@ function App() {
 
       {/* 404 - Redirect to login if not authenticated, otherwise to dashboard */}
       <Route path="*" element={<NotFoundRoute />} />
-    </Routes>
+      </Routes>
+    </OnboardingProvider>
   );
 }
 

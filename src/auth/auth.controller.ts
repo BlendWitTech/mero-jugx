@@ -18,6 +18,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { VerifyMfaLoginDto } from './dto/verify-mfa-login.dto';
+import { LoginWithMfaDto } from './dto/login-with-mfa.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -105,6 +106,26 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid 2FA code or expired token' })
   async verifyMfaAndLogin(@Body() dto: VerifyMfaLoginDto) {
     return this.authService.verifyMfaAndLogin(dto);
+  }
+
+  @Public()
+  @Post('login-with-mfa')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with email and MFA code directly (for organizations with MFA enabled)' })
+  @ApiResponse({ status: 200, description: 'Login successful with MFA code' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials or MFA code' })
+  @ApiResponse({ status: 400, description: 'MFA not set up or invalid request' })
+  async loginWithMfa(@Body() dto: LoginWithMfaDto) {
+    return this.authService.loginWithMfa(dto);
+  }
+
+  @Public()
+  @Post('check-mfa-required')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check if email belongs to user with MFA-enabled organizations' })
+  @ApiResponse({ status: 200, description: 'Returns whether MFA login is available' })
+  async checkMfaRequired(@Body('email') email: string) {
+    return this.authService.checkMfaRequiredForEmail(email);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -6,6 +6,30 @@ import { Activity, Eye, X, Filter, Calendar, User, FileText, Search, AlertCircle
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 
+interface AuditLog {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  user_id: string | null;
+  metadata: any;
+  created_at: string;
+  user?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+interface AuditLogsResponse {
+  audit_logs: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export default function AuditLogsPage() {
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const navigate = useNavigate();
@@ -31,7 +55,7 @@ export default function AuditLogsPage() {
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
   });
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<AuditLogsResponse>({
     queryKey: ['audit-logs', page, search, actionFilter, entityTypeFilter, userIdFilter, dateFrom, dateTo],
     queryFn: async () => {
       const params: any = {
@@ -50,17 +74,19 @@ export default function AuditLogsPage() {
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken && !hasPermissionError,
     retry: 1,
-    onError: (error: any) => {
-      if (error?.response?.status === 403) {
-        setHasPermissionError(true);
-        toast.error('You do not have permission to view audit logs');
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
-      }
-    },
   });
+
+  // Handle error
+  useEffect(() => {
+    if (error && (error as any)?.response?.status === 403) {
+      setHasPermissionError(true);
+      toast.error('You do not have permission to view audit logs');
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    }
+  }, [error, navigate]);
 
   const { data: stats } = useQuery({
     queryKey: ['audit-logs-stats', dateFrom, dateTo],
@@ -133,6 +159,460 @@ export default function AuditLogsPage() {
     return '•';
   };
 
+  // Format audit log action into human-readable message
+  const formatAuditLogMessage = (log: any): string => {
+    const userName = log.user ? `${log.user.first_name} ${log.user.last_name}`.trim() : 'Unknown User';
+    const action = log.action;
+    const entityType = log.entity_type;
+    const metadata = log.metadata || {};
+    const oldValues = log.old_values || {};
+    const newValues = log.new_values || {};
+
+    // Chat actions
+    if (action === 'chat.created') {
+      const chatType = metadata.chat_type === 'group' ? 'group chat' : 'direct message';
+      const chatName = metadata.chat_name ? `"${metadata.chat_name}"` : chatType;
+      return `${userName} created a ${chatName}`;
+    }
+    if (action === 'chat.updated') {
+      const changes: string[] = [];
+      if (newValues.name && oldValues.name !== newValues.name) {
+        changes.push(`renamed to "${newValues.name}"`);
+      }
+      if (newValues.description !== undefined && oldValues.description !== newValues.description) {
+        changes.push('updated the description');
+      }
+      if (changes.length > 0) {
+        return `${userName} ${changes.join(' and ')}`;
+      }
+      return `${userName} updated the chat`;
+    }
+    if (action === 'chat.deleted') {
+      return `${userName} deleted a chat`;
+    }
+    if (action === 'chat.members.added') {
+      const count = Array.isArray(metadata.user_ids) ? metadata.user_ids.length : 1;
+      return `${userName} added ${count} member${count !== 1 ? 's' : ''} to the group`;
+    }
+    if (action === 'chat.member.removed') {
+      return `${userName} removed a member from the group`;
+    }
+    if (action === 'chat.left') {
+      return `${userName} left a chat`;
+    }
+
+    // User actions
+    if (action === 'user.create') {
+      return `${userName} created a new user account`;
+    }
+    if (action === 'user.update') {
+      const changes: string[] = [];
+      if (newValues.first_name && oldValues.first_name !== newValues.first_name) {
+        changes.push('first name');
+      }
+      if (newValues.last_name && oldValues.last_name !== newValues.last_name) {
+        changes.push('last name');
+      }
+      if (newValues.email && oldValues.email !== newValues.email) {
+        changes.push('email address');
+      }
+      if (changes.length > 0) {
+        return `${userName} updated user's ${changes.join(', ')}`;
+      }
+      return `${userName} updated a user`;
+    }
+    if (action === 'user.delete') {
+      return `${userName} deleted a user account`;
+    }
+    if (action === 'user.revoke') {
+      return `${userName} revoked access for a user`;
+    }
+
+    // Role actions
+    if (action === 'role.create') {
+      const roleName = metadata.role_name || 'a role';
+      return `${userName} created the role "${roleName}"`;
+    }
+    if (action === 'role.update') {
+      const roleName = metadata.role_name || 'a role';
+      return `${userName} updated the role "${roleName}"`;
+    }
+    if (action === 'role.delete') {
+      return `${userName} deleted a role`;
+    }
+    if (action === 'role.assign') {
+      const roleName = metadata.role_name || 'a role';
+      return `${userName} assigned the role "${roleName}" to a user`;
+    }
+
+    // Invitation actions
+    if (action === 'invitation.create') {
+      return `${userName} sent an invitation`;
+    }
+    if (action === 'invitation.accept') {
+      return `${userName} accepted an invitation`;
+    }
+    if (action === 'invitation.cancel') {
+      return `${userName} cancelled an invitation`;
+    }
+
+    // Organization actions
+    if (action === 'organization.update') {
+      return `${userName} updated organization settings`;
+    }
+    if (action === 'organization.settings.update') {
+      return `${userName} changed organization settings`;
+    }
+
+    // Package actions
+    if (action === 'package.purchased') {
+      const packageName = metadata.package_name || 'a package';
+      return `${userName} purchased the ${packageName} package`;
+    }
+    if (action === 'package.upgraded') {
+      const packageName = metadata.package_name || 'a package';
+      return `${userName} upgraded to the ${packageName} package`;
+    }
+
+    // Default fallback
+    const actionWords = action.split('.').map((word: string) => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+    return `${userName} performed ${actionWords} on ${entityType}`;
+  };
+
+  // Format entity information into human-readable text
+  const formatEntityReadable = (log: any): { name: string; subtitle?: string } => {
+    const entityType = log.entity_type;
+    const metadata = log.metadata || {};
+    const oldValues = log.old_values || {};
+    const newValues = log.new_values || {};
+
+    // Chat entities
+    if (entityType === 'chat') {
+      const chatName = metadata.chat_name || newValues.name || oldValues.name;
+      const chatType = metadata.chat_type || newValues.type || oldValues.type;
+      
+      if (chatType === 'direct' || chatType === 'direct_message' || (!chatType && !chatName)) {
+        // For direct messages, try to get participant info from metadata
+        const otherParticipant = metadata.other_participant_name || metadata.participant_name || metadata.member_name;
+        const otherParticipantEmail = metadata.other_participant_email || metadata.participant_email || metadata.member_email;
+        
+        if (otherParticipant) {
+          return {
+            name: `Direct message with ${otherParticipant}`,
+            subtitle: otherParticipantEmail || 'One-on-one conversation'
+          };
+        }
+        if (otherParticipantEmail) {
+          return {
+            name: `Direct message with ${otherParticipantEmail}`,
+            subtitle: 'One-on-one conversation'
+          };
+        }
+        // If we have member_ids in metadata, we could potentially show count
+        if (metadata.member_ids && Array.isArray(metadata.member_ids) && metadata.member_ids.length > 0) {
+          return {
+            name: 'Direct Message',
+            subtitle: `${metadata.member_ids.length} participant${metadata.member_ids.length !== 1 ? 's' : ''}`
+          };
+        }
+        return {
+          name: 'Direct Message',
+          subtitle: 'One-on-one conversation'
+        };
+      }
+      
+      if (chatName) {
+        return {
+          name: `"${chatName}"`,
+          subtitle: chatType === 'group' ? 'Group Chat' : 'Direct Message'
+        };
+      }
+      return {
+        name: chatType === 'group' ? 'Group Chat' : 'Direct Message',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Role entities
+    if (entityType === 'role') {
+      const roleName = metadata.role_name || newValues.name || oldValues.name;
+      if (roleName) {
+        return {
+          name: `"${roleName}"`,
+          subtitle: 'Role'
+        };
+      }
+      return {
+        name: 'Role',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // User entities
+    if (entityType === 'user') {
+      const userName = metadata.user_name || newValues.first_name || oldValues.first_name;
+      const userEmail = metadata.user_email || newValues.email || oldValues.email;
+      if (userName || userEmail) {
+        return {
+          name: userName ? `${userName} ${newValues.last_name || oldValues.last_name || ''}`.trim() : userEmail,
+          subtitle: userEmail && userName ? userEmail : 'User'
+        };
+      }
+      return {
+        name: 'User',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Invitation entities
+    if (entityType === 'invitation') {
+      const email = metadata.invited_email || newValues.email || oldValues.email;
+      if (email) {
+        return {
+          name: email,
+          subtitle: 'Invitation'
+        };
+      }
+      return {
+        name: 'Invitation',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Organization entities
+    if (entityType === 'organization') {
+      const orgName = metadata.organization_name || newValues.name || oldValues.name;
+      if (orgName) {
+        return {
+          name: `"${orgName}"`,
+          subtitle: 'Organization'
+        };
+      }
+      return {
+        name: 'Organization',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Package entities
+    if (entityType === 'package') {
+      const packageName = metadata.package_name || newValues.name || oldValues.name;
+      if (packageName) {
+        return {
+          name: packageName.charAt(0).toUpperCase() + packageName.slice(1),
+          subtitle: 'Package'
+        };
+      }
+      return {
+        name: 'Package',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Package Feature entities
+    if (entityType === 'package_feature' || entityType === 'organization_package_feature') {
+      const featureName = metadata.feature_name || newValues.name || oldValues.name;
+      const featureSlug = metadata.feature_slug || newValues.slug || oldValues.slug;
+      const featureType = metadata.feature_type || newValues.type || oldValues.type;
+      const packageName = metadata.package_name || metadata.purchased_with_package || metadata.current_package_name;
+      
+      // Format feature name
+      let displayName = 'Package Feature';
+      if (featureName) {
+        displayName = featureName;
+      } else if (featureSlug) {
+        // Convert slug to readable name (e.g., "chat-system" -> "Chat System")
+        displayName = featureSlug
+          .split('-')
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      } else if (featureType) {
+        // Use feature type as fallback
+        displayName = featureType
+          .split('_')
+          .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      
+      // Build subtitle with package and feature info
+      const subtitleParts: string[] = [];
+      
+      // Add feature type info if available
+      if (featureType) {
+        const typeMap: Record<string, string> = {
+          'user_upgrade': 'User Upgrade Feature',
+          'role_upgrade': 'Role Upgrade Feature',
+          'chat': 'Chat Feature',
+          'support': 'Support Feature',
+        };
+        subtitleParts.push(typeMap[featureType] || 'Feature');
+      } else {
+        subtitleParts.push('Feature');
+      }
+      
+      // Add package info if available
+      if (packageName) {
+        subtitleParts.push(`with ${packageName.charAt(0).toUpperCase() + packageName.slice(1)} package`);
+      } else if (metadata.package_id) {
+        subtitleParts.push('(standalone purchase)');
+      }
+      
+      return {
+        name: displayName,
+        subtitle: subtitleParts.join(' ')
+      };
+    }
+
+    // Permission entities
+    if (entityType === 'permission') {
+      const permName = metadata.permission_name || newValues.name || oldValues.name;
+      if (permName) {
+        return {
+          name: permName,
+          subtitle: 'Permission'
+        };
+      }
+      return {
+        name: 'Permission',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Message entities
+    if (entityType === 'message') {
+      return {
+        name: 'Message',
+        subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+      };
+    }
+
+    // Default fallback
+    return {
+      name: entityType.charAt(0).toUpperCase() + entityType.slice(1),
+      subtitle: log.entity_id ? `ID: ${log.entity_id}` : undefined
+    };
+  };
+
+  // Format metadata/values into human-readable paragraphs
+  const formatMetadataReadable = (data: any, log: any): string => {
+    if (!data || Object.keys(data).length === 0) return '';
+
+    const parts: string[] = [];
+    const action = log.action;
+    const metadata = log.metadata || {};
+    const oldValues = log.old_values || {};
+    const newValues = log.new_values || {};
+
+    // Chat-specific formatting
+    if (action === 'chat.created') {
+      if (data.chat_type) {
+        parts.push(`Chat type: ${data.chat_type === 'group' ? 'Group chat' : 'Direct message'}`);
+      }
+      if (data.chat_name) {
+        parts.push(`Chat name: "${data.chat_name}"`);
+      }
+    }
+
+    if (action === 'chat.updated') {
+      if (newValues.name && oldValues.name !== newValues.name) {
+        parts.push(`Chat was renamed from "${oldValues.name || 'Unnamed'}" to "${newValues.name}"`);
+      }
+      if (newValues.description !== undefined && oldValues.description !== newValues.description) {
+        if (oldValues.description) {
+          parts.push(`Description was updated from "${oldValues.description}" to "${newValues.description || 'No description'}"`);
+        } else {
+          parts.push(`Description was set to "${newValues.description || 'No description'}"`);
+        }
+      }
+    }
+
+    if (action === 'chat.members.added') {
+      if (data.user_ids && Array.isArray(data.user_ids)) {
+        parts.push(`${data.user_ids.length} member${data.user_ids.length !== 1 ? 's were' : ' was'} added to the group`);
+      }
+    }
+
+    if (action === 'chat.member.removed') {
+      if (data.removed_user_id) {
+        parts.push(`A member was removed from the group`);
+      }
+    }
+
+    // Role-specific formatting
+    if (action === 'role.create' || action === 'role.update') {
+      if (data.role_name) {
+        parts.push(`Role name: "${data.role_name}"`);
+      }
+      if (data.role_id) {
+        parts.push(`Role ID: ${data.role_id}`);
+      }
+    }
+
+    if (action === 'role.assign') {
+      if (data.role_name) {
+        parts.push(`Role "${data.role_name}" was assigned`);
+      }
+      if (data.user_id) {
+        parts.push(`Assigned to user ID: ${data.user_id}`);
+      }
+    }
+
+    // User-specific formatting
+    if (action === 'user.update') {
+      const changes: string[] = [];
+      if (newValues.first_name && oldValues.first_name !== newValues.first_name) {
+        changes.push(`first name from "${oldValues.first_name}" to "${newValues.first_name}"`);
+      }
+      if (newValues.last_name && oldValues.last_name !== newValues.last_name) {
+        changes.push(`last name from "${oldValues.last_name}" to "${newValues.last_name}"`);
+      }
+      if (newValues.email && oldValues.email !== newValues.email) {
+        changes.push(`email from "${oldValues.email}" to "${newValues.email}"`);
+      }
+      if (changes.length > 0) {
+        parts.push(`Changed ${changes.join(', ')}`);
+      }
+    }
+
+    // Package-specific formatting
+    if (action === 'package.purchased' || action === 'package.upgraded') {
+      if (data.package_name) {
+        parts.push(`Package: ${data.package_name.charAt(0).toUpperCase() + data.package_name.slice(1)}`);
+      }
+    }
+
+    // Generic formatting for any remaining fields
+    const formattedKeys: Record<string, string> = {
+      chat_type: 'Chat Type',
+      chat_name: 'Chat Name',
+      user_ids: 'User IDs',
+      role_name: 'Role Name',
+      role_id: 'Role ID',
+      package_name: 'Package Name',
+      removed_user_id: 'Removed User ID',
+    };
+
+    for (const [key, value] of Object.entries(data)) {
+      if (!parts.some(p => p.includes(formattedKeys[key] || key))) {
+        const label = formattedKeys[key] || key.split('_').map((w: string) => 
+          w.charAt(0).toUpperCase() + w.slice(1)
+        ).join(' ');
+        
+        if (Array.isArray(value)) {
+          parts.push(`${label}: ${value.length} item${value.length !== 1 ? 's' : ''}`);
+        } else if (typeof value === 'object' && value !== null) {
+          parts.push(`${label}: ${JSON.stringify(value)}`);
+        } else {
+          parts.push(`${label}: ${value}`);
+        }
+      }
+    }
+
+    return parts.length > 0 ? parts.join('. ') + '.' : '';
+  };
+
   const actionTypes = [
     'user.create',
     'user.update',
@@ -147,9 +627,16 @@ export default function AuditLogsPage() {
     'invitation.cancel',
     'organization.update',
     'organization.settings.update',
+    'chat.created',
+    'chat.updated',
+    'chat.deleted',
+    'chat.members.added',
+    'chat.member.removed',
+    'chat.left',
+    'message.deleted',
   ];
 
-  const entityTypes = ['user', 'role', 'invitation', 'organization', 'package', 'permission'];
+  const entityTypes = ['user', 'role', 'invitation', 'organization', 'package', 'permission', 'chat', 'message'];
 
   // Show permission error message
   if (hasPermissionError || (error && (error as any)?.response?.status === 403)) {
@@ -378,19 +865,19 @@ export default function AuditLogsPage() {
             <table className="min-w-full divide-y divide-[#202225]">
               <thead className="bg-[#2f3136]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
-                    Action
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-2/5">
+                    Action & Description
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
-                    Entity
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/6">
+                    Item
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/6">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/6">
                     Timestamp
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/12">
                     Actions
                   </th>
                 </tr>
@@ -399,20 +886,32 @@ export default function AuditLogsPage() {
                 {data?.audit_logs && data.audit_logs.length > 0 ? (
                   data.audit_logs.map((log: any) => (
                     <tr key={log.id} className="hover:bg-[#36393f]">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <div className="flex items-center">
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(log.action)}`}>
                             {getActionIcon(log.action)} {log.action.replace('.', ' ')}
                           </span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <span className="text-sm font-medium text-white">{log.entity_type}</span>
-                          {log.entity_id && (
-                            <span className="text-xs text-[#8e9297] ml-2">#{log.entity_id}</span>
-                          )}
+                        <div className="mt-1 text-sm text-[#b9bbbe]">
+                          {formatAuditLogMessage(log)}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {(() => {
+                          const entityInfo = formatEntityReadable(log);
+                          return (
+                            <div>
+                              <div className="text-sm font-medium text-white">
+                                {entityInfo.name}
+                              </div>
+                              {entityInfo.subtitle && (
+                                <div className="text-xs text-[#8e9297] mt-0.5">
+                                  {entityInfo.subtitle}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-white">
@@ -496,67 +995,143 @@ export default function AuditLogsPage() {
                     <X className="h-6 w-6" />
                   </button>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {/* Human-readable summary */}
+                  <div className="bg-[#36393f] rounded-lg p-4 border-l-4 border-[#5865f2]">
+                    <p className="text-sm font-medium text-[#8e9297] mb-2">Summary</p>
+                    <p className="text-base text-white leading-relaxed">
+                      {formatAuditLogMessage(selectedLog)}
+                    </p>
+                    <p className="text-xs text-[#8e9297] mt-2">
+                      {formatDateTime(selectedLog.created_at)}
+                    </p>
+                  </div>
+
+                  {/* Details Grid */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-[#8e9297]">Action</p>
-                      <p className="mt-1 text-sm text-white">
+                      <p className="text-sm font-medium text-[#8e9297] mb-1">Action Type</p>
+                      <p className="text-sm text-white">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(selectedLog.action)}`}>
-                          {selectedLog.action}
+                          {getActionIcon(selectedLog.action)} {selectedLog.action}
                         </span>
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#8e9297]">Entity Type</p>
-                      <p className="mt-1 text-sm text-white">{selectedLog.entity_type}</p>
+                      <p className="text-sm font-medium text-[#8e9297] mb-1">Entity</p>
+                      {(() => {
+                        const entityInfo = formatEntityReadable(selectedLog);
+                        return (
+                          <div>
+                            <p className="text-sm text-white font-medium">{entityInfo.name}</p>
+                            {entityInfo.subtitle && (
+                              <p className="text-xs text-[#8e9297] mt-0.5">{entityInfo.subtitle}</p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#8e9297]">Entity ID</p>
-                      <p className="mt-1 text-sm text-white">{selectedLog.entity_id || 'N/A'}</p>
+                      <p className="text-sm font-medium text-[#8e9297] mb-1">Entity Type & ID</p>
+                      <p className="text-sm text-white capitalize">{selectedLog.entity_type}</p>
+                      {selectedLog.entity_id && (
+                        <p className="text-xs text-[#8e9297] font-mono mt-0.5">ID: {selectedLog.entity_id}</p>
+                      )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#8e9297]">Timestamp</p>
-                      <p className="mt-1 text-sm text-white">{formatDateTime(selectedLog.created_at)}</p>
+                      <p className="text-sm font-medium text-[#8e9297] mb-1">Timestamp</p>
+                      <p className="text-sm text-white">{formatDateTime(selectedLog.created_at)}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#8e9297]">User</p>
-                      <p className="mt-1 text-sm text-white">
+                      <p className="text-sm font-medium text-[#8e9297] mb-1">Performed By</p>
+                      <p className="text-sm text-white">
                         {selectedLog.user?.first_name} {selectedLog.user?.last_name}
                       </p>
                       <p className="text-xs text-[#8e9297]">{selectedLog.user?.email}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#8e9297]">IP Address</p>
-                      <p className="mt-1 text-sm text-white">{selectedLog.ip_address || 'N/A'}</p>
+                      <p className="text-sm font-medium text-[#8e9297] mb-1">IP Address</p>
+                      <p className="text-sm text-white font-mono">{selectedLog.ip_address || 'Not recorded'}</p>
                     </div>
                   </div>
 
-                  {selectedLog.old_values && Object.keys(selectedLog.old_values).length > 0 && (
+                  {/* Changes (if update action) */}
+                  {selectedLog.old_values && Object.keys(selectedLog.old_values).length > 0 && 
+                   selectedLog.new_values && Object.keys(selectedLog.new_values).length > 0 && (
                     <div className="pt-4 border-t border-[#202225]">
-                      <p className="text-sm font-medium text-[#8e9297] mb-2">Old Values</p>
-                      <pre className="bg-[#36393f] p-3 rounded text-xs text-[#b9bbbe] overflow-x-auto">
-                        {JSON.stringify(selectedLog.old_values, null, 2)}
-                      </pre>
+                      <p className="text-sm font-medium text-[#8e9297] mb-3">Changes Made</p>
+                      <div className="bg-[#36393f] rounded-lg p-4 space-y-3">
+                        {Object.keys(selectedLog.new_values).map((key) => {
+                          const oldVal = selectedLog.old_values[key];
+                          const newVal = selectedLog.new_values[key];
+                          if (oldVal === newVal) return null;
+                          
+                          const label = key.split('_').map((w: string) => 
+                            w.charAt(0).toUpperCase() + w.slice(1)
+                          ).join(' ');
+                          
+                          return (
+                            <div key={key} className="flex items-start gap-3">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-white mb-1">{label}</p>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-[#ed4245] line-through">{String(oldVal || 'Empty')}</span>
+                                  <span className="text-[#8e9297]">→</span>
+                                  <span className="text-[#23a55a]">{String(newVal || 'Empty')}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
-                  {selectedLog.new_values && Object.keys(selectedLog.new_values).length > 0 && (
-                    <div className="pt-4 border-t border-[#202225]">
-                      <p className="text-sm font-medium text-[#8e9297] mb-2">New Values</p>
-                      <pre className="bg-[#36393f] p-3 rounded text-xs text-[#b9bbbe] overflow-x-auto">
-                        {JSON.stringify(selectedLog.new_values, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
+                  {/* Additional Information */}
                   {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
                     <div className="pt-4 border-t border-[#202225]">
-                      <p className="text-sm font-medium text-[#8e9297] mb-2">Metadata</p>
-                      <pre className="bg-[#36393f] p-3 rounded text-xs text-[#b9bbbe] overflow-x-auto">
-                        {JSON.stringify(selectedLog.metadata, null, 2)}
-                      </pre>
+                      <p className="text-sm font-medium text-[#8e9297] mb-3">Additional Information</p>
+                      <div className="bg-[#36393f] rounded-lg p-4">
+                        <p className="text-sm text-white leading-relaxed whitespace-pre-wrap">
+                          {formatMetadataReadable(selectedLog.metadata, selectedLog) || 
+                           'No additional information available.'}
+                        </p>
+                      </div>
                     </div>
                   )}
+
+                  {/* Raw Data (collapsible for technical details) */}
+                  <details className="pt-4 border-t border-[#202225]">
+                    <summary className="text-sm font-medium text-[#8e9297] cursor-pointer hover:text-white mb-2">
+                      Technical Details (JSON)
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      {selectedLog.old_values && Object.keys(selectedLog.old_values).length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-[#8e9297] mb-1">Old Values</p>
+                          <pre className="bg-[#202225] p-3 rounded text-xs text-[#b9bbbe] overflow-x-auto">
+                            {JSON.stringify(selectedLog.old_values, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {selectedLog.new_values && Object.keys(selectedLog.new_values).length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-[#8e9297] mb-1">New Values</p>
+                          <pre className="bg-[#202225] p-3 rounded text-xs text-[#b9bbbe] overflow-x-auto">
+                            {JSON.stringify(selectedLog.new_values, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-[#8e9297] mb-1">Metadata</p>
+                          <pre className="bg-[#202225] p-3 rounded text-xs text-[#b9bbbe] overflow-x-auto">
+                            {JSON.stringify(selectedLog.metadata, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  </details>
                 </div>
                 <div className="mt-6 flex justify-end">
                   <button

@@ -2,7 +2,19 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Get API URL, ensuring it includes /api/v1
+const getApiUrl = () => {
+  const viteApiUrl = import.meta.env.VITE_API_URL;
+  if (viteApiUrl) {
+    // If VITE_API_URL is set, use it (it should already include /api/v1)
+    // Remove trailing slash if present
+    return viteApiUrl.endsWith('/') ? viteApiUrl.slice(0, -1) : viteApiUrl;
+  }
+  // If not set, use relative URL (will use Vite proxy)
+  return '/api/v1';
+};
+
+const API_URL = getApiUrl();
 
 export interface Chat {
   id: string;
@@ -57,6 +69,10 @@ export interface Message {
   };
   attachments?: MessageAttachment[];
   reactions?: MessageReaction[];
+  read_status?: {
+    delivered_at: string | null;
+    read_at: string | null;
+  };
 }
 
 export interface MessageAttachment {
@@ -91,11 +107,42 @@ class ChatService {
   }
 
   connect(organizationId: string, token: string): Socket {
+    // Reuse existing socket if it's connected
     if (this.socket?.connected) {
+      console.log('[ChatService] Reusing existing socket connection, socket ID:', this.socket.id);
       return this.socket;
     }
 
-    this.socket = io(`${API_URL}/chat`, {
+    // If socket exists but not connected, wait for reconnection instead of creating new one
+    if (this.socket && !this.socket.connected) {
+      console.log('[ChatService] Socket exists but not connected, will reconnect automatically');
+      // Return existing socket - socket.io will handle reconnection
+      return this.socket;
+    }
+
+    // For WebSocket, we need the base URL without /api/v1
+    // If API_URL is relative (/api/v1), use window.location.origin
+    // If API_URL is absolute and includes /api/v1, remove it
+    let socketUrl: string;
+    if (API_URL.startsWith('/')) {
+      // Relative URL - use current origin
+      socketUrl = window.location.origin;
+    } else if (API_URL.includes('/api/v1')) {
+      // Absolute URL with /api/v1 - remove it
+      socketUrl = API_URL.replace('/api/v1', '');
+    } else if (API_URL.includes('/api')) {
+      // Absolute URL with /api - remove it
+      socketUrl = API_URL.replace('/api', '');
+    } else {
+      // Fallback
+      socketUrl = 'http://localhost:3000';
+    }
+    
+    console.log('[ChatService] Connecting to socket:', `${socketUrl}/chat`);
+    
+    // Connect to /chat namespace (as defined in backend ChatGateway)
+    // Socket.io automatically handles namespaces, so we connect to the base URL with namespace
+    this.socket = io(`${socketUrl}/chat`, {
       auth: {
         token,
       },
@@ -110,15 +157,51 @@ class ChatService {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      // Remove forceNew to allow connection reuse
     });
+
+    // Add connection event listeners for debugging
+    this.socket.on('connect', () => {
+      console.log('[ChatService] Socket connected to chat namespace, socket ID:', this.socket?.id);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('[ChatService] Connection error:', error);
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('[ChatService] Socket disconnected:', reason);
+    });
+
+    // Don't add a global message:new listener here - let components add their own
+    // This prevents duplicate handling
 
     return this.socket;
   }
 
   disconnect() {
+    // Only disconnect if explicitly called (e.g., on logout)
     if (this.socket) {
+      console.log('[ChatService] Disconnecting socket');
       this.socket.disconnect();
       this.socket = null;
+    }
+  }
+
+  /**
+   * Mark messages as read for a chat
+   * This calls the backend API which marks messages as read
+   */
+  async markMessagesAsRead(organizationId: string, chatId: string): Promise<void> {
+    try {
+      // Call getMessages with a small limit to trigger the backend mark-as-read logic
+      // The backend automatically marks messages as read when getMessages is called
+      await api.get(`${API_URL}/chats/${chatId}/messages`, {
+        params: { limit: 1 },
+      });
+    } catch (error) {
+      console.error('[ChatService] Error marking messages as read:', error);
+      // Don't throw - this is not critical
     }
   }
 
@@ -128,7 +211,7 @@ class ChatService {
     page: number;
     limit: number;
   }> {
-    const response = await axios.get(`${API_URL}/api/v1/chats`, {
+    const response = await axios.get(`${API_URL}/chats`, {
       params,
       headers: {
         Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
@@ -138,7 +221,7 @@ class ChatService {
   }
 
   async getChat(organizationId: string, chatId: string): Promise<Chat> {
-    const response = await axios.get(`${API_URL}/api/v1/chats/${chatId}`, {
+    const response = await axios.get(`${API_URL}/chats/${chatId}`, {
       headers: {
         Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
       },
@@ -157,7 +240,7 @@ class ChatService {
     limit: number;
   }> {
     const response = await axios.get(
-      `${API_URL}/api/v1/chats/${chatId}/messages`,
+      `${API_URL}/chats/${chatId}/messages`,
       {
         params,
         headers: {
@@ -174,7 +257,7 @@ class ChatService {
     description?: string;
     member_ids?: string[];
   }): Promise<Chat> {
-    const response = await axios.post(`${API_URL}/api/v1/chats`, data, {
+    const response = await axios.post(`${API_URL}/chats`, data, {
       headers: {
         Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
       },
@@ -199,7 +282,7 @@ class ChatService {
     },
   ): Promise<Message> {
     const response = await axios.post(
-      `${API_URL}/api/v1/chats/${chatId}/messages`,
+      `${API_URL}/chats/${chatId}/messages`,
       data,
       {
         headers: {
@@ -212,7 +295,7 @@ class ChatService {
 
   async addMember(organizationId: string, chatId: string, userId: string): Promise<void> {
     await axios.post(
-      `${API_URL}/api/v1/chats/${chatId}/members`,
+      `${API_URL}/chats/${chatId}/members`,
       { member_ids: [userId] },
       {
         headers: {
@@ -224,7 +307,7 @@ class ChatService {
 
   async removeMember(organizationId: string, chatId: string, memberId: number): Promise<void> {
     await axios.delete(
-      `${API_URL}/api/v1/chats/${chatId}/members/${memberId}`,
+      `${API_URL}/chats/${chatId}/members/${memberId}`,
       {
         headers: {
           Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
@@ -239,7 +322,7 @@ class ChatService {
     avatar_url?: string;
   }): Promise<Chat> {
     const response = await axios.put(
-      `${API_URL}/api/v1/chats/${chatId}`,
+      `${API_URL}/chats/${chatId}`,
       data,
       {
         headers: {
@@ -251,7 +334,7 @@ class ChatService {
   }
 
   async deleteChat(organizationId: string, chatId: string): Promise<void> {
-    await axios.delete(`${API_URL}/api/v1/chats/${chatId}`, {
+    await axios.delete(`${API_URL}/chats/${chatId}`, {
       headers: {
         Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
       },

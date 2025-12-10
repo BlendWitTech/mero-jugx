@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Ticket, MessageSquare, Clock, Users, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Hash, X } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useQuery } from '@tanstack/react-query';
@@ -41,47 +41,51 @@ export default function RightSidebar({
 
   const canCreateGroup = hasPermission('chat.create_group');
 
-  // Load groups with unread counts
+  // Load all chats to get unread counts - use same query key as ChatManager for consistency
+  // This ensures we get real-time updates when ChatManager updates the cache
   const { data: chatsData } = useQuery({
     queryKey: ['chats', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return { chats: [], total: 0, page: 1, limit: 50 };
       try {
-        return await chatService.getChats(organization.id, { type: 'group', limit: 100 });
-      } catch (error: any) {
-        if (error.response?.status === 403) {
-          return { chats: [], total: 0, page: 1, limit: 50 };
-        }
-        throw error;
-      }
-    },
-    enabled: !!organization?.id && hasChatAccess,
-  });
-
-  // Load all chats to get unread counts
-  const { data: allChatsData } = useQuery({
-    queryKey: ['all-chats', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return { chats: [], total: 0, page: 1, limit: 50 };
-      try {
         return await chatService.getChats(organization.id, { limit: 100 });
       } catch (error: any) {
-        if (error.response?.status === 403) {
+        // Handle 403 (no access) or 400 (validation/access issue) gracefully
+        if (error.response?.status === 403 || error.response?.status === 400) {
+          console.warn('Chat access issue:', error.response?.data?.message || error.message);
           return { chats: [], total: 0, page: 1, limit: 50 };
         }
         throw error;
       }
     },
-    enabled: !!organization?.id && hasChatAccess,
+    enabled: !!organization?.id && !!currentPackage && hasChatAccess === true,
+    retry: false,
+    // Refetch interval to ensure we get updates (though setQueryData should handle this)
+    refetchInterval: false,
   });
 
-  const groups = chatsData?.chats || [];
-  const allChats = allChatsData?.chats || [];
+  const allChats = chatsData?.chats || [];
+  const groups = allChats.filter((chat: any) => chat.type === 'group');
+  
+  // Debug: Log unread counts
+  useEffect(() => {
+    if (allChats.length > 0) {
+      const unreadChats = allChats.filter((c: any) => (c.unread_count || 0) > 0);
+      if (unreadChats.length > 0) {
+        console.log('[RightSidebar] Chats with unread messages:', unreadChats.map((c: any) => ({ id: c.id, name: c.name, unread: c.unread_count })));
+      }
+    }
+  }, [allChats]);
   
   // Get unread count for a chat
   const getUnreadCount = (chatId: string) => {
     const chat = allChats.find((c: any) => c.id === chatId);
-    return chat?.unread_count || 0;
+    const count = chat?.unread_count || 0;
+    // Debug logging
+    if (count > 0) {
+      console.log('[RightSidebar] Unread count for chat', chatId, ':', count);
+    }
+    return count;
   };
 
   const handleCreateGroup = async (name: string, description?: string, memberIds: string[] = []) => {
@@ -146,11 +150,15 @@ export default function RightSidebar({
 
             {/* Online Users Section */}
             {hasPermission('users.view') && (
-              <OnlineUsersSection onOpenChat={(chatId) => {
-                if ((window as any).openChatWindow) {
-                  (window as any).openChatWindow(chatId, null);
-                }
-              }} />
+              <OnlineUsersSection 
+                onOpenChat={(chatId) => {
+                  if ((window as any).openChatWindow) {
+                    (window as any).openChatWindow(chatId, null);
+                  }
+                }}
+                allChats={allChats}
+                getUnreadCount={getUnreadCount}
+              />
             )}
 
             {/* Groups Section */}
@@ -220,7 +228,15 @@ function QuickAccessSection({ title, icon: Icon, items }: any) {
   );
 }
 
-function OnlineUsersSection({ onOpenChat }: { onOpenChat: (chatId: string) => void }) {
+function OnlineUsersSection({ 
+  onOpenChat, 
+  allChats, 
+  getUnreadCount 
+}: { 
+  onOpenChat: (chatId: string) => void;
+  allChats: any[];
+  getUnreadCount: (chatId: string) => number;
+}) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { user: currentUser, organization } = useAuthStore();
   const { hasPermission, isOrganizationOwner } = usePermissions();
@@ -244,28 +260,42 @@ function OnlineUsersSection({ onOpenChat }: { onOpenChat: (chatId: string) => vo
     if (!organization?.id) return;
 
     try {
-      // Try to find existing direct chat
-      const chats = await chatService.getChats(organization.id);
-      const existingChat = chats.chats.find(
+      // First check if we already have this chat in our loaded chats
+      const existingChat = allChats.find(
         (chat: any) =>
           chat.type === 'direct' &&
           chat.members?.some((m: any) => m.user_id === userId)
       );
 
       if (existingChat) {
-        // Open existing chat with user name
+        // Open existing chat with user name - ChatManager will prevent duplicates
         if ((window as any).openChatWindow) {
-          (window as any).openChatWindow(existingChat.id, null, undefined, undefined, userName);
+          (window as any).openChatWindow(existingChat.id, userId, undefined, undefined, userName);
         }
       } else {
-        // Create new direct chat
-        const newChat = await chatService.createChat(organization.id, {
-          type: 'direct',
-          member_ids: [userId],
-        });
-        // Open new chat with user name
-        if ((window as any).openChatWindow) {
-          (window as any).openChatWindow(newChat.id, null, undefined, undefined, userName);
+        // Try to fetch chats to see if one exists
+        const chats = await chatService.getChats(organization.id, { type: 'direct' });
+        const foundChat = chats.chats.find(
+          (chat: any) =>
+            chat.type === 'direct' &&
+            chat.members?.some((m: any) => m.user_id === userId)
+        );
+
+        if (foundChat) {
+          // Open existing chat
+          if ((window as any).openChatWindow) {
+            (window as any).openChatWindow(foundChat.id, userId, undefined, undefined, userName);
+          }
+        } else {
+          // Create new direct chat
+          const newChat = await chatService.createChat(organization.id, {
+            type: 'direct',
+            member_ids: [userId],
+          });
+          // Open new chat with user name
+          if ((window as any).openChatWindow) {
+            (window as any).openChatWindow(newChat.id, userId, undefined, undefined, userName);
+          }
         }
       }
     } catch (error: any) {
@@ -275,6 +305,16 @@ function OnlineUsersSection({ onOpenChat }: { onOpenChat: (chatId: string) => vo
         toast.error(error.response?.data?.message || 'Failed to open chat');
       }
     }
+  };
+
+  // Get unread count for a user's direct chat
+  const getUserUnreadCount = (userId: string) => {
+    const chat = allChats.find(
+      (c: any) =>
+        c.type === 'direct' &&
+        c.members?.some((m: any) => m.user_id === userId)
+    );
+    return chat ? getUnreadCount(chat.id) : 0;
   };
 
   return (
@@ -306,45 +346,54 @@ function OnlineUsersSection({ onOpenChat }: { onOpenChat: (chatId: string) => vo
             <div className="text-xs text-[#ed4245] px-2">Failed to load users</div>
           ) : members && members.length > 0 ? (
             <>
-              {members.map((member: any) => (
-                <button
-                  key={member.id}
-                  onClick={() => handleUserClick(member.id, `${member.first_name} ${member.last_name}`.trim())}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#393c43] transition-colors group"
-                >
-                  <div className="relative flex-shrink-0">
-                    {member.avatar_url ? (
-                      <img
-                        src={member.avatar_url}
-                        alt={`${member.first_name} ${member.last_name}`}
-                        className="h-8 w-8 rounded-full"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-[#5865f2] flex items-center justify-center">
-                        <span className="text-xs font-semibold text-white">
-                          {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
-                        </span>
-                      </div>
+              {members.map((member: any) => {
+                const unreadCount = getUserUnreadCount(member.id);
+                return (
+                  <button
+                    key={member.id}
+                    onClick={() => handleUserClick(member.id, `${member.first_name} ${member.last_name}`.trim())}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#393c43] transition-colors group relative"
+                  >
+                    <div className="relative flex-shrink-0">
+                      {member.avatar_url ? (
+                        <img
+                          src={member.avatar_url}
+                          alt={`${member.first_name} ${member.last_name}`}
+                          className="h-8 w-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-[#5865f2] flex items-center justify-center">
+                          <span className="text-xs font-semibold text-white">
+                            {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      {/* Show green dot for active users (online status tracking can be added later) */}
+                      {member.status === 'active' && (
+                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#23a55a] border-2 border-[#2f3136]"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-medium text-[#dcddde] truncate">
+                        {member.first_name} {member.last_name}
+                      </p>
+                      {/* Show "Active now" for active users (online status tracking can be added later) */}
+                      {member.status === 'active' && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3 text-[#8e9297]" />
+                          <span className="text-xs text-[#8e9297]">Active now</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Show unread count badge */}
+                    {unreadCount > 0 && (
+                      <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-[#ed4245] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                        {unreadCount > 999 ? '999+' : unreadCount}
+                      </span>
                     )}
-                    {/* Show green dot for active users (online status tracking can be added later) */}
-                    {member.status === 'active' && (
-                      <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#23a55a] border-2 border-[#2f3136]"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-[#dcddde] truncate">
-                      {member.first_name} {member.last_name}
-                    </p>
-                    {/* Show "Active now" for active users (online status tracking can be added later) */}
-                    {member.status === 'active' && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Clock className="h-3 w-3 text-[#8e9297]" />
-                        <span className="text-xs text-[#8e9297]">Active now</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </>
           ) : (
             <div className="text-xs text-[#8e9297] px-2">No one online</div>
@@ -414,8 +463,8 @@ function GroupsSection({
                   <Hash className="h-4 w-4 text-[#8e9297] flex-shrink-0" />
                   <span className="text-sm text-[#dcddde] truncate flex-1">{group.name || 'Unnamed Group'}</span>
                   {unreadCount > 0 && (
-                    <span className="h-5 w-5 rounded-full bg-[#ed4245] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                    <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-[#ed4245] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                      {unreadCount > 999 ? '999+' : unreadCount}
                     </span>
                   )}
                 </button>

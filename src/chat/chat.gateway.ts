@@ -14,7 +14,7 @@ import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { User } from '../database/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
 
 interface AuthenticatedSocket extends Socket {
@@ -25,10 +25,11 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
     credentials: true,
   },
   namespace: '/chat',
+  path: '/socket.io',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -189,6 +190,63 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('message:delivered')
+  async handleMessageDelivered(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { message_ids: string[] },
+  ) {
+    try {
+      if (!client.userId || !client.organizationId) {
+        client.emit('error', { message: 'Unauthorized' });
+        return;
+      }
+
+      const { message_ids } = data;
+      await this.chatService.markMessagesAsDelivered(client.userId, message_ids);
+
+      // Notify senders that their messages were delivered
+      const messages = await this.chatService['messageRepository'].find({
+        where: { id: In(message_ids) },
+        relations: ['sender'],
+      });
+
+      const uniqueSenders = [...new Set(messages.map(m => m.sender_id))];
+      for (const senderId of uniqueSenders) {
+        this.server.to(`user:${senderId}`).emit('message:delivered', {
+          message_ids,
+          delivered_to: client.userId,
+          delivered_at: new Date(),
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Error marking messages as delivered:', error);
+      client.emit('error', { message: error.message || 'Failed to mark messages as delivered' });
+    }
+  }
+
+  @SubscribeMessage('message:read')
+  async handleMessageRead(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { chat_id: string; message_ids: string[] },
+  ) {
+    try {
+      if (!client.userId || !client.organizationId) {
+        client.emit('error', { message: 'Unauthorized' });
+        return;
+      }
+
+      const { chat_id, message_ids } = data;
+      await this.chatService.markMessagesAsRead(client.userId, chat_id, message_ids);
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Error marking messages as read:', error);
+      client.emit('error', { message: error.message || 'Failed to mark messages as read' });
+    }
+  }
+
   @SubscribeMessage('message:typing')
   async handleTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -283,6 +341,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     
     return null;
+  }
+
+  // Method to broadcast a message to all chat members (called from ChatService)
+  broadcastMessage(chatId: string, message: any) {
+    this.logger.log(`Broadcasting message ${message.id} to chat ${chatId}`);
+    this.server.to(`chat:${chatId}`).emit('message:new', {
+      message,
+      chat_id: chatId,
+    });
   }
 
   // Method to notify chat members when a new member is added

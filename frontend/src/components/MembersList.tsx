@@ -2,7 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Circle, User as UserIcon, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 import { chatService } from '../services/chatService';
 import toast from 'react-hot-toast';
@@ -15,7 +15,7 @@ export default function MembersList() {
   // Organization owners should always be able to view users
   const canViewUsers = hasPermission('users.view') || isOrganizationOwner;
 
-  // Load chats to get unread counts
+  // Load chats to get unread counts - use same query key as ChatManager for consistency
   const { data: chatsData } = useQuery({
     queryKey: ['chats', organization?.id],
     queryFn: async () => {
@@ -30,9 +30,20 @@ export default function MembersList() {
       }
     },
     enabled: !!organization?.id && canViewUsers,
+    retry: false,
   });
 
   const allChats = chatsData?.chats || [];
+  
+  // Debug: Log unread counts
+  useEffect(() => {
+    if (allChats.length > 0) {
+      const unreadChats = allChats.filter((c: any) => (c.unread_count || 0) > 0);
+      if (unreadChats.length > 0) {
+        console.log('[MembersList] Chats with unread messages:', unreadChats.map((c: any) => ({ id: c.id, type: c.type, unread: c.unread_count })));
+      }
+    }
+  }, [allChats]);
 
   // Get unread count for a user's direct chat
   const getUnreadCountForUser = (userId: string) => {
@@ -41,7 +52,12 @@ export default function MembersList() {
         chat.type === 'direct' &&
         chat.members?.some((m: any) => m.user_id === userId)
     );
-    return directChat?.unread_count || 0;
+    const count = directChat?.unread_count || 0;
+    // Debug logging
+    if (count > 0) {
+      console.log('[MembersList] Unread count for user', userId, ':', count, 'chat:', directChat?.id);
+    }
+    return count;
   };
 
   const { data: members, isLoading, error } = useQuery({

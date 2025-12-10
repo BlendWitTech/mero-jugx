@@ -1,8 +1,11 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { SentryService } from '../services/sentry.service';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  constructor(private readonly sentryService?: SentryService) {}
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -25,7 +28,31 @@ export class AllExceptionsFilter implements ExceptionFilter {
       details: typeof message === 'object' ? (message as any).error : null,
     };
 
-    // Log error details for debugging - make it very visible
+    // Only send to Sentry for server errors (5xx) or unexpected errors
+    if ((status >= 500 || !(exception instanceof HttpException)) && this.sentryService) {
+      try {
+        // Get user from request if available
+        const user = (request as any).user;
+        const organization = (request as any).organization;
+
+        this.sentryService.captureException(exception, {
+          user,
+          organization,
+          extra: {
+            path: request.url,
+            method: request.method,
+            body: request.body,
+            query: request.query,
+            params: request.params,
+          },
+        });
+      } catch (sentryError) {
+        // Don't fail if Sentry fails
+        console.error('Failed to send error to Sentry:', sentryError);
+      }
+    }
+
+    // Log error details for debugging
     console.error('\n❌ ========== EXCEPTION CAUGHT ==========');
     console.error(`📍 Path: ${request.method} ${request.url}`);
     console.error(`📊 Status: ${status}`);

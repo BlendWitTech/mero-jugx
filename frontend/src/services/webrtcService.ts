@@ -132,6 +132,9 @@ export class WebRTCService {
       this.setupSocketListeners();
 
       // Create offer
+      if (!this.peerConnection) {
+        throw new Error('Peer connection not initialized');
+      }
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
@@ -141,7 +144,7 @@ export class WebRTCService {
         chatId,
         otherUserId,
         callType,
-        offer: offer.toJSON(),
+        offer: offer,
       });
     } catch (error: any) {
       this.handleError(error);
@@ -198,18 +201,21 @@ export class WebRTCService {
       this.setupSocketListeners();
 
       // Set remote description
-      await this.peerConnection!.setRemoteDescription(new RTCSessionDescription(offer));
+      if (!this.peerConnection) {
+        throw new Error('Peer connection not initialized');
+      }
+      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 
       // Create answer
-      const answer = await this.peerConnection!.createAnswer();
-      await this.peerConnection!.setLocalDescription(answer);
+      const answer = await this.peerConnection.createAnswer();
+      await this.peerConnection.setLocalDescription(answer);
 
       // Send answer
       this.setState('connected');
       socket.emit('call:answer', {
         chatId,
         otherUserId,
-        answer: answer.toJSON(),
+        answer: answer,
       });
     } catch (error: any) {
       this.handleError(error);

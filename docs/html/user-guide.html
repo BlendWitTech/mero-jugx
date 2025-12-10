@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide - Mero Jugx Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📖 User Guide</h1>
+            <p>Complete guide for using Mero Jugx</p>
+        </div>
+    </header>
+
+    <nav class="container">
+        <a href="index.html">Home</a>
+        <a href="developer-guide.html">Developer Guide</a>
+        <a href="organization-guide.html">Organization Guide</a>
+        <a href="admin-guide.html">Admin Guide</a>
+        <a href="structure.html">Project Structure</a>
+    </nav>
+
+    <div class="container">
+        <div class="content">
+            <h1>Welcome to Mero Jugx</h1>
+            <p>Mero Jugx is a comprehensive organization-based platform that enables teams to collaborate, communicate, and manage their work efficiently. This guide will help you get started and make the most of the platform.</p>
+
+            <div class="toc">
+                <h2>Table of Contents</h2>
+                <ul>
+                    <li><a href="#getting-started">Getting Started</a></li>
+                    <li><a href="#account-management">Account Management</a></li>
+                    <li><a href="#organizations">Organizations</a></li>
+                    <li><a href="#chat-communication">Chat & Communication</a></li>
+                    <li><a href="#documents">Documents</a></li>
+                    <li><a href="#notifications">Notifications</a></li>
+                    <li><a href="#mfa">Multi-Factor Authentication</a></li>
+                    <li><a href="#settings">Settings</a></li>
+                    <li><a href="#api-reference">User API Reference</a></li>
+                    <li><a href="#troubleshooting">Troubleshooting</a></li>
+                </ul>
+            </div>
+
+            <h2 id="getting-started">Getting Started</h2>
+
+            <h3>Creating an Account</h3>
+            <ol>
+                <li>Visit the registration page</li>
+                <li>Fill in your details:
+                    <ul>
+                        <li>Full Name</li>
+                        <li>Email Address</li>
+                        <li>Password (minimum 8 characters)</li>
+                    </ul>
+                </li>
+                <li>Click "Register"</li>
+                <li>Check your email for verification link</li>
+                <li>Click the verification link to activate your account</li>
+            </ol>
+
+            <h3>Logging In</h3>
+            <ol>
+                <li>Go to the login page</li>
+                <li>Enter your email and password</li>
+                <li>Click "Login"</li>
+            </ol>
+
+            <div class="note">
+                <strong>Two-Factor Authentication:</strong> If you have enabled 2FA, after entering your email and password, you'll need to enter the 6-digit code from your authenticator app and click "Verify".
+            </div>
+
+            <h3>First Login</h3>
+            <p>On your first login, you'll be guided through:</p>
+            <ul>
+                <li>Profile setup</li>
+                <li>Organization selection or creation</li>
+                <li>Notification preferences</li>
+            </ul>
+
+            <h2 id="account-management">Account Management</h2>
+
+            <h3>Profile Settings</h3>
+            <p>Access your profile from the top-right menu.</p>
+
+            <h4>Edit Profile:</h4>
+            <ol>
+                <li>Click on your profile picture or name</li>
+                <li>Select "Profile Settings"</li>
+                <li>Update your information:
+                    <ul>
+                        <li>Full Name</li>
+                        <li>Profile Picture</li>
+                        <li>Phone Number</li>
+                        <li>Bio</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h4>Change Password:</h4>
+            <ol>
+                <li>Go to Profile Settings</li>
+                <li>Click "Security"</li>
+                <li>Click "Change Password"</li>
+                <li>Enter current password</li>
+                <li>Enter new password (minimum 8 characters)</li>
+                <li>Confirm new password</li>
+                <li>Click "Update Password"</li>
+            </ol>
+
+            <h3>Two-Factor Authentication (2FA)</h3>
+            <p>Enable 2FA for enhanced security:</p>
+            <ol>
+                <li>Go to Profile Settings > Security</li>
+                <li>Click "Enable Two-Factor Authentication"</li>
+                <li>Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)</li>
+                <li>Enter the 6-digit code to verify</li>
+                <li>Save your backup codes in a safe place</li>
+            </ol>
+
+            <p><strong>Disable 2FA:</strong></p>
+            <ol>
+                <li>Go to Profile Settings > Security</li>
+                <li>Click "Disable Two-Factor Authentication"</li>
+                <li>Enter your password to confirm</li>
+            </ol>
+
+            <h2 id="organizations">Organizations</h2>
+
+            <h3>Understanding Organizations</h3>
+            <p>Organizations are workspaces where teams collaborate. You can:</p>
+            <ul>
+                <li>Belong to multiple organizations</li>
+                <li>Have different roles in each organization</li>
+                <li>Switch between organizations easily</li>
+            </ul>
+
+            <h3>Joining an Organization</h3>
+            <p><strong>By Invitation:</strong></p>
+            <ol>
+                <li>Check your email for an invitation</li>
+                <li>Click the invitation link</li>
+                <li>Log in if needed</li>
+                <li>Accept the invitation</li>
+                <li>You'll be added to the organization</li>
+            </ol>
+
+            <p><strong>By Code:</strong></p>
+            <ol>
+                <li>Get the organization join code from an admin</li>
+                <li>Go to Organizations page</li>
+                <li>Click "Join Organization"</li>
+                <li>Enter the join code</li>
+                <li>Click "Join"</li>
+            </ol>
+
+            <h3>Creating an Organization</h3>
+            <ol>
+                <li>Go to Organizations page</li>
+                <li>Click "Create Organization"</li>
+                <li>Fill in the details:
+                    <ul>
+                        <li>Organization Name</li>
+                        <li>Description (optional)</li>
+                        <li>Plan/Package (if applicable)</li>
+                    </ul>
+                </li>
+                <li>Click "Create"</li>
+                <li>You'll automatically become the owner</li>
+            </ol>
+
+            <h3>Switching Organizations</h3>
+            <ol>
+                <li>Click the organization selector in the top navigation</li>
+                <li>Select the organization you want to switch to</li>
+                <li>The interface will update to show that organization's data</li>
+            </ol>
+
+            <h3>Leaving an Organization</h3>
+            <ol>
+                <li>Go to Organizations page</li>
+                <li>Find the organization you want to leave</li>
+                <li>Click "Leave Organization"</li>
+                <li>Confirm your decision</li>
+            </ol>
+
+            <div class="warning">
+                <strong>Note:</strong> If you're the owner, you must transfer ownership first.
+            </div>
+
+            <h2 id="chat-communication">Chat & Communication</h2>
+
+            <h3>Starting a Chat</h3>
+            <p><strong>Direct Messages:</strong></p>
+            <ol>
+                <li>Go to Chat section</li>
+                <li>Click "New Chat"</li>
+                <li>Search for a user</li>
+                <li>Click on their name to start chatting</li>
+            </ol>
+
+            <p><strong>Group Chats:</strong></p>
+            <ol>
+                <li>Go to Chat section</li>
+                <li>Click "New Group"</li>
+                <li>Enter group name</li>
+                <li>Add members</li>
+                <li>Click "Create Group"</li>
+            </ol>
+
+            <h3>Sending Messages</h3>
+            <ul>
+                <li>Type your message in the input field</li>
+                <li>Press Enter to send</li>
+                <li>Use Shift+Enter for a new line</li>
+            </ul>
+
+            <p><strong>Message Features:</strong></p>
+            <ul>
+                <li><strong>@Mentions</strong>: Type @ to mention a user</li>
+                <li><strong>Emojis</strong>: Click the emoji button or type :emoji_name:</li>
+                <li><strong>File Attachments</strong>: Click the attachment icon</li>
+                <li><strong>Voice Messages</strong>: Hold the microphone button to record</li>
+            </ul>
+
+            <h3>Making Calls</h3>
+            <p><strong>Voice/Video Calls:</strong></p>
+            <ol>
+                <li>Open a chat with a user</li>
+                <li>Click the call button (phone or video icon)</li>
+                <li>Wait for the other user to accept</li>
+                <li>Grant microphone/camera permissions when prompted</li>
+            </ol>
+
+            <p><strong>During a Call:</strong></p>
+            <ul>
+                <li>Mute/unmute: Click the microphone icon</li>
+                <li>Turn video on/off: Click the camera icon</li>
+                <li>End call: Click the end call button</li>
+            </ul>
+
+            <h3>Chat Settings</h3>
+            <p>Access chat settings from the chat header:</p>
+            <ul>
+                <li>Change chat name (for groups)</li>
+                <li>Add/remove members (for groups)</li>
+                <li>Leave chat</li>
+                <li>Mute notifications</li>
+                <li>Search messages</li>
+            </ul>
+
+            <h2 id="documents">Documents</h2>
+
+            <h3>Uploading Documents</h3>
+            <ol>
+                <li>Go to Documents section in your organization</li>
+                <li>Click "Upload Document"</li>
+                <li>Select file(s) from your computer</li>
+                <li>Add optional description</li>
+                <li>Click "Upload"</li>
+            </ol>
+
+            <p><strong>Supported Formats:</strong></p>
+            <ul>
+                <li>PDF, DOC, DOCX</li>
+                <li>XLS, XLSX</li>
+                <li>PPT, PPTX</li>
+                <li>Images (JPG, PNG, GIF)</li>
+                <li>Text files</li>
+            </ul>
+
+            <h3>Organizing Documents</h3>
+            <p><strong>Folders:</strong></p>
+            <ul>
+                <li>Create folders to organize documents</li>
+                <li>Drag and drop documents into folders</li>
+                <li>Nest folders within folders</li>
+            </ul>
+
+            <p><strong>Tags:</strong></p>
+            <ul>
+                <li>Add tags to documents for easy searching</li>
+                <li>Use multiple tags per document</li>
+            </ul>
+
+            <h3>Sharing Documents</h3>
+            <ol>
+                <li>Find the document you want to share</li>
+                <li>Click the share icon</li>
+                <li>Choose sharing option:
+                    <ul>
+                        <li>Share with specific users</li>
+                        <li>Share with organization members</li>
+                        <li>Generate shareable link</li>
+                    </ul>
+                </li>
+                <li>Set permissions (view, edit, download)</li>
+            </ol>
+
+            <h3>Downloading Documents</h3>
+            <ol>
+                <li>Find the document</li>
+                <li>Click the download icon</li>
+                <li>File will download to your computer</li>
+            </ol>
+
+            <h2 id="notifications">Notifications</h2>
+
+            <h3>Notification Types</h3>
+            <p>You'll receive notifications for:</p>
+            <ul>
+                <li>New messages in chats</li>
+                <li>Mentions in messages</li>
+                <li>Document shares</li>
+                <li>Organization invitations</li>
+                <li>System updates</li>
+                <li>Payment reminders (if applicable)</li>
+            </ul>
+
+            <h3>Notification Settings</h3>
+            <ol>
+                <li>Go to Settings > Notifications</li>
+                <li>Configure preferences:
+                    <ul>
+                        <li>Email notifications</li>
+                        <li>Push notifications</li>
+                        <li>In-app notifications</li>
+                        <li>Specific notification types</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h3>Managing Notifications</h3>
+            <p><strong>Mark as Read:</strong></p>
+            <ul>
+                <li>Click on a notification to mark it as read</li>
+                <li>Click "Mark All as Read" to clear all</li>
+            </ul>
+
+            <p><strong>Clear Notifications:</strong></p>
+            <ul>
+                <li>Click "Clear All" to remove all notifications</li>
+                <li>Individual notifications can be dismissed</li>
+            </ul>
+
+            <h2 id="mfa">Multi-Factor Authentication (MFA)</h2>
+
+            <h3>Setting Up MFA</h3>
+            <p>Enable MFA for enhanced account security using an authenticator app.</p>
+
+            <h4>Check MFA Status API</h4>
+            <pre><code>GET /mfa/check
+Authorization: Bearer &lt;token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns whether MFA is enabled and setup status.</p>
+
+            <h4>Initialize MFA Setup API</h4>
+            <pre><code>POST /mfa/setup/initialize
+Authorization: Bearer &lt;token&gt;</code></pre>
+            <p><strong>Response:</strong> Returns QR code data URL and secret for authenticator app.</p>
+            <p><strong>What it does:</strong> Generates TOTP secret and QR code for setup.</p>
+
+            <h4>Verify MFA Setup API</h4>
+            <pre><code>POST /mfa/setup/verify
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "code": "123456"
+}</code></pre>
+            <p><strong>What it does:</strong> Verifies TOTP code and completes MFA setup, generates backup codes.</p>
+
+            <h4>Get Backup Codes API</h4>
+            <pre><code>GET /mfa/backup-codes
+Authorization: Bearer &lt;token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns MFA backup codes (one-time use for account recovery).</p>
+
+            <h4>Regenerate Backup Codes API</h4>
+            <pre><code>POST /mfa/backup-codes/regenerate
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "code": "123456"
+}</code></pre>
+            <p><strong>What it does:</strong> Regenerates new backup codes after verifying current TOTP code.</p>
+
+            <h4>Disable MFA API</h4>
+            <pre><code>DELETE /mfa/disable
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "code": "123456"
+}</code></pre>
+            <p><strong>What it does:</strong> Disables MFA after verifying TOTP code.</p>
+
+            <h3>Using MFA</h3>
+            <ol>
+                <li>Download an authenticator app (Google Authenticator, Authy, Microsoft Authenticator)</li>
+                <li>Initialize MFA setup to get QR code</li>
+                <li>Scan QR code with your authenticator app</li>
+                <li>Enter 6-digit code to verify</li>
+                <li>Save backup codes in a safe place</li>
+            </ol>
+
+            <h2 id="settings">Settings</h2>
+
+            <h3>General Settings</h3>
+            <p><strong>Language:</strong></p>
+            <ul>
+                <li>Select your preferred language</li>
+                <li>Changes take effect immediately</li>
+            </ul>
+
+            <p><strong>Theme:</strong></p>
+            <ul>
+                <li>Light mode</li>
+                <li>Dark mode</li>
+                <li>Auto (follows system preference)</li>
+            </ul>
+
+            <p><strong>Time Zone:</strong></p>
+            <ul>
+                <li>Set your time zone for accurate timestamps</li>
+            </ul>
+
+            <h3>Privacy Settings</h3>
+            <p><strong>Profile Visibility:</strong></p>
+            <ul>
+                <li>Public: All users can see your profile</li>
+                <li>Organization Only: Only organization members</li>
+                <li>Private: Only you</li>
+            </ul>
+
+            <p><strong>Activity Status:</strong></p>
+            <ul>
+                <li>Show when you're online</li>
+                <li>Show when you're typing</li>
+                <li>Hide activity status</li>
+            </ul>
+
+            <h3>Notification Preferences</h3>
+            <p>Configure what notifications you receive:</p>
+            <ul>
+                <li>Email notifications</li>
+                <li>Push notifications</li>
+                <li>In-app notifications</li>
+                <li>Specific event notifications</li>
+            </ul>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3>Can't Log In</h3>
+            <p><strong>Forgot Password:</strong></p>
+            <ol>
+                <li>Click "Forgot Password" on login page</li>
+                <li>Enter your email</li>
+                <li>Check email for reset link</li>
+                <li>Follow instructions to reset password</li>
+            </ol>
+
+            <p><strong>Account Locked:</strong></p>
+            <ul>
+                <li>Too many failed login attempts</li>
+                <li>Wait 15 minutes or contact support</li>
+            </ul>
+
+            <h3>Can't Send Messages</h3>
+            <p><strong>Check:</strong></p>
+            <ul>
+                <li>Internet connection</li>
+                <li>You're in the correct organization</li>
+                <li>Recipient hasn't blocked you</li>
+                <li>Organization chat permissions</li>
+            </ul>
+
+            <h3>Can't Join Organization</h3>
+            <p><strong>Common Issues:</strong></p>
+            <ul>
+                <li>Invalid join code</li>
+                <li>Organization is full</li>
+                <li>You've been blocked</li>
+                <li>Organization doesn't exist</li>
+            </ul>
+
+            <p><strong>Solution:</strong></p>
+            <ul>
+                <li>Verify the join code</li>
+                <li>Contact the organization admin</li>
+            </ul>
+
+            <h3>Documents Not Uploading</h3>
+            <p><strong>Check:</strong></p>
+            <ul>
+                <li>File size (max 50MB)</li>
+                <li>File format is supported</li>
+                <li>You have upload permissions</li>
+                <li>Internet connection is stable</li>
+            </ul>
+
+            <p><strong>Try:</strong></p>
+            <ul>
+                <li>Compress large files</li>
+                <li>Convert to supported format</li>
+                <li>Check available storage space</li>
+            </ul>
+
+            <h3>Not Receiving Notifications</h3>
+            <p><strong>Check Settings:</strong></p>
+            <ol>
+                <li>Go to Settings > Notifications</li>
+                <li>Verify notifications are enabled</li>
+                <li>Check browser permissions for push notifications</li>
+            </ol>
+
+            <p><strong>Browser Settings:</strong></p>
+            <ul>
+                <li>Chrome: Settings > Privacy > Notifications</li>
+                <li>Firefox: Settings > Privacy > Permissions</li>
+                <li>Safari: Preferences > Websites > Notifications</li>
+            </ul>
+
+            <h2>Keyboard Shortcuts</h2>
+            <ul>
+                <li><code>Ctrl/Cmd + K</code>: Search</li>
+                <li><code>Ctrl/Cmd + /</code>: Show all shortcuts</li>
+                <li><code>Ctrl/Cmd + N</code>: New chat/document</li>
+                <li><code>Escape</code>: Close modals/panels</li>
+            </ul>
+
+            <h2 id="api-reference">Complete User API Reference</h2>
+
+            <h3>Authentication APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/auth/organization/register</code></td>
+                        <td>POST</td>
+                        <td>Register new organization and account</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth/login</code></td>
+                        <td>POST</td>
+                        <td>Login to account</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth/refresh</code></td>
+                        <td>POST</td>
+                        <td>Refresh access token</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth/verify-email</code></td>
+                        <td>GET</td>
+                        <td>Verify email address</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth/forgot-password</code></td>
+                        <td>POST</td>
+                        <td>Request password reset</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth/reset-password</code></td>
+                        <td>POST</td>
+                        <td>Reset password</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth/logout</code></td>
+                        <td>POST</td>
+                        <td>Logout from account</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>User Profile APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/users/me</code></td>
+                        <td>GET</td>
+                        <td>Get current user profile</td>
+                    </tr>
+                    <tr>
+                        <td><code>/users/me</code></td>
+                        <td>PUT</td>
+                        <td>Update user profile</td>
+                    </tr>
+                    <tr>
+                        <td><code>/users/me/change-password</code></td>
+                        <td>PUT</td>
+                        <td>Change password</td>
+                    </tr>
+                    <tr>
+                        <td><code>/users/me/download-data</code></td>
+                        <td>GET</td>
+                        <td>Download all account data (GDPR)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Organization APIs (User Context)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/organizations</code></td>
+                        <td>GET</td>
+                        <td>List user's organizations</td>
+                    </tr>
+                    <tr>
+                        <td><code>/organizations/me</code></td>
+                        <td>GET</td>
+                        <td>Get current organization</td>
+                    </tr>
+                    <tr>
+                        <td><code>/organizations/switch</code></td>
+                        <td>PUT</td>
+                        <td>Switch to different organization</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Chat & Communication APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/chats</code></td>
+                        <td>GET</td>
+                        <td>List all user's chats</td>
+                    </tr>
+                    <tr>
+                        <td><code>/chats</code></td>
+                        <td>POST</td>
+                        <td>Create new chat</td>
+                    </tr>
+                    <tr>
+                        <td><code>/chats/:id</code></td>
+                        <td>GET</td>
+                        <td>Get chat details</td>
+                    </tr>
+                    <tr>
+                        <td><code>/chats/:id/messages</code></td>
+                        <td>GET</td>
+                        <td>Get chat messages</td>
+                    </tr>
+                    <tr>
+                        <td><code>/chats/:id/messages</code></td>
+                        <td>POST</td>
+                        <td>Send message</td>
+                    </tr>
+                    <tr>
+                        <td><code>/calls/chats/:chatId</code></td>
+                        <td>POST</td>
+                        <td>Start call</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Notification APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/notifications</code></td>
+                        <td>GET</td>
+                        <td>List notifications</td>
+                    </tr>
+                    <tr>
+                        <td><code>/notifications/unread-count</code></td>
+                        <td>GET</td>
+                        <td>Get unread count</td>
+                    </tr>
+                    <tr>
+                        <td><code>/notifications/:id/read</code></td>
+                        <td>PUT</td>
+                        <td>Mark as read</td>
+                    </tr>
+                    <tr>
+                        <td><code>/notifications/read-all</code></td>
+                        <td>PUT</td>
+                        <td>Mark all as read</td>
+                    </tr>
+                    <tr>
+                        <td><code>/notifications/preferences</code></td>
+                        <td>GET</td>
+                        <td>Get notification preferences</td>
+                    </tr>
+                    <tr>
+                        <td><code>/notifications/preferences</code></td>
+                        <td>PUT</td>
+                        <td>Update preferences</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>MFA APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/mfa/check</code></td>
+                        <td>GET</td>
+                        <td>Check MFA status</td>
+                    </tr>
+                    <tr>
+                        <td><code>/mfa/setup/initialize</code></td>
+                        <td>POST</td>
+                        <td>Initialize MFA setup</td>
+                    </tr>
+                    <tr>
+                        <td><code>/mfa/setup/verify</code></td>
+                        <td>POST</td>
+                        <td>Verify and complete MFA setup</td>
+                    </tr>
+                    <tr>
+                        <td><code>/mfa/backup-codes</code></td>
+                        <td>GET</td>
+                        <td>Get backup codes</td>
+                    </tr>
+                    <tr>
+                        <td><code>/mfa/backup-codes/regenerate</code></td>
+                        <td>POST</td>
+                        <td>Regenerate backup codes</td>
+                    </tr>
+                    <tr>
+                        <td><code>/mfa/disable</code></td>
+                        <td>DELETE</td>
+                        <td>Disable MFA</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Invitation APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/invitations/token/:token</code></td>
+                        <td>GET</td>
+                        <td>Get invitation details (public)</td>
+                    </tr>
+                    <tr>
+                        <td><code>/invitations/accept/:token</code></td>
+                        <td>POST</td>
+                        <td>Accept invitation (public)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Document APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/organizations/me/documents</code></td>
+                        <td>GET</td>
+                        <td>List documents</td>
+                    </tr>
+                    <tr>
+                        <td><code>/organizations/me/documents/:id</code></td>
+                        <td>GET</td>
+                        <td>Get document</td>
+                    </tr>
+                    <tr>
+                        <td><code>/organizations/me/documents/:id/download</code></td>
+                        <td>GET</td>
+                        <td>Download document</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Search APIs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/search/global</code></td>
+                        <td>GET</td>
+                        <td>Global search across organization</td>
+                    </tr>
+                    <tr>
+                        <td><code>/search/chat/:chatId</code></td>
+                        <td>GET</td>
+                        <td>Search messages in chat</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Getting Help</h2>
+            <p><strong>Support Resources:</strong></p>
+            <ul>
+                <li>Check this user guide</li>
+                <li>Contact your organization admin</li>
+                <li>Email support: support@merojugx.com</li>
+                <li>Visit help center: https://help.merojugx.com</li>
+            </ul>
+
+            <p><strong>Reporting Issues:</strong></p>
+            <ul>
+                <li>Use the "Report Issue" button in settings</li>
+                <li>Include:
+                    <ul>
+                        <li>What you were trying to do</li>
+                        <li>What happened instead</li>
+                        <li>Steps to reproduce</li>
+                        <li>Screenshots if possible</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="info">
+                <strong>Note:</strong> For complete API documentation with request/response examples, see the <a href="developer-guide.html">Developer Guide</a>.
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Mero Jugx - Blendwit Tech. All rights reserved.</p>
+        <p>Documentation Version 1.0.0 | Last Updated: 2024</p>
+    </footer>
+</body>
+</html>

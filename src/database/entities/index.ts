@@ -24,3 +24,7 @@ export { MessageAttachment } from './message-attachment.entity';
 export { MessageReaction } from './message-reaction.entity';
 export { CallSession } from './call-session.entity';
 export { CallParticipant } from './call-participant.entity';
+export { ApiKey } from './api-key.entity';
+export { Webhook } from './webhook.entity';
+export { TimeBasedPermission } from './time-based-permission.entity';
+export { CustomPermission } from './custom-permission.entity';

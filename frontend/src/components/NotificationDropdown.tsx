@@ -11,7 +11,7 @@ export default function NotificationDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated, accessToken, _hasHydrated, organizationId } = useAuthStore();
+  const { isAuthenticated, accessToken, _hasHydrated, organization } = useAuthStore();
 
   // Fetch unread and read count
   const { data: countData, refetch: refetchUnreadCount } = useQuery({
@@ -98,6 +98,9 @@ export default function NotificationDropdown() {
       // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notification-unread-count'] });
+      refetchUnreadCount();
+      // Also invalidate analytics to update read counts
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
 
@@ -354,7 +357,14 @@ export default function NotificationDropdown() {
                             <span className="mt-1.5 mr-2 h-2 w-2 rounded-full bg-[#5865f2] flex-shrink-0"></span>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white">{notification.title}</p>
+                            <p className="text-sm font-medium text-white">
+                              {notification.title}
+                              {notification.data?.message_count > 1 && (
+                                <span className="ml-2 text-xs text-[#5865f2]">
+                                  ({notification.data.message_count} messages)
+                                </span>
+                              )}
+                            </p>
                             <p className="text-sm text-[#b9bbbe] mt-1">{notification.message}</p>
                             <div className="flex items-center justify-between mt-2">
                               <span className="text-xs text-[#8e9297]">{formatTime(notification.created_at)}</span>
@@ -402,7 +412,11 @@ export default function NotificationDropdown() {
             <div className="p-3 border-t border-[#202225]">
               <button
                 onClick={() => {
-                  navigate('/notifications');
+                  if (organization?.slug) {
+                    navigate(`/org/${organization.slug}/notifications`);
+                  } else {
+                    navigate('/notifications');
+                  }
                   setIsOpen(false);
                 }}
                 className="w-full text-sm text-[#5865f2] hover:text-[#4752c4] font-medium"

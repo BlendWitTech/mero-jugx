@@ -65,6 +65,24 @@ export class Organization {
   @Column({ type: 'varchar', length: 500, nullable: true })
   logo_url: string | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  favicon_url: string | null;
+
+  @Column({ type: 'varchar', length: 7, nullable: true })
+  primary_color: string | null;
+
+  @Column({ type: 'varchar', length: 7, nullable: true })
+  secondary_color: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  custom_css: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  custom_js: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  footer_text: string | null;
+
   @Column({ type: 'text', nullable: true })
   description: string | null;
 

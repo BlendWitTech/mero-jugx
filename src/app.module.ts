@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseConfig } from './config/database.config';
@@ -18,6 +19,17 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CommonModule } from './common/common.module';
 import { ChatModule } from './chat/chat.module';
+import { HealthModule } from './health/health.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { SearchModule } from './search/search.module';
+import { DataManagementModule } from './data-management/data-management.module';
+import { BillingModule } from './billing/billing.module';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { CommunicationModule } from './communication/communication.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { SentryService } from './common/services/sentry.service';
 
 @Module({
   imports: [
@@ -59,9 +71,26 @@ import { ChatModule } from './chat/chat.module';
     AuditLogsModule,
     PaymentsModule,
     ChatModule,
-    // PermissionsModule,
+    HealthModule,
+    AnalyticsModule,
+    SearchModule,
+    DataManagementModule,
+    BillingModule,
+    IntegrationsModule,
+    PermissionsModule,
+    CommunicationModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useFactory: (sentryService: SentryService) => {
+        return new AllExceptionsFilter(sentryService);
+      },
+      inject: [SentryService],
+    },
+  ],
 })
 export class AppModule {}

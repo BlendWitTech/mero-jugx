@@ -23,6 +23,8 @@ import {
   Search,
   Cog,
   RefreshCw,
+  BarChart3,
+  HelpCircle,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
@@ -35,9 +37,11 @@ import OrganizationSwitcher from '../components/OrganizationSwitcher';
 import MembersList from '../components/MembersList';
 import RightSidebar from '../components/RightSidebar';
 import ChatManager from '../components/ChatManager';
+import { HelpCenter } from '../components/HelpCenter/HelpCenter';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: null },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, permission: 'organizations.view' },
   { name: 'Users', href: '/users', icon: Users, permission: 'users.view' },
   { name: 'Organizations', href: '/organizations', icon: Building2, permission: null },
   { name: 'Invitations', href: '/invitations', icon: Mail, permission: 'invitations.view' },
@@ -56,6 +60,7 @@ export default function OrganizationDashboardLayout() {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [showHelpCenter, setShowHelpCenter] = useState(false);
   const { user, logout, accessToken, organization: orgFromStore, _hasHydrated, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,24 +71,25 @@ export default function OrganizationDashboardLayout() {
   const orgSlug = slug || orgFromStore?.slug || '';
 
   // Fetch current organization details
-  const { data: currentOrganization } = useQuery({
+  const { data: currentOrganization } = useQuery<{ id: string; name: string; slug: string }>({
     queryKey: ['current-organization'],
     queryFn: async () => {
       const response = await api.get('/organizations/me');
       return response.data;
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
-    onSuccess: (data) => {
-      // Update organization in store with slug if it's missing
-      if (data && data.slug && (!orgFromStore?.slug || orgFromStore.slug !== data.slug)) {
-        useAuthStore.getState().setOrganization({
-          id: data.id,
-          name: data.name || '',
-          slug: data.slug,
-        });
-      }
-    },
   });
+
+  // Update organization in store with slug if it's missing
+  useEffect(() => {
+    if (currentOrganization && currentOrganization.slug && (!orgFromStore?.slug || orgFromStore.slug !== currentOrganization.slug)) {
+      useAuthStore.getState().setOrganization({
+        id: currentOrganization.id,
+        name: currentOrganization.name || '',
+        slug: currentOrganization.slug,
+      });
+    }
+  }, [currentOrganization, orgFromStore?.slug]);
 
   // Use fetched organization or fallback to store organization
   const organization = currentOrganization || orgFromStore;
@@ -118,7 +124,7 @@ export default function OrganizationDashboardLayout() {
   return (
     <div className="flex h-screen bg-[#36393f] text-gray-100 overflow-hidden">
       {/* Left Sidebar - Channels/Applications */}
-      <div className="w-[72px] bg-[#202225] flex flex-col items-center py-2 space-y-2 flex-shrink-0">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-[72px] bg-[#202225] flex flex-col items-center py-2 space-y-2 flex-shrink-0 transition-transform duration-300`}>
         {/* Organization Switcher Icon */}
         <div className="mb-2">
           <OrganizationSwitcher compact={true} />
@@ -171,7 +177,7 @@ export default function OrganizationDashboardLayout() {
       </div>
 
       {/* Second Sidebar - Navigation & Members */}
-      <div className={`bg-[#2f3136] flex flex-col flex-shrink-0 transition-all duration-300 ${
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-[72px] md:left-0 z-30 bg-[#2f3136] flex flex-col flex-shrink-0 transition-all duration-300 ${
         leftSidebarCollapsed ? 'w-[72px]' : 'w-[240px]'
       }`}>
         {/* Navigation Section */}
@@ -277,10 +283,18 @@ export default function OrganizationDashboardLayout() {
         </div>
       </div>
 
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-20"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden md:ml-0 ml-0">
         {/* Top Bar */}
-        <div className="h-12 bg-[#36393f] border-b border-[#202225] px-4 flex items-center justify-between flex-shrink-0">
+        <div className="h-12 md:h-12 mt-12 md:mt-0 bg-[#36393f] border-b border-[#202225] px-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">
             {leftSidebarCollapsed && (
               <button
@@ -301,6 +315,14 @@ export default function OrganizationDashboardLayout() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowHelpCenter(true)}
+              className="p-2 text-[#b9bbbe] hover:text-white hover:bg-[#393c43] rounded-lg transition-colors"
+              aria-label="Help Center"
+              title="Help Center"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
             <NotificationDropdown />
           </div>
         </div>
@@ -334,6 +356,7 @@ export default function OrganizationDashboardLayout() {
 
       {/* Chat Manager - Handles multiple chat windows */}
       <ChatManager />
+      {showHelpCenter && <HelpCenter onClose={() => setShowHelpCenter(false)} />}
     </div>
   );
 }

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Guide - Mero Jugx Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>⚙️ System Administrator Guide</h1>
+            <p>Complete system administration guide with all admin APIs</p>
+        </div>
+    </header>
+
+    <nav class="container">
+        <a href="index.html">Home</a>
+        <a href="developer-guide.html">Developer Guide</a>
+        <a href="user-guide.html">User Guide</a>
+        <a href="organization-guide.html">Organization Guide</a>
+        <a href="structure.html">Project Structure</a>
+    </nav>
+
+    <div class="container">
+        <div class="content">
+            <h1>System Administration Guide</h1>
+            <p>This guide is for system administrators who need to configure, maintain, monitor, and troubleshoot the Mero Jugx platform. It includes all administrative APIs and system management functions.</p>
+
+            <div class="toc">
+                <h2>Table of Contents</h2>
+                <ul>
+                    <li><a href="#installation">Installation & Setup</a></li>
+                    <li><a href="#configuration">Configuration</a></li>
+                    <li><a href="#database-management">Database Management</a></li>
+                    <li><a href="#user-management">User Management</a></li>
+                    <li><a href="#system-monitoring">System Monitoring</a></li>
+                    <li><a href="#security">Security</a></li>
+                    <li><a href="#backup-recovery">Backup & Recovery</a></li>
+                    <li><a href="#api-reference">Admin API Reference</a></li>
+                    <li><a href="#troubleshooting">Troubleshooting</a></li>
+                </ul>
+            </div>
+
+            <h2 id="installation">Installation & Setup</h2>
+
+            <h3>System Requirements</h3>
+            <ul>
+                <li><strong>Node.js</strong> 18+ (recommended: 20+)</li>
+                <li><strong>PostgreSQL</strong> 16+</li>
+                <li><strong>Redis</strong> 7+</li>
+                <li><strong>Operating System:</strong> Linux, macOS, or Windows</li>
+                <li><strong>Memory:</strong> Minimum 2GB RAM, 4GB+ recommended</li>
+                <li><strong>Storage:</strong> 10GB+ for application and database</li>
+            </ul>
+
+            <h3>Installation Steps</h3>
+
+            <h4>1. Clone Repository</h4>
+            <pre><code>git clone &lt;repository-url&gt;
+cd mero-jugx</code></pre>
+
+            <h4>2. Install Dependencies</h4>
+            <pre><code>npm run setup:github</code></pre>
+            <p>Or for manual setup:</p>
+            <pre><code>npm run setup:manual</code></pre>
+
+            <h4>3. Configure Environment</h4>
+            <p>Edit <code>.env</code> file with your configuration (see Configuration section).</p>
+
+            <h4>4. Initialize Database</h4>
+            <pre><code>npm run db:init</code></pre>
+            <p>This will:</p>
+            <ul>
+                <li>Run all database migrations</li>
+                <li>Seed initial data</li>
+                <li>Create default roles and packages</li>
+            </ul>
+
+            <h4>5. Start Application</h4>
+            <pre><code># Development (both backend and frontend)
+npm run start:dev:all
+
+# Development (backend only)
+npm run start:dev
+
+# Production (both backend and frontend)
+npm run start:prod:all
+
+# Production (backend only, after build)
+npm run start:prod</code></pre>
+
+            <h2 id="configuration">Configuration</h2>
+
+            <h3>Environment Variables</h3>
+            <p>Key environment variables in <code>.env</code>:</p>
+
+            <h4>Application</h4>
+            <pre><code>NODE_ENV=production
+PORT=3000
+API_PREFIX=api
+FRONTEND_URL=https://yourdomain.com
+APP_URL=https://api.yourdomain.com</code></pre>
+
+            <h4>Database</h4>
+            <pre><code>DB_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_secure_password
+DB_NAME=mero_jugx</code></pre>
+
+            <h4>Redis</h4>
+            <pre><code>REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password</code></pre>
+
+            <h4>JWT Security</h4>
+            <pre><code>JWT_SECRET=generate-strong-secret-here
+JWT_REFRESH_SECRET=generate-different-strong-secret
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d</code></pre>
+            <div class="warning">
+                <strong>IMPORTANT:</strong> Generate strong, unique secrets for JWT_SECRET and JWT_REFRESH_SECRET. Never use default values in production!
+            </div>
+
+            <h4>Email Configuration</h4>
+            <pre><code>SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_email@example.com
+SMTP_PASS=your_email_password
+SMTP_FROM=noreply@merojugx.com
+SMTP_SECURE=false</code></pre>
+
+            <h4>Payment Gateways</h4>
+            <pre><code># Stripe
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# eSewa
+ESEWA_MERCHANT_ID=your_merchant_id
+ESEWA_SECRET_KEY=your_secret_key
+ESEWA_ENVIRONMENT=production</code></pre>
+
+            <h4>File Storage</h4>
+            <pre><code>UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=52428800
+ALLOWED_FILE_TYPES=pdf,doc,docx,xls,xlsx,jpg,png</code></pre>
+
+            <h3>Production Configuration</h3>
+            <ul>
+                <li>Set <code>NODE_ENV=production</code></li>
+                <li>Use strong, unique secrets</li>
+                <li>Enable HTTPS</li>
+                <li>Configure proper CORS settings</li>
+                <li>Set up proper logging</li>
+                <li>Configure rate limiting</li>
+            </ul>
+
+            <h2 id="database-management">Database Management</h2>
+
+            <h3>Migrations</h3>
+
+            <h4>Run Migrations API</h4>
+            <p><strong>CLI Command:</strong></p>
+            <pre><code>npm run migration:run</code></pre>
+            <p><strong>What it does:</strong> Runs all pending database migrations.</p>
+
+            <h4>Revert Migration</h4>
+            <pre><code>npm run migration:revert</code></pre>
+            <p><strong>What it does:</strong> Reverts the last executed migration.</p>
+
+            <h4>Generate Migration</h4>
+            <pre><code>npm run migration:generate -- -n MigrationName</code></pre>
+            <p><strong>What it does:</strong> Generates new migration file based on entity changes.</p>
+
+            <h4>Show Migration Status</h4>
+            <pre><code>npm run migration:show</code></pre>
+            <p><strong>What it does:</strong> Shows which migrations have been run and which are pending.</p>
+
+            <h4>Validate Migrations</h4>
+            <pre><code>npm run migration:validate</code></pre>
+            <p><strong>What it does:</strong> Validates migration files for consistency.</p>
+
+            <h3>Database Operations</h3>
+
+            <h4>Initialize Database</h4>
+            <pre><code>npm run db:init</code></pre>
+            <p><strong>What it does:</strong> Runs migrations and seeds initial data.</p>
+
+            <h4>Reset Database</h4>
+            <pre><code>npm run db:reset</code></pre>
+            <div class="warning">
+                <strong>WARNING:</strong> This will drop all tables and data. Use with caution!
+            </div>
+            <p><strong>What it does:</strong> Drops database, recreates, runs migrations, and seeds data.</p>
+
+            <h4>Check Database Connection</h4>
+            <pre><code>npm run db:check</code></pre>
+            <p><strong>What it does:</strong> Tests database connection and configuration.</p>
+
+            <h3>Backup & Restore</h3>
+
+            <h4>Backup Database</h4>
+            <pre><code># PostgreSQL backup
+pg_dump -U postgres -d mero_jugx -f backup_$(date +%Y%m%d).sql
+
+# With compression
+pg_dump -U postgres -d mero_jugx | gzip > backup_$(date +%Y%m%d).sql.gz</code></pre>
+
+            <h4>Restore Database</h4>
+            <pre><code># From SQL file
+psql -U postgres -d mero_jugx -f backup_20241201.sql
+
+# From compressed backup
+gunzip -c backup_20241201.sql.gz | psql -U postgres -d mero_jugx</code></pre>
+
+            <h2 id="user-management">User Management</h2>
+
+            <h3>System User Operations</h3>
+
+            <h4>List All Users API</h4>
+            <pre><code>GET /users?page=1&limit=50
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>Required Permission:</strong> <code>users.view</code></p>
+            <p><strong>What it does:</strong> Returns paginated list of all users in organization.</p>
+
+            <h4>Get User Details API</h4>
+            <pre><code>GET /users/:id
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns complete user details including all organizations.</p>
+
+            <h4>Update User (Admin) API</h4>
+            <pre><code>PUT /users/:id
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "newemail@example.com",
+  "status": "active|suspended|inactive"
+}</code></pre>
+            <p><strong>Required Permission:</strong> <code>users.edit</code></p>
+            <p><strong>What it does:</strong> Admin can update any user's information including status.</p>
+
+            <h4>Revoke User Access API</h4>
+            <pre><code>POST /users/:id/revoke
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "reason": "Terms violation",
+  "transfer_data": true,
+  "transfer_to_user_id": "uuid"
+}</code></pre>
+            <p><strong>Required Permission:</strong> <code>users.revoke</code></p>
+            <p><strong>What it does:</strong> Revokes user access across all organizations, optionally transfers data.</p>
+
+            <h4>Impersonate User API</h4>
+            <pre><code>POST /users/:id/impersonate
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>Required Permission:</strong> Owner/Admin or <code>users.impersonate</code></p>
+            <p><strong>What it does:</strong> Allows admin to impersonate user for support purposes.</p>
+
+            <h3>Bulk Operations</h3>
+
+            <h4>Export Users API</h4>
+            <pre><code>GET /data-management/users/export
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Exports all users to CSV for backup or analysis.</p>
+
+            <h4>Import Users API</h4>
+            <pre><code>POST /data-management/users/import
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "csv_data": "email,first_name,last_name,role\nuser@example.com,John,Doe,member",
+  "role_id": 3
+}</code></pre>
+            <p><strong>What it does:</strong> Bulk imports users from CSV data.</p>
+
+            <h4>Bulk Assign Role API</h4>
+            <pre><code>POST /data-management/users/bulk-assign-role
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "user_ids": ["uuid1", "uuid2", "uuid3"],
+  "role_id": 2
+}</code></pre>
+            <p><strong>What it does:</strong> Assigns role to multiple users at once.</p>
+
+            <h4>Bulk Send Invitations API</h4>
+            <pre><code>POST /data-management/invitations/bulk-send
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "emails": ["user1@example.com", "user2@example.com"],
+  "role_id": 2
+}</code></pre>
+            <p><strong>What it does:</strong> Sends invitations to multiple emails.</p>
+
+            <h2 id="system-monitoring">System Monitoring</h2>
+
+            <h3>Health Checks</h3>
+
+            <h4>Health Check API</h4>
+            <pre><code>GET /health</code></pre>
+            <p><strong>Public endpoint</strong></p>
+            <p><strong>Response:</strong></p>
+            <pre><code>{
+  "status": "ok",
+  "database": "connected",
+  "redis": "connected",
+  "timestamp": "2024-12-01T00:00:00Z"
+}</code></pre>
+
+            <h4>Liveness Check API</h4>
+            <pre><code>GET /health/liveness</code></pre>
+            <p><strong>What it does:</strong> Simple endpoint to check if application is running.</p>
+
+            <h4>Readiness Check API</h4>
+            <pre><code>GET /health/readiness</code></pre>
+            <p><strong>What it does:</strong> Checks if application is ready to accept requests (database, Redis connected).</p>
+
+            <h3>Metrics & Monitoring</h3>
+
+            <h4>Get Metrics API</h4>
+            <pre><code>GET /monitoring/metrics</code></pre>
+            <p><strong>Required Permission:</strong> Admin access</p>
+            <p><strong>Response:</strong> Prometheus-formatted metrics</p>
+
+            <h4>Get Monitoring Summary API</h4>
+            <pre><code>GET /monitoring/summary</code></pre>
+            <p><strong>What it does:</strong> Returns system summary: uptime, requests, errors, database stats.</p>
+
+            <h3>Audit Logs</h3>
+
+            <h4>List Audit Logs API</h4>
+            <pre><code>GET /audit-logs?page=1&limit=50&action=user.created&from_date=2024-01-01&to_date=2024-12-31
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>Required Permission:</strong> <code>audit.view</code></p>
+            <p><strong>Query Parameters:</strong></p>
+            <ul>
+                <li><code>action</code> - Filter by action type</li>
+                <li><code>user_id</code> - Filter by user</li>
+                <li><code>from_date</code> - Start date</li>
+                <li><code>to_date</code> - End date</li>
+                <li><code>page</code> - Page number</li>
+                <li><code>limit</code> - Items per page</li>
+            </ul>
+            <p><strong>What it does:</strong> Returns comprehensive activity logs for compliance and monitoring.</p>
+
+            <h4>Get Audit Log Statistics API</h4>
+            <pre><code>GET /audit-logs/stats?from_date=2024-01-01&to_date=2024-12-31
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns aggregated statistics: action counts, user activity, time ranges.</p>
+
+            <h4>Get Viewable Users API</h4>
+            <pre><code>GET /audit-logs/viewable-users
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns list of users that can be viewed in audit logs (based on permissions).</p>
+
+            <h4>Get Audit Log by ID API</h4>
+            <pre><code>GET /audit-logs/:id
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns detailed audit log entry with all metadata.</p>
+
+            <h4>Export Audit Logs API</h4>
+            <pre><code>GET /data-management/audit-logs/export?startDate=2024-01-01&endDate=2024-12-31
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Exports audit logs to CSV for compliance reporting.</p>
+
+            <h3>Analytics</h3>
+
+            <h4>Get Organization Analytics API</h4>
+            <pre><code>GET /analytics/organization?preset=LAST_30_DAYS
+Authorization: Bearer &lt;admin_token&gt;</code></pre>
+            <p><strong>What it does:</strong> Returns comprehensive analytics: usage, activity, trends.</p>
+
+            <h2 id="security">Security</h2>
+
+            <h3>Security Best Practices</h3>
+            <ul>
+                <li>Use strong, unique JWT secrets</li>
+                <li>Enable HTTPS in production</li>
+                <li>Configure proper CORS settings</li>
+                <li>Enable rate limiting</li>
+                <li>Regularly review audit logs</li>
+                <li>Keep dependencies updated</li>
+                <li>Use environment variables for secrets</li>
+                <li>Implement proper backup strategies</li>
+            </ul>
+
+            <h3>API Security</h3>
+
+            <h4>API Keys Management</h4>
+            <pre><code>POST /integrations/api-keys
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "name": "Admin API Key",
+  "description": "Key for system administration",
+  "permissions": ["*"],
+  "expires_at": "2025-12-31"
+}
+
+GET /integrations/api-keys
+PUT /integrations/api-keys/:id
+DELETE /integrations/api-keys/:id</code></pre>
+            <p><strong>What it does:</strong> Manages API keys for programmatic access with scoped permissions.</p>
+
+            <h4>Webhook Management</h4>
+            <pre><code>POST /integrations/webhooks
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "name": "System Events",
+  "url": "https://example.com/webhook",
+  "events": ["user.created", "payment.completed"],
+  "secret": "webhook_secret"
+}
+
+GET /integrations/webhooks
+PUT /integrations/webhooks/:id
+DELETE /integrations/webhooks/:id</code></pre>
+            <p><strong>What it does:</strong> Manages webhooks for receiving system events externally.</p>
+
+            <h3>Communication Management</h3>
+
+            <h4>Email Templates API</h4>
+            <pre><code>POST /communication/email-templates
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "name": "custom_template",
+  "subject": "Custom Email Subject",
+  "body": "Custom email body with {{variables}}"
+}
+
+GET /communication/email-templates
+GET /communication/email-templates/:name</code></pre>
+            <p><strong>What it does:</strong> Manages custom email templates.</p>
+
+            <h4>Send SMS API</h4>
+            <pre><code>POST /communication/sms/send
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "to": "+1234567890",
+  "message": "SMS message content"
+}</code></pre>
+            <p><strong>What it does:</strong> Sends SMS messages (requires SMS service configuration).</p>
+
+            <h4>Send Push Notification API</h4>
+            <pre><code>POST /communication/push/send
+Authorization: Bearer &lt;admin_token&gt;
+Content-Type: application/json
+
+{
+  "user_id": "uuid",
+  "title": "Notification Title",
+  "body": "Notification body",
+  "data": {}
+}</code></pre>
+            <p><strong>What it does:</strong> Sends push notifications to users.</p>
+
+            <h2 id="backup-recovery">Backup & Recovery</h2>
+
+            <h3>Backup Strategy</h3>
+            <ol>
+                <li><strong>Database Backups:</strong> Daily automated backups</li>
+                <li><strong>File Backups:</strong> Backup uploaded files directory</li>
+                <li><strong>Configuration Backups:</strong> Backup .env and config files</li>
+                <li><strong>Offsite Storage:</strong> Store backups in separate location</li>
+            </ol>
+
+            <h3>Automated Backup Script</h3>
+            <pre><code>#!/bin/bash
+# backup.sh
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="./backups"
+
+# Database backup
+pg_dump -U postgres mero_jugx | gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
+
+# Files backup
+tar -czf "$BACKUP_DIR/files_$DATE.tar.gz" ./uploads
+
+# Config backup
+cp .env "$BACKUP_DIR/env_$DATE.backup"
+
+# Clean old backups (keep last 30 days)
+find "$BACKUP_DIR" -type f -mtime +30 -delete</code></pre>
+
+            <h3>Recovery Procedures</h3>
+
+            <h4>Database Recovery</h4>
+            <ol>
+                <li>Stop application</li>
+                <li>Restore database from backup</li>
+                <li>Run any pending migrations</li>
+                <li>Verify data integrity</li>
+                <li>Restart application</li>
+            </ol>
+
+            <h4>File Recovery</h4>
+            <ol>
+                <li>Extract backup archive</li>
+                <li>Restore files to uploads directory</li>
+                <li>Verify file permissions</li>
+            </ol>
+
+            <h2 id="api-reference">Complete Admin API Reference</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Method</th>
+                        <th>Permission</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/health</code></td>
+                        <td>GET</td>
+                        <td>Public</td>
+                        <td>Health check</td>
+                    </tr>
+                    <tr>
+                        <td><code>/health/liveness</code></td>
+                        <td>GET</td>
+                        <td>Public</td>
+                        <td>Liveness probe</td>
+                    </tr>
+                    <tr>
+                        <td><code>/health/readiness</code></td>
+                        <td>GET</td>
+                        <td>Public</td>
+                        <td>Readiness probe</td>
+                    </tr>
+                    <tr>
+                        <td><code>/monitoring/metrics</code></td>
+                        <td>GET</td>
+                        <td>Admin</td>
+                        <td>System metrics</td>
+                    </tr>
+                    <tr>
+                        <td><code>/monitoring/summary</code></td>
+                        <td>GET</td>
+                        <td>Admin</td>
+                        <td>Monitoring summary</td>
+                    </tr>
+                    <tr>
+                        <td><code>/audit-logs</code></td>
+                        <td>GET</td>
+                        <td>audit.view</td>
+                        <td>List audit logs</td>
+                    </tr>
+                    <tr>
+                        <td><code>/audit-logs/stats</code></td>
+                        <td>GET</td>
+                        <td>audit.view</td>
+                        <td>Audit log statistics</td>
+                    </tr>
+                    <tr>
+                        <td><code>/users</code></td>
+                        <td>GET</td>
+                        <td>users.view</td>
+                        <td>List all users</td>
+                    </tr>
+                    <tr>
+                        <td><code>/users/:id</code></td>
+                        <td>PUT</td>
+                        <td>users.edit</td>
+                        <td>Update user</td>
+                    </tr>
+                    <tr>
+                        <td><code>/users/:id/revoke</code></td>
+                        <td>POST</td>
+                        <td>users.revoke</td>
+                        <td>Revoke user access</td>
+                    </tr>
+                    <tr>
+                        <td><code>/data-management/users/export</code></td>
+                        <td>GET</td>
+                        <td>users.view</td>
+                        <td>Export users</td>
+                    </tr>
+                    <tr>
+                        <td><code>/data-management/users/import</code></td>
+                        <td>POST</td>
+                        <td>users.create</td>
+                        <td>Import users</td>
+                    </tr>
+                    <tr>
+                        <td><code>/data-management/audit-logs/export</code></td>
+                        <td>GET</td>
+                        <td>audit.view</td>
+                        <td>Export audit logs</td>
+                    </tr>
+                    <tr>
+                        <td><code>/integrations/api-keys</code></td>
+                        <td>POST/GET/PUT/DELETE</td>
+                        <td>integrations.manage</td>
+                        <td>Manage API keys</td>
+                    </tr>
+                    <tr>
+                        <td><code>/integrations/webhooks</code></td>
+                        <td>POST/GET/PUT/DELETE</td>
+                        <td>integrations.manage</td>
+                        <td>Manage webhooks</td>
+                    </tr>
+                    <tr>
+                        <td><code>/communication/email-templates</code></td>
+                        <td>POST/GET</td>
+                        <td>Admin</td>
+                        <td>Manage email templates</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="troubleshooting">Troubleshooting</h2>
+
+            <h3>Common Issues</h3>
+
+            <h4>Application Won't Start</h4>
+            <ul>
+                <li>Check Node.js version: <code>node -v</code></li>
+                <li>Verify database connection</li>
+                <li>Check Redis is running</li>
+                <li>Review error logs</li>
+                <li>Check port availability</li>
+            </ul>
+
+            <h4>Database Connection Errors</h4>
+            <ul>
+                <li>Verify PostgreSQL is running</li>
+                <li>Check database credentials in .env</li>
+                <li>Test connection: <code>psql -U postgres -d mero_jugx</code></li>
+                <li>Check firewall settings</li>
+                <li>Verify database exists</li>
+            </ul>
+
+            <h4>Redis Connection Errors</h4>
+            <ul>
+                <li>Check Redis is running: <code>redis-cli ping</code></li>
+                <li>Verify Redis credentials</li>
+                <li>Check Redis port (default: 6379)</li>
+                <li>Review Redis logs</li>
+            </ul>
+
+            <h4>High Memory Usage</h4>
+            <ul>
+                <li>Check for memory leaks</li>
+                <li>Review active connections</li>
+                <li>Optimize database queries</li>
+                <li>Clear Redis cache if needed</li>
+                <li>Restart application</li>
+            </ul>
+
+            <h4>Slow Performance</h4>
+            <ul>
+                <li>Check database query performance</li>
+                <li>Review index usage</li>
+                <li>Check Redis cache hit rate</li>
+                <li>Review application logs</li>
+                <li>Monitor system resources</li>
+            </ul>
+
+            <h3>Log Files</h3>
+            <p>Log files are typically located in:</p>
+            <ul>
+                <li>Application logs: <code>logs/app.log</code></li>
+                <li>Error logs: <code>logs/error.log</code></li>
+                <li>Access logs: <code>logs/access.log</code></li>
+            </ul>
+
+            <h3>Debugging</h3>
+
+            <h4>Enable Debug Mode</h4>
+            <pre><code>NODE_ENV=development
+DEBUG=*</code></pre>
+
+            <h4>Database Query Logging</h4>
+            <pre><code># In TypeORM config
+logging: true
+logger: "advanced-console"</code></pre>
+
+            <h2>Maintenance Tasks</h2>
+
+            <h3>Regular Maintenance</h3>
+            <ul>
+                <li><strong>Daily:</strong> Check health endpoints, review error logs</li>
+                <li><strong>Weekly:</strong> Review audit logs, check disk space, backup verification</li>
+                <li><strong>Monthly:</strong> Update dependencies, security review, performance analysis</li>
+                <li><strong>Quarterly:</strong> Full system audit, backup strategy review</li>
+            </ul>
+
+            <h3>Cleanup Tasks</h3>
+
+            <h4>Clean Expired Sessions</h4>
+            <p>Expired sessions are automatically cleaned, but you can manually trigger:</p>
+            <pre><code># Clean expired Redis keys
+redis-cli --scan --pattern "session:*" | xargs redis-cli DEL</code></pre>
+
+            <h4>Archive Old Audit Logs</h4>
+            <p>Archive audit logs older than retention period (configure in settings).</p>
+
+            <h4>Clean Temporary Files</h4>
+            <pre><code># Clean upload temp directory
+find ./uploads/temp -type f -mtime +7 -delete</code></pre>
+
+            <div class="info">
+                <strong>Need More Help?</strong> See the <a href="developer-guide.html">Developer Guide</a> for complete API documentation and technical details.
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Mero Jugx - Blendwit Tech. All rights reserved.</p>
+        <p>Documentation Version 1.0.0 | Last Updated: 2024</p>
+    </footer>
+</body>
+</html>

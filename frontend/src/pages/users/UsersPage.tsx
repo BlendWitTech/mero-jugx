@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Search, Plus, Edit, Trash2, Eye, MoreVertical, X, Save, Shield, CheckCircle2, AlertCircle, UserCog, Users } from 'lucide-react';
@@ -40,6 +40,7 @@ type RevokeAccessFormData = z.infer<typeof revokeAccessSchema>;
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
+  const { slug } = useParams<{ slug: string }>();
   const { user: currentUser, isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const { isOrganizationOwner, hasPermission, userData } = usePermissions();
   
@@ -341,7 +342,7 @@ export default function UsersPage() {
               <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage organization users and their access</p>
             </div>
           </div>
-          <Link to="/invitations" className="btn btn-primary">
+          <Link to={slug ? `/org/${slug}/invitations` : '/invitations'} className="btn btn-primary">
             <Plus className="mr-2 h-4 w-4" />
             Invite User
           </Link>
