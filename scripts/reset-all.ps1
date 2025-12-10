@@ -86,20 +86,21 @@ Write-Host "  This will drop all tables, recreate them, and seed all data" -Fore
 $envFileExists = Test-Path .env
 if (-not $envFileExists) {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
-}
-if ($envFileExists) {
+    Write-Host ""
+} else {
     $oldErrorAction = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     npm run db:reset 2>&1 | Out-Null
     $exitCode = $LASTEXITCODE
     $ErrorActionPreference = $oldErrorAction
-    $successMessage = "  ✓ Database reset completed (tables created and seeded)"
-    $failMessage = "  ⚠ Database reset failed. You may need to run it manually."
-    $messageToShow = if ($exitCode -eq 0) { $successMessage } else { $failMessage }
-    $colorToUse = if ($exitCode -eq 0) { "Green" } else { "Yellow" }
-    Write-Host $messageToShow -ForegroundColor $colorToUse
+    if ($exitCode -eq 0) {
+        Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
+    }
+    if ($exitCode -ne 0) {
+        Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
+    }
+    Write-Host ""
 }
-Write-Host ""
 
 # Step 6: Reset environment files
 Write-Host "[6/7] Resetting environment files..." -ForegroundColor Blue
