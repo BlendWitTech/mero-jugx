@@ -5,12 +5,14 @@
 ```
 main (🔒 Owner Only - Hidden)
 ├── development
-│   └── development/version-control (Entry for new dev collaborators)
+│   └── version-control-development (Entry for new dev collaborators)
 ├── testing
-│   └── testing/version-control (Entry for new test collaborators)
+│   └── version-control-testing (Entry for new test collaborators)
 └── production
-    └── production/version-control (Entry for new prod collaborators)
+    └── version-control-production (Entry for new prod collaborators)
 ```
+
+**Note**: Due to Git limitations, we use `version-control-development` instead of `development/version-control`. See `.github/OWNER_ONLY/BRANCH_STRUCTURE.md` for details.
 
 ## Step 1: Protect Main Branch (Owner Only)
 
@@ -29,7 +31,7 @@ main (🔒 Owner Only - Hidden)
    - ✅ Require status checks
    - ✅ **Restrict who can push** → Add: `saugatpahari` + your username
 
-2. Add rule for `development/version-control`:
+2. Add rule for `version-control-development`:
    - ✅ Require pull request
    - ✅ **Restrict who can push** → Add: `saugatpahari` + your username
    - This is the entry point for new development collaborators
@@ -41,7 +43,7 @@ main (🔒 Owner Only - Hidden)
    - ✅ Require status checks
    - ✅ **Restrict who can push** → Add: your username only
 
-2. Add rule for `testing/version-control`:
+2. Add rule for `version-control-testing`:
    - ✅ Require pull request
    - ✅ **Restrict who can push** → Add: your username only
    - This is the entry point for new testing collaborators
@@ -53,7 +55,7 @@ main (🔒 Owner Only - Hidden)
    - ✅ Require status checks
    - ✅ **Restrict who can push** → Add: `sarbaja` + your username
 
-2. Add rule for `production/version-control`:
+2. Add rule for `version-control-production`:
    - ✅ Require pull request
    - ✅ **Restrict who can push** → Add: `sarbaja` + your username
    - This is the entry point for new production collaborators
@@ -67,8 +69,8 @@ main (🔒 Owner Only - Hidden)
 3. Permission: **Write**
 4. After they accept, they can:
    - Push to `development`, `testing`, `production`
-   - Push to all `version-control` branches
-   - Invite new collaborators to any `version-control` branch
+   - Push to all `version-control-*` branches
+   - Invite new collaborators to any `version-control-*` branch
 
 ### Invite sarbaja
 
@@ -77,26 +79,28 @@ main (🔒 Owner Only - Hidden)
 3. Permission: **Write**
 4. After they accept, they can:
    - Push to `production` only
-   - Push to `production/version-control` only
-   - Invite new collaborators to `production/version-control` only
+   - Push to `version-control-production` only
+   - Invite new collaborators to `version-control-production` only
 
 ## Step 6: Create Version-Control Branches
 
+**Note**: These branches have already been created and pushed. If you need to recreate them:
+
 ```bash
-# Create development/version-control
+# Create version-control-development
 git checkout development
-git checkout -b development/version-control
-git push origin development/version-control
+git checkout -b version-control-development
+git push origin version-control-development
 
-# Create testing/version-control
+# Create version-control-testing
 git checkout testing
-git checkout -b testing/version-control
-git push origin testing/version-control
+git checkout -b version-control-testing
+git push origin version-control-testing
 
-# Create production/version-control
+# Create version-control-production
 git checkout production
-git checkout -b production/version-control
-git push origin production/version-control
+git checkout -b version-control-production
+git push origin version-control-production
 ```
 
 ## Step 7: Hide Main Branch from Collaborators
@@ -153,4 +157,5 @@ Unfortunately, GitHub doesn't allow delegating invitation permissions directly. 
 - Only owner can directly invite
 - Collaborators can request (you approve)
 - Or use GitHub Teams for better control
+
 

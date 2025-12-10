@@ -9,12 +9,14 @@ This documentation is only visible to the repository owner and contains sensitiv
 ```
 main (🔒 Owner Only - Hidden from collaborators)
 ├── development (🔒 Protected)
-│   └── development/version-control (Entry point for new collaborators)
+│   └── version-control-development (Entry point for new collaborators)
 ├── testing (🔒 Protected)
-│   └── testing/version-control (Entry point for new collaborators)
+│   └── version-control-testing (Entry point for new collaborators)
 └── production (🔒 Protected)
-    └── production/version-control (Entry point for new collaborators)
+    └── version-control-production (Entry point for new collaborators)
 ```
+
+**Note**: Branch names use `version-control-{branch}` format due to Git limitations. See `.github/OWNER_ONLY/BRANCH_STRUCTURE.md` for details.
 
 ## Access Control
 
@@ -23,7 +25,7 @@ main (🔒 Owner Only - Hidden from collaborators)
 | Username | Access | Can Invite To |
 |----------|--------|---------------|
 | saugatpahari | `development`, `testing`, `production` + all version-control branches | All version-control branches |
-| sarbaja | `production` + `production/version-control` | `production/version-control` only |
+| sarbaja | `production` + `version-control-production` | `version-control-production` only |
 
 ### Access Rules
 
@@ -67,4 +69,5 @@ See `.github/OWNER_ONLY/GITHUB_SETUP.md` for complete setup instructions.
 - Remove inactive collaborators
 - Monitor branch protection rules
 - Review pull requests carefully
+
 
