@@ -88,22 +88,18 @@ if ($envExists) {
     $dbResetSuccess = $false
     try {
         $result = npm run db:reset 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            $dbResetSuccess = $true
-        }
+        $dbResetSuccess = ($LASTEXITCODE -eq 0)
     }
     catch {
         $dbResetSuccess = $false
     }
     
-    if ($dbResetSuccess -eq $true) {
+    if ($dbResetSuccess) {
         Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
-    }
-    if ($dbResetSuccess -eq $false) {
+    } else {
         Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
     }
-}
-if ($envExists -eq $false) {
+} else {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
 }
 Write-Host ""
