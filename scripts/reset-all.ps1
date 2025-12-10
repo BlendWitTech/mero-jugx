@@ -98,7 +98,8 @@ if ($envExists) {
     
     if ($dbResetSuccess) {
         Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
     }
 }
