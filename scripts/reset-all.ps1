@@ -94,10 +94,11 @@ if ($envFileExists) {
     npm run db:reset 2>&1 | Out-Null
     $exitCode = $LASTEXITCODE
     $ErrorActionPreference = $oldErrorAction
-    if ($exitCode -eq 0) {
+    $isSuccess = ($exitCode -eq 0)
+    if ($isSuccess) {
         Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
     }
-    if ($exitCode -ne 0) {
+    if (-not $isSuccess) {
         Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
     }
     Write-Host ""
