@@ -279,6 +279,6 @@ fi
 
 echo ""
 echo "Reset and initialization complete!"
-echo "You can now run 'npm run run' to start the development servers."
+echo "You can now run 'npm run dev' to start the development servers."
 echo ""
 

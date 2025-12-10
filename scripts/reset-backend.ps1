@@ -64,7 +64,7 @@ Write-Host ""
 Write-Host "✓ Backend reset complete!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Blue
-Write-Host "  1. Run 'npm run setup' or 'npm run setup:manual' to reinstall dependencies" -ForegroundColor White
+Write-Host "  1. Run npm run setup or npm run setup:manual to reinstall dependencies" -ForegroundColor White
 Write-Host "  2. Or manually: npm install" -ForegroundColor White
 Write-Host ""
 

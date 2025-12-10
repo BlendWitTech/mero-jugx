@@ -306,5 +306,5 @@ VITE_DEFAULT_CURRENCY=USD
 }
 
 Write-Host ""
-Write-Host "Setup complete! You can now run 'npm run run' to start development servers." -ForegroundColor Green
+Write-Host "Setup complete! You can now run 'npm run dev' to start development servers." -ForegroundColor Green
 Write-Host ""

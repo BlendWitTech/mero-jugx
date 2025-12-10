@@ -87,8 +87,7 @@ $envFileExists = Test-Path .env
 if (-not $envFileExists) {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
     Write-Host ""
-}
-if ($envFileExists) {
+} else {
     $oldErrorAction = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     npm run db:reset 2>&1 | Out-Null
@@ -97,7 +96,10 @@ if ($envFileExists) {
     $isSuccess = ($exitCode -eq 0)
     $msg = "  ✓ Database reset completed (tables created and seeded)"
     $clr = "Green"
-    if (-not $isSuccess) { $msg = "  ⚠ Database reset failed. You may need to run it manually."; $clr = "Yellow" }
+    if (-not $isSuccess) {
+        $msg = "  ⚠ Database reset failed. You may need to run it manually."
+        $clr = "Yellow"
+    }
     Write-Host $msg -ForegroundColor $clr
     Write-Host ""
 }
@@ -321,4 +323,5 @@ Write-Host ""
 Write-Host "Reset and initialization complete!" -ForegroundColor Green
 Write-Host "You can now run 'npm run dev' to start the development servers." -ForegroundColor Yellow
 Write-Host ""
+
 

@@ -99,11 +99,12 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
     Write-Host "  1. Make your changes" -ForegroundColor White
-    Write-Host "  2. Commit: git add . && git commit -m 'feat: your message'" -ForegroundColor White
+    Write-Host "  2. Commit: git add . ; git commit -m 'feat: your message'" -ForegroundColor White
     Write-Host "  3. Push: git push origin $fullBranchName" -ForegroundColor White
     Write-Host "  4. Create PR on GitHub to merge into $currentBranch" -ForegroundColor White
     Write-Host ""
-} else {
+}
+if ($LASTEXITCODE -ne 0) {
     Write-Host "✗ Failed to create branch." -ForegroundColor Red
     exit 1
 }
