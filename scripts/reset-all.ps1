@@ -95,12 +95,13 @@ if ($envFileExists) {
     $exitCode = $LASTEXITCODE
     $ErrorActionPreference = $oldErrorAction
     $isSuccess = ($exitCode -eq 0)
-    if ($isSuccess) {
-        Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
-    }
+    $message = "  ✓ Database reset completed (tables created and seeded)"
+    $color = "Green"
     if (-not $isSuccess) {
-        Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
+        $message = "  ⚠ Database reset failed. You may need to run it manually."
+        $color = "Yellow"
     }
+    Write-Host $message -ForegroundColor $color
     Write-Host ""
 }
 
