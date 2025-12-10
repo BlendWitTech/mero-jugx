@@ -89,10 +89,12 @@ if (Test-Path .env) {
     $ErrorActionPreference = "Stop"
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  ✓ Database reset completed (tables created and seeded)" -ForegroundColor Green
-    } else {
+    }
+    if ($LASTEXITCODE -ne 0) {
         Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
     }
-} else {
+}
+if (-not (Test-Path .env)) {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
 }
 Write-Host ""
