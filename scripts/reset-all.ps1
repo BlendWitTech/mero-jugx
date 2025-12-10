@@ -86,8 +86,8 @@ Write-Host "  This will drop all tables, recreate them, and seed all data" -Fore
 $envExists = Test-Path .env
 if (-not $envExists) {
     Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
-    Write-Host ""
-} else {
+}
+if ($envExists) {
     $dbResetSuccess = $false
     try {
         $result = npm run db:reset 2>&1
@@ -103,7 +103,6 @@ if (-not $envExists) {
     if (-not $dbResetSuccess) {
         Write-Host "  ⚠ Database reset failed. You may need to run it manually." -ForegroundColor Yellow
     }
-    Write-Host ""
 }
 Write-Host ""
 
