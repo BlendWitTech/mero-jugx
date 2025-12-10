@@ -94,17 +94,91 @@ The setup script will ask you to choose:
 - ✅ Creates all database tables (runs migrations)
 - ✅ Seeds all initial data (packages, permissions, roles, package features, role templates)
 
-**Running the Application:**
+## 🚀 Running the Application
+
+### Development Server
+
+For active development with hot reload and debugging:
+
 ```bash
-# Interactive dev script (asks for development or production)
-# Only works if project is set up
+# Start development servers (interactive - choose "Development Server")
 npm run dev
 
-# Development mode (starts backend and frontend in separate windows)
-# Production mode (builds and starts both backend and frontend)
+# Or directly start backend in watch mode
+npm run start:dev
 ```
 
-#### Option 2: Manual Setup (Local PostgreSQL & Redis)
+**Development Server Features:**
+- ✅ Hot reload for both backend and frontend
+- ✅ Separate terminal windows for backend and frontend
+- ✅ Full debugging support
+- ✅ Source maps enabled
+- ✅ Detailed error messages
+
+**Access Points (Development):**
+- Frontend: http://localhost:3001
+- Backend API: http://localhost:3000
+- API Documentation: http://localhost:3000/api/docs
+- Health Check: http://localhost:3000/health
+
+### Production Server
+
+For production-ready builds and deployment:
+
+```bash
+# Start production server (interactive - choose "Production Server")
+npm run dev
+
+# Or directly build and start production
+npm run start:prod
+```
+
+**Production Server Features:**
+- ✅ Optimized builds (minified, tree-shaken)
+- ✅ Single process for backend and frontend
+- ✅ Production environment variables
+- ✅ Performance optimizations
+- ✅ Error handling and logging
+
+**Access Points (Production):**
+- Frontend: http://localhost:3001 (or your configured domain)
+- Backend API: http://localhost:3000 (or your configured domain)
+- API Documentation: http://localhost:3000/api/docs
+- Health Check: http://localhost:3000/health
+
+### Testing Server
+
+For running tests and quality assurance:
+
+```bash
+# Run all tests (interactive)
+npm run test
+
+# Run specific test types
+npm run test:unit          # Unit tests only
+npm run test:integration  # Integration tests only
+npm run test:e2e          # End-to-end tests
+npm run test:cov          # Tests with coverage report
+```
+
+**Testing Server Features:**
+- ✅ Complete test suite (unit, integration, e2e)
+- ✅ Coverage reports
+- ✅ Watch mode for development
+- ✅ CI/CD ready
+
+**Test Commands:**
+```bash
+npm run test              # Interactive test runner
+npm run test:all          # Run all tests
+npm run test:unit         # Unit tests only
+npm run test:integration  # Integration tests only
+npm run test:e2e         # End-to-end tests
+npm run test:watch        # Watch mode
+npm run test:cov         # With coverage
+```
+
+### Manual Setup (Local PostgreSQL & Redis)
 
 This option requires you to install PostgreSQL and Redis locally on your system.
 
@@ -146,21 +220,30 @@ npm run setup:manual
 npm run start:dev:all
 ```
 
-### Access Points
+## 📍 Server Access Points
 
+### Development Server
 - **Frontend**: http://localhost:3001
 - **Backend API**: http://localhost:3000
-- **API Base URL**: http://localhost:3000/api/v1
 - **API Documentation**: http://localhost:3000/api/docs
 - **Health Check**: http://localhost:3000/health
-- **Application Docs**: http://localhost:3001/docs (when served)
+
+### Production Server
+- **Frontend**: http://localhost:3001 (or your configured domain)
+- **Backend API**: http://localhost:3000 (or your configured domain)
+- **API Documentation**: http://localhost:3000/api/docs
+- **Health Check**: http://localhost:3000/health
+
+### Testing
+- **Test Results**: Displayed in terminal
+- **Coverage Reports**: Generated in `coverage/` directory
 
 ## 📚 Documentation
 
 **All documentation is available in HTML format** and can be accessed:
 
-- **Development/Testing Server**: `http://localhost:3001/docs` (when served)
-- **Production Server**: `https://yourdomain.com/docs`
+- **Development Server**: Open `docs/html/index.html` in your browser
+- **Production Server**: `https://yourdomain.com/docs` (when configured)
 - **Local Files**: Open `docs/html/index.html` in your browser
 
 ### Complete Documentation
