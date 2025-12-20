@@ -8,14 +8,14 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import { AppDataSource } from './migrations/DataSource';
-import { EmailVerificationType } from './entities/email-verification.entity';
-import { DocumentType } from './entities/organization-document.entity';
-import { OrganizationStatus } from './entities/organization.entity';
-import { OrganizationPackageFeatureStatus } from './entities/organization-package-feature.entity';
-import { PackageFeatureType } from './entities/package-feature.entity';
-import { InvitationStatus, InvitationType } from './entities/invitation.entity';
-import { OrganizationMemberStatus } from './entities/organization-member.entity';
-import { UserStatus } from './entities/user.entity';
+import { EmailVerificationType } from './entities/email_verifications.entity';
+import { DocumentType } from './entities/organization_documents.entity';
+import { OrganizationStatus } from './entities/organizations.entity';
+import { OrganizationPackageFeatureStatus } from './entities/organization_package_features.entity';
+import { PackageFeatureType } from './entities/package_features.entity';
+import { InvitationStatus, InvitationType } from './entities/invitations.entity';
+import { OrganizationMemberStatus } from './entities/organization_members.entity';
+import { UserStatus } from './entities/users.entity';
 
 // Load environment variables
 config();
@@ -34,42 +34,42 @@ const EXPECTED_ENUMS: EnumDefinition[] = [
   {
     name: 'email_verifications_type_enum',
     values: Object.values(EmailVerificationType),
-    entityFile: 'email-verification.entity.ts',
+    entityFile: 'email_verifications.entity.ts',
   },
   {
     name: 'invitations_status_enum',
     values: Object.values(InvitationStatus),
-    entityFile: 'invitation.entity.ts',
+    entityFile: 'invitations.entity.ts',
   },
   {
     name: 'users_status_enum',
     values: Object.values(UserStatus),
-    entityFile: 'user.entity.ts',
+    entityFile: 'users.entity.ts',
   },
   {
     name: 'organizations_status_enum',
     values: Object.values(OrganizationStatus),
-    entityFile: 'organization.entity.ts',
+    entityFile: 'organizations.entity.ts',
   },
   {
     name: 'organization_members_status_enum',
     values: Object.values(OrganizationMemberStatus),
-    entityFile: 'organization-member.entity.ts',
+    entityFile: 'organization_members.entity.ts',
   },
   {
     name: 'package_features_type_enum',
     values: Object.values(PackageFeatureType),
-    entityFile: 'package-feature.entity.ts',
+    entityFile: 'package_features.entity.ts',
   },
   {
     name: 'organization_package_features_status_enum',
     values: Object.values(OrganizationPackageFeatureStatus),
-    entityFile: 'organization-package-feature.entity.ts',
+    entityFile: 'organization_package_features.entity.ts',
   },
   {
     name: 'organization_documents_document_type_enum',
     values: Object.values(DocumentType),
-    entityFile: 'organization-document.entity.ts',
+    entityFile: 'organization_documents.entity.ts',
   },
 ];
 

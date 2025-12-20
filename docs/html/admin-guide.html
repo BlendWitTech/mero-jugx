@@ -60,35 +60,51 @@
             <pre><code>git clone &lt;repository-url&gt;
 cd mero-jugx</code></pre>
 
-            <h4>2. Install Dependencies</h4>
-            <pre><code>npm run setup:github</code></pre>
-            <p>Or for manual setup:</p>
-            <pre><code>npm run setup:manual</code></pre>
-
-            <h4>3. Configure Environment</h4>
-            <p>Edit <code>.env</code> file with your configuration (see Configuration section).</p>
-
-            <h4>4. Initialize Database</h4>
-            <pre><code>npm run db:init</code></pre>
-            <p>This will:</p>
+            <h4>2. Run Setup</h4>
+            <pre><code>npm run setup</code></pre>
+            <p>The setup script will prompt you to choose:</p>
             <ul>
-                <li>Run all database migrations</li>
-                <li>Seed initial data</li>
-                <li>Create default roles and packages</li>
+                <li><strong>Manual Setup:</strong> Requires local PostgreSQL and Redis installations</li>
+                <li><strong>Docker Setup:</strong> Uses Docker Compose for PostgreSQL and Redis (recommended)</li>
+            </ul>
+            <p><strong>What setup does:</strong></p>
+            <ul>
+                <li>Installs all dependencies (backend and frontend)</li>
+                <li>Creates comprehensive <code>.env</code> files with all values (allows project to work immediately)</li>
+                <li>Starts Docker containers (if using Docker setup)</li>
+                <li>Runs all database migrations (creates all tables)</li>
+                <li>Seeds all initial data (packages, permissions, roles, etc.)</li>
+            </ul>
+            <p><strong>Alternative setup commands:</strong></p>
+            <ul>
+                <li><code>npm run setup:github</code> - Direct Docker setup (bypasses prompt)</li>
+                <li><code>npm run setup:manual</code> - Direct manual setup (bypasses prompt)</li>
             </ul>
 
-            <h4>5. Start Application</h4>
-            <pre><code># Development (both backend and frontend)
-npm run start:dev:all
+            <h4>3. Start Application</h4>
+            <pre><code># Development (interactive - choose dev or prod)
+npm run dev
 
-# Development (backend only)
+# Development (backend only, watch mode)
 npm run start:dev
 
-# Production (both backend and frontend)
-npm run start:prod:all
-
-# Production (backend only, after build)
+# Production (builds and starts both)
 npm run start:prod</code></pre>
+            
+            <h3>Complete Reset</h3>
+            <p>To completely reset the system and remove everything:</p>
+            <pre><code>npm run reset:all</code></pre>
+            <p><strong>What gets removed:</strong></p>
+            <ul>
+                <li>All node_modules (backend and frontend)</li>
+                <li>All dist and build folders</li>
+                <li>ALL database tables and data</li>
+                <li>All .env files</li>
+                <li>npm cache and logs</li>
+                <li>Docker containers (optional volume removal)</li>
+            </ul>
+            <p><strong>After reset:</strong> Run <code>npm run setup</code> to set up everything fresh.</p>
+            <p><strong>For new installations:</strong> Clone the repository and run <code>npm run setup</code> - same process as after reset.</p>
 
             <h2 id="configuration">Configuration</h2>
 

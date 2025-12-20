@@ -89,11 +89,8 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
               member_ids: [userId],
             });
           } catch (error: any) {
-            if (error.response?.status === 403) {
-              toast.error('Chat feature is not available. Please upgrade to Platinum or Diamond package, or purchase the Chat System feature.');
-            } else {
-              toast.error(error.response?.data?.message || 'Failed to create chat');
-            }
+            // Error toast is already handled by API interceptor
+            // No need to show duplicate toast here
             onClose();
             return;
           }
@@ -104,11 +101,8 @@ export default function ChatWindow({ chatId, userId, userName, onClose, onMinimi
           setIsLoading(false);
         }
       } catch (error: any) {
-        if (error.response?.status === 403) {
-          toast.error('Chat feature is not available. Please upgrade to Platinum or Diamond package, or purchase the Chat System feature.');
-        } else {
-          toast.error(error.response?.data?.message || 'Failed to load chat');
-        }
+        // Error toast is already handled by API interceptor
+        // No need to show duplicate toast here
         onClose();
       }
     };

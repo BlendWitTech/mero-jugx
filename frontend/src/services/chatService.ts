@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore';
+import { logger } from '../utils/logger';
 
 // Get API URL, ensuring it includes /api/v1
 const getApiUrl = () => {
@@ -109,13 +110,17 @@ class ChatService {
   connect(organizationId: string, token: string): Socket {
     // Reuse existing socket if it's connected
     if (this.socket?.connected) {
-      console.log('[ChatService] Reusing existing socket connection, socket ID:', this.socket.id);
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatService] Reusing existing socket connection, socket ID:', this.socket.id);
+      }
       return this.socket;
     }
 
     // If socket exists but not connected, wait for reconnection instead of creating new one
     if (this.socket && !this.socket.connected) {
-      console.log('[ChatService] Socket exists but not connected, will reconnect automatically');
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatService] Socket exists but not connected, will reconnect automatically');
+      }
       // Return existing socket - socket.io will handle reconnection
       return this.socket;
     }
@@ -138,7 +143,9 @@ class ChatService {
       socketUrl = 'http://localhost:3000';
     }
     
-    console.log('[ChatService] Connecting to socket:', `${socketUrl}/chat`);
+    if (process.env.NODE_ENV === 'development') {
+      logger.log('[ChatService] Connecting to socket:', `${socketUrl}/chat`);
+    }
     
     // Connect to /chat namespace (as defined in backend ChatGateway)
     // Socket.io automatically handles namespaces, so we connect to the base URL with namespace
@@ -160,17 +167,28 @@ class ChatService {
       // Remove forceNew to allow connection reuse
     });
 
-    // Add connection event listeners for debugging
+    // Add connection event listeners for debugging (only in development)
     this.socket.on('connect', () => {
-      console.log('[ChatService] Socket connected to chat namespace, socket ID:', this.socket?.id);
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatService] Socket connected to chat namespace, socket ID:', this.socket?.id);
+      }
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('[ChatService] Connection error:', error);
+      // Only log connection errors in development
+      if (process.env.NODE_ENV === 'development') {
+        logger.error('[ChatService] Connection error:', error);
+      }
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('[ChatService] Socket disconnected:', reason);
+      // Only log disconnects in development (unless it's an error)
+      if (process.env.NODE_ENV === 'development' || reason === 'io server disconnect') {
+        // Suppress "io server disconnect" logs - this is expected behavior
+        if (process.env.NODE_ENV === 'development' && reason !== 'io server disconnect') {
+          logger.log('[ChatService] Socket disconnected:', reason);
+        }
+      }
     });
 
     // Don't add a global message:new listener here - let components add their own
@@ -182,7 +200,9 @@ class ChatService {
   disconnect() {
     // Only disconnect if explicitly called (e.g., on logout)
     if (this.socket) {
-      console.log('[ChatService] Disconnecting socket');
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatService] Disconnecting socket');
+      }
       this.socket.disconnect();
       this.socket = null;
     }
@@ -200,7 +220,7 @@ class ChatService {
         params: { limit: 1 },
       });
     } catch (error) {
-      console.error('[ChatService] Error marking messages as read:', error);
+      logger.error('[ChatService] Error marking messages as read:', error);
       // Don't throw - this is not critical
     }
   }
@@ -211,13 +231,32 @@ class ChatService {
     page: number;
     limit: number;
   }> {
-    const response = await axios.get(`${API_URL}/chats`, {
-      params,
-      headers: {
-        Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
-      },
-    });
-    return response.data;
+    try {
+      const response = await axios.get(`${API_URL}/chats`, {
+        params,
+        headers: {
+          Authorization: `Bearer ${useAuthStore.getState().accessToken}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      // Handle 403 (no chat access) gracefully - return empty result
+      // Don't log 403 errors - they're expected for users without chat access
+      if (error?.response?.status === 403) {
+        return {
+          chats: [],
+          total: 0,
+          page: params?.page || 1,
+          limit: params?.limit || 50,
+        };
+      }
+      // Only log unexpected errors in development
+      if (process.env.NODE_ENV === 'development') {
+        logger.error('[ChatService] Error fetching chats:', error);
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   async getChat(organizationId: string, chatId: string): Promise<Chat> {

@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsArray, IsUrl, ArrayMinSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { WebhookEvent } from '../../database/entities/webhook.entity';
+import { WebhookEvent } from '../../database/entities/webhooks.entity';
 
 export class CreateWebhookDto {
   @ApiProperty({

@@ -52,19 +52,29 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    // Log error details for debugging
-    console.error('\n❌ ========== EXCEPTION CAUGHT ==========');
-    console.error(`📍 Path: ${request.method} ${request.url}`);
-    console.error(`📊 Status: ${status}`);
-    console.error(`💬 Message: ${typeof message === 'string' ? message : (message as any).message || 'Unknown error'}`);
-    console.error(`🔴 Error: ${exception instanceof Error ? exception.message : 'Unknown error'}`);
-    if (exception instanceof Error && exception.stack) {
-      console.error(`📚 Stack Trace:\n${exception.stack}`);
+    // List of paths that are expected to return 404 (not implemented yet)
+    const expected404Paths = [
+      '/api/v1/announcements/active',
+    ];
+
+    // Skip logging for expected 404 errors
+    const isExpected404 = status === 404 && expected404Paths.some(path => request.url.includes(path));
+
+    // Log error details for debugging (skip expected 404s)
+    if (!isExpected404) {
+      console.error('\n❌ ========== EXCEPTION CAUGHT ==========');
+      console.error(`📍 Path: ${request.method} ${request.url}`);
+      console.error(`📊 Status: ${status}`);
+      console.error(`💬 Message: ${typeof message === 'string' ? message : (message as any).message || 'Unknown error'}`);
+      console.error(`🔴 Error: ${exception instanceof Error ? exception.message : 'Unknown error'}`);
+      if (exception instanceof Error && exception.stack) {
+        console.error(`📚 Stack Trace:\n${exception.stack}`);
+      }
+      if (request.body && Object.keys(request.body).length > 0) {
+        console.error(`📦 Request Body:`, JSON.stringify(request.body, null, 2));
+      }
+      console.error('==========================================\n');
     }
-    if (request.body && Object.keys(request.body).length > 0) {
-      console.error(`📦 Request Body:`, JSON.stringify(request.body, null, 2));
-    }
-    console.error('==========================================\n');
 
     response.status(status).json(errorResponse);
   }

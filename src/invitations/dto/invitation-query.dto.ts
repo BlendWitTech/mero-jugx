@@ -1,7 +1,7 @@
 import { IsOptional, IsString, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { InvitationStatus } from '../../database/entities/invitation.entity';
+import { InvitationStatus } from '../../database/entities/invitations.entity';
 
 export class InvitationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by status', enum: InvitationStatus })

@@ -6,16 +6,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { RoleTemplate } from '../database/entities/role-template.entity';
-import { RoleTemplatePermission } from '../database/entities/role-template-permission.entity';
-import { Role } from '../database/entities/role.entity';
-import { Permission } from '../database/entities/permission.entity';
-import { RolePermission } from '../database/entities/role-permission.entity';
-import { Organization } from '../database/entities/organization.entity';
+import { RoleTemplate } from '../database/entities/role_templates.entity';
+import { RoleTemplatePermission } from '../database/entities/role_template_permissions.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Permission } from '../database/entities/permissions.entity';
+import { RolePermission } from '../database/entities/role_permissions.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
+} from '../database/entities/organization_members.entity';
 import { CreateRoleFromTemplateDto } from './dto/create-role-from-template.dto';
 
 @Injectable()

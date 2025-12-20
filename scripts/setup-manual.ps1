@@ -256,6 +256,9 @@ if (-not $skipEnv) {
     if (-not $stripeSecret) { $stripeSecret = "" }
     if (-not $esewaMerchantId) { $esewaMerchantId = "" }
     
+    # eSewa test secret key (contains special characters that need escaping)
+    $esewa_test_secret = '8gBm/:&EnhH.1/q'
+    
     # Generate comprehensive .env file with all defaults
     $envContent = @"
 # ============================================
@@ -370,7 +373,7 @@ CACHE_TTL=3600
 
 # eSewa Payment Gateway (Test credentials - works out of the box)
 ESEWA_TEST_MERCHANT_ID=EPAYTEST
-ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q
+ESEWA_TEST_SECRET_KEY=$esewa_test_secret
 ESEWA_TEST_API_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form
 ESEWA_TEST_VERIFY_URL=https://rc.esewa.com.np/api/epay/transaction/status
 ESEWA_MERCHANT_ID=$esewaMerchantId
@@ -496,14 +499,16 @@ Write-Host ""
 Write-Host "Manual setup complete!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Blue
-Write-Host "1. Make sure PostgreSQL is installed and running"
-Write-Host "2. Make sure Redis is installed and running"
-Write-Host "3. Create the database if you haven't already:"
-Write-Host "   psql -U postgres -c `"CREATE DATABASE $dbName;`"" -ForegroundColor White
-Write-Host "4. Review your .env file"
-Write-Host "5. Run 'npm run start:dev:all' to start development servers"
-Write-Host "6. Visit http://localhost:3001 to access the application"
+Write-Host "1. Make sure PostgreSQL is installed and running" -ForegroundColor White
+Write-Host "2. Make sure Redis is installed and running" -ForegroundColor White
+Write-Host "3. Create the database if you haven't already:" -ForegroundColor White
+Write-Host "   psql -U postgres -c `"CREATE DATABASE $dbName;`"" -ForegroundColor Gray
+Write-Host "4. Review your .env file" -ForegroundColor White
+Write-Host "5. Initialize database: npm run db:init" -ForegroundColor White
+Write-Host "   This will run migrations and seed base data (packages, permissions, roles, etc.)" -ForegroundColor Gray
+Write-Host "6. Start development servers: npm run dev" -ForegroundColor White
+Write-Host "7. Visit http://localhost:3001 to access the application" -ForegroundColor White
 Write-Host ""
 Write-Host "Note: This setup uses LOCAL PostgreSQL and Redis, NOT Docker." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Happy coding!" -ForegroundColor Green
+Write-Host "Happy coding! 🚀" -ForegroundColor Green

@@ -2,10 +2,10 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Response } from 'express';
-import { Payment, PaymentStatus } from '../database/entities/payment.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { Package } from '../database/entities/package.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { Payment, PaymentStatus } from '../database/entities/payments.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { Package } from '../database/entities/packages.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 export interface InvoiceData {

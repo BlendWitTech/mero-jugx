@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentOrganization } from '../common/decorators/current-organization.decorator';
 
 @ApiTags('billing')
 @Controller('billing')
@@ -23,11 +24,12 @@ export class BillingController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getBillingHistory(
     @CurrentUser() user: any,
+    @CurrentOrganization() organization: any,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
     return this.billingService.getBillingHistory(
-      user.organizationId,
+      organization.id,
       user.userId,
       page || 1,
       limit || 20,
@@ -39,9 +41,12 @@ export class BillingController {
   @ApiOperation({ summary: 'Get subscription details' })
   @ApiResponse({ status: 200, description: 'Subscription details retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
-  async getSubscriptionDetails(@CurrentUser() user: any) {
+  async getSubscriptionDetails(
+    @CurrentUser() user: any,
+    @CurrentOrganization() organization: any,
+  ) {
     return this.billingService.getSubscriptionDetails(
-      user.organizationId,
+      organization.id,
       user.userId,
     );
   }
@@ -55,10 +60,11 @@ export class BillingController {
   @ApiParam({ name: 'paymentId', description: 'Payment ID' })
   async getInvoice(
     @CurrentUser() user: any,
+    @CurrentOrganization() organization: any,
     @Param('paymentId') paymentId: string,
   ) {
     return this.billingService.generateInvoice(
-      user.organizationId,
+      organization.id,
       user.userId,
       paymentId,
     );
@@ -72,11 +78,12 @@ export class BillingController {
   @ApiParam({ name: 'paymentId', description: 'Payment ID' })
   async exportInvoice(
     @CurrentUser() user: any,
+    @CurrentOrganization() organization: any,
     @Param('paymentId') paymentId: string,
     @Res() res: Response,
   ) {
     const csv = await this.billingService.exportInvoice(
-      user.organizationId,
+      organization.id,
       user.userId,
       paymentId,
     );
@@ -92,9 +99,12 @@ export class BillingController {
   @ApiOperation({ summary: 'Cancel subscription auto-renewal' })
   @ApiResponse({ status: 200, description: 'Subscription cancelled successfully' })
   @ApiResponse({ status: 403, description: 'Only owner can cancel subscription' })
-  async cancelSubscription(@CurrentUser() user: any) {
+  async cancelSubscription(
+    @CurrentUser() user: any,
+    @CurrentOrganization() organization: any,
+  ) {
     return this.billingService.cancelSubscription(
-      user.organizationId,
+      organization.id,
       user.userId,
     );
   }
@@ -105,9 +115,12 @@ export class BillingController {
   @ApiOperation({ summary: 'Resume subscription auto-renewal' })
   @ApiResponse({ status: 200, description: 'Subscription resumed successfully' })
   @ApiResponse({ status: 403, description: 'Only owner can resume subscription' })
-  async resumeSubscription(@CurrentUser() user: any) {
+  async resumeSubscription(
+    @CurrentUser() user: any,
+    @CurrentOrganization() organization: any,
+  ) {
     return this.billingService.resumeSubscription(
-      user.organizationId,
+      organization.id,
       user.userId,
     );
   }

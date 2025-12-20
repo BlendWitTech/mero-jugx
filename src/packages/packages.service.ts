@@ -8,20 +8,20 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import * as crypto from 'crypto';
-import { Package } from '../database/entities/package.entity';
-import { PackageFeature, PackageFeatureType } from '../database/entities/package-feature.entity';
+import { Package } from '../database/entities/packages.entity';
+import { PackageFeature, PackageFeatureType } from '../database/entities/package_features.entity';
 import {
   OrganizationPackageFeature,
   OrganizationPackageFeatureStatus,
-} from '../database/entities/organization-package-feature.entity';
-import { Organization } from '../database/entities/organization.entity';
+} from '../database/entities/organization_package_features.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { Permission } from '../database/entities/permission.entity';
-import { RolePermission } from '../database/entities/role-permission.entity';
+} from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Permission } from '../database/entities/permissions.entity';
+import { RolePermission } from '../database/entities/role_permissions.entity';
 import { UpgradePackageDto, SubscriptionPeriod } from './dto/upgrade-package.dto';
 import { PurchaseFeatureDto } from './dto/purchase-feature.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -267,25 +267,36 @@ export class PackagesService {
           relations: ['feature'],
         });
 
-        // Find chat feature to check if it's already purchased
+        // Find chat and ticket features to check if they're already purchased
         const chatFeature = await this.featureRepository.findOne({
           where: { slug: 'chat-system', is_active: true },
         });
 
-        // If upgrading to Platinum/Diamond and chat is already purchased, exclude it from credit calculation
+        const ticketFeature = await this.featureRepository.findOne({
+          where: { slug: 'ticket-system', is_active: true },
+        });
+
+        // If upgrading to Platinum/Diamond and chat/ticket system is already purchased, exclude it from credit calculation
         // because we'll deduct its price from the new package price instead
         const isUpgradingToPlatinumOrDiamond = newPackage.slug === 'platinum' || newPackage.slug === 'diamond';
         const hasChatPurchased = chatFeature && activeFeatures.some(
           (f) => f.feature_id === chatFeature.id
         );
+        const hasTicketPurchased = ticketFeature && activeFeatures.some(
+          (f) => f.feature_id === ticketFeature.id
+        );
 
         // Calculate total current monthly cost (package + features)
-        // If upgrading to Platinum/Diamond and chat is purchased, exclude chat from credit calculation
+        // If upgrading to Platinum/Diamond and chat/ticket system is purchased, exclude from credit calculation
         const currentPackagePrice = organization.package.price || 0;
         const activeFeaturesPrice = activeFeatures.reduce((sum, orgFeature) => {
           // Exclude chat feature price if upgrading to Platinum/Diamond (we'll deduct it separately)
           if (isUpgradingToPlatinumOrDiamond && chatFeature && orgFeature.feature_id === chatFeature.id) {
             return sum; // Don't include chat in credit calculation
+          }
+          // Exclude ticket system feature price if upgrading to Platinum/Diamond (we'll deduct it separately)
+          if (isUpgradingToPlatinumOrDiamond && ticketFeature && orgFeature.feature_id === ticketFeature.id) {
+            return sum; // Don't include ticket system in credit calculation
           }
           return sum + (orgFeature.feature?.price || 0);
         }, 0);
@@ -295,7 +306,11 @@ export class PackagesService {
         let adjustedNewPackagePrice = newPackage.price;
         if (isUpgradingToPlatinumOrDiamond && hasChatPurchased && chatFeature) {
           // Deduct chat feature price from new package price (like we do for user upgrades)
-          adjustedNewPackagePrice = Math.max(0, newPackage.price - (chatFeature.price || 0));
+          adjustedNewPackagePrice = Math.max(0, adjustedNewPackagePrice - (chatFeature.price || 0));
+        }
+        if (isUpgradingToPlatinumOrDiamond && hasTicketPurchased && ticketFeature) {
+          // Deduct ticket system feature price from new package price (like we do for user upgrades)
+          adjustedNewPackagePrice = Math.max(0, adjustedNewPackagePrice - (ticketFeature.price || 0));
         }
 
         upgradePriceCalc = calculateUpgradePrice(
@@ -484,6 +499,62 @@ export class PackagesService {
         // If chat was not purchased, do nothing - user can purchase it separately if they want
       }
       // For other upgrade scenarios, keep existing chat feature as-is
+    }
+
+    // Handle ticket system feature based on upgrade scenario
+    const ticketFeature = await this.featureRepository.findOne({
+      where: { slug: 'ticket-system', is_active: true },
+    });
+
+    if (ticketFeature) {
+      const existingTicketFeature = await this.orgFeatureRepository.findOne({
+        where: {
+          organization_id: organizationId,
+          feature_id: ticketFeature.id,
+          status: OrganizationPackageFeatureStatus.ACTIVE,
+        },
+      });
+
+      // If upgrading to Platinum or Diamond
+      if (newPackage.slug === 'platinum' || newPackage.slug === 'diamond') {
+        // Auto-purchase ticket system if not already purchased (it's free with Platinum/Diamond)
+        if (!existingTicketFeature) {
+          const orgTicketFeature = this.orgFeatureRepository.create({
+            organization_id: organizationId,
+            feature_id: ticketFeature.id,
+            status: OrganizationPackageFeatureStatus.ACTIVE,
+            purchased_at: new Date(),
+          });
+
+          await this.orgFeatureRepository.save(orgTicketFeature);
+
+          // Create audit log for auto-purchase
+          await this.auditLogsService.createAuditLog(
+            organizationId,
+            userId,
+            'package.feature.auto_purchase',
+            'package_feature',
+            orgTicketFeature.id.toString(),
+            null,
+            {
+              feature_id: ticketFeature.id,
+              feature_name: ticketFeature.name,
+              feature_type: ticketFeature.type,
+              reason: 'Auto-purchased with Platinum/Diamond package (free)',
+            },
+          );
+        }
+        // If ticket system was already purchased, keep it active (price was already deducted from upgrade price above)
+      } else if (organization.package.slug === 'freemium' && newPackage.slug === 'basic') {
+        // When upgrading from freemium to basic:
+        // - If ticket system was purchased, keep it active
+        // - If ticket system was not purchased, don't give it (user needs to purchase separately)
+        if (existingTicketFeature) {
+          // Ticket system was purchased, keep it active - no action needed
+        }
+        // If ticket system was not purchased, do nothing - user can purchase it separately if they want
+      }
+      // For other upgrade scenarios, keep existing ticket system feature as-is
     }
 
     // Create audit log

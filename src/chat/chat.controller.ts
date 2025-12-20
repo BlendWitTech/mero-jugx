@@ -198,5 +198,17 @@ export class ChatController {
   ) {
     return this.chatService.exportChat(userId, organizationId, chatId);
   }
+
+  @Post(':id/flag-thread')
+  @ApiOperation({ summary: 'Flag a chat thread to create a ticket' })
+  @ApiResponse({ status: 201, description: 'Ticket created from chat thread' })
+  async flagThread(
+    @CurrentUser('id') userId: string,
+    @CurrentOrganization('id') organizationId: string,
+    @Param('id') chatId: string,
+    @Body() dto: any, // Using any for now, will use CreateTicketFromChatDto
+  ) {
+    return this.chatService.flagThread(userId, organizationId, chatId, dto);
+  }
 }
 

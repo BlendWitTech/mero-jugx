@@ -4,8 +4,10 @@ import { Building2, ChevronDown, Plus, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function OrganizationSwitcher({ compact = false }: { compact?: boolean }) {
+  const { theme } = useTheme();
   const { organization: orgFromStore, accessToken, _hasHydrated, isAuthenticated } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -13,10 +15,19 @@ export default function OrganizationSwitcher({ compact = false }: { compact?: bo
   const { data: currentOrganization } = useQuery({
     queryKey: ['current-organization'],
     queryFn: async () => {
-      const response = await api.get('/organizations/me');
-      return response.data;
+      try {
+        const response = await api.get('/organizations/me');
+        return response.data;
+      } catch (error: any) {
+        // Handle 401/403 gracefully
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return null;
+        }
+        throw error;
+      }
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    retry: false,
   });
 
   // Use fetched organization or fallback to store organization
@@ -26,10 +37,19 @@ export default function OrganizationSwitcher({ compact = false }: { compact?: bo
   const { data: organizations } = useQuery({
     queryKey: ['user-organizations'],
     queryFn: async () => {
-      const response = await api.get('/organizations');
-      return response.data || [];
+      try {
+        const response = await api.get('/organizations');
+        return response.data || [];
+      } catch (error: any) {
+        // Handle 401/403 gracefully
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    retry: false,
   });
 
   const handleSwitchOrganization = async (orgId: string) => {
@@ -68,35 +88,53 @@ export default function OrganizationSwitcher({ compact = false }: { compact?: bo
     <div className="relative w-full">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full ${compact ? 'w-12 h-12' : 'px-2 py-1.5'} ${compact ? 'rounded-2xl' : 'rounded'} flex items-center ${compact ? 'justify-center' : 'gap-2'} ${compact ? 'bg-gradient-to-br from-[#5865f2] to-[#4752c4] hover:from-[#4752c4] hover:to-[#3c45a5]' : 'hover:bg-[#393c43]'} transition-colors group ${compact ? 'relative' : ''} ${compact ? '' : 'text-left'}`}
+        className={`w-full ${compact ? 'w-12 h-12' : 'px-2 py-1.5'} ${compact ? 'rounded-2xl' : 'rounded'} flex items-center ${compact ? 'justify-center' : 'gap-2'} transition-colors group ${compact ? 'relative' : ''} ${compact ? '' : 'text-left'}`}
+        style={compact 
+          ? { background: `linear-gradient(to bottom right, ${theme.colors.primary}, ${theme.colors.secondary})` }
+          : {}
+        }
+        onMouseEnter={(e) => {
+          if (!compact) {
+            e.currentTarget.style.backgroundColor = theme.colors.surface;
+          } else {
+            e.currentTarget.style.background = `linear-gradient(to bottom right, ${theme.colors.secondary}, ${theme.colors.primary})`;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!compact) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          } else {
+            e.currentTarget.style.background = `linear-gradient(to bottom right, ${theme.colors.primary}, ${theme.colors.secondary})`;
+          }
+        }}
         title={compact ? 'Switch Account' : (organization?.name || 'Switch Organization')}
       >
         {organization ? (
-          <div className={`${compact ? 'h-12 w-12' : 'h-8 w-8'} ${compact ? 'rounded-2xl' : 'rounded-full'} ${compact ? '' : 'bg-[#5865f2]'} flex items-center justify-center flex-shrink-0 relative`}>
+          <div className={`${compact ? 'h-12 w-12' : 'h-8 w-8'} ${compact ? 'rounded-2xl' : 'rounded-full'} flex items-center justify-center flex-shrink-0 relative`} style={compact ? {} : { backgroundColor: theme.colors.primary }}>
             <span className="text-xs font-bold text-white">
               {organization.name.charAt(0).toUpperCase()}
             </span>
             {compact && (
-              <RefreshCw className="h-3 w-3 absolute -bottom-0.5 -right-0.5 bg-[#202225] text-white rounded-full p-0.5 border border-[#36393f]" />
+              <RefreshCw className="h-3 w-3 absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 border text-white" style={{ backgroundColor: theme.colors.border, borderColor: theme.colors.surface }} />
             )}
           </div>
         ) : (
-          <div className={`${compact ? 'h-12 w-12' : 'h-8 w-8'} ${compact ? 'rounded-2xl' : 'rounded-full'} ${compact ? '' : 'bg-[#5865f2]'} flex items-center justify-center flex-shrink-0 relative`}>
+          <div className={`${compact ? 'h-12 w-12' : 'h-8 w-8'} ${compact ? 'rounded-2xl' : 'rounded-full'} flex items-center justify-center flex-shrink-0 relative`} style={compact ? {} : { backgroundColor: theme.colors.primary }}>
             <Building2 className={`${compact ? 'h-5 w-5' : 'h-4 w-4'} text-white`} />
             {compact && (
-              <RefreshCw className="h-3 w-3 absolute -bottom-0.5 -right-0.5 bg-[#202225] text-white rounded-full p-0.5 border border-[#36393f]" />
+              <RefreshCw className="h-3 w-3 absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 border text-white" style={{ backgroundColor: theme.colors.border, borderColor: theme.colors.surface }} />
             )}
           </div>
         )}
         {!compact && (
           <>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-medium truncate" style={{ color: theme.colors.text }}>
                 {organization?.name || 'No Organization'}
               </p>
-              <p className="text-xs text-[#b9bbbe] truncate">Switch account</p>
+              <p className="text-xs truncate" style={{ color: theme.colors.textSecondary }}>Switch account</p>
             </div>
-            <ChevronDown className={`h-4 w-4 text-[#b9bbbe] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: theme.colors.textSecondary }} />
           </>
         )}
       </button>
@@ -107,39 +145,42 @@ export default function OrganizationSwitcher({ compact = false }: { compact?: bo
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className={`absolute ${compact ? 'top-14 left-0' : 'top-0 left-16'} z-50 w-64 bg-[#18191c] rounded-lg shadow-xl border border-[#202225] overflow-hidden`}>
+          <div className={`absolute ${compact ? 'top-14 left-0' : 'top-0 left-16'} z-50 w-64 rounded-lg shadow-xl overflow-hidden`} style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="p-2">
-              <div className="px-3 py-2 text-xs font-semibold text-[#8e9297] uppercase tracking-wide">
+              <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide" style={{ color: theme.colors.textSecondary }}>
                 Switch Organization
               </div>
               
               {/* Organizations */}
               {organizations && organizations.length > 0 && (
                 <>
-                  <div className="px-3 py-2 text-xs font-semibold text-[#8e9297] uppercase tracking-wide mt-2">
+                  <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide mt-2" style={{ color: theme.colors.textSecondary }}>
                     Organizations
                   </div>
                   {organizations.map((org: any) => (
                     <button
                       key={org.id}
                       onClick={() => handleSwitchOrganization(org.id)}
-                      className="w-full px-3 py-2 rounded text-left hover:bg-[#2d2f33] transition-colors flex items-center gap-3 group"
+                      className="w-full px-3 py-2 rounded text-left transition-colors flex items-center gap-3 group"
+                      style={{ color: theme.colors.text }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.background}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <div className="h-10 w-10 rounded-full bg-[#5865f2] flex items-center justify-center flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: theme.colors.primary }}>
                         <span className="text-sm font-bold text-white">
                           {org.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
+                        <p className="text-sm font-medium truncate" style={{ color: theme.colors.text }}>
                           {org.name}
                         </p>
-                        <p className="text-xs text-[#b9bbbe] truncate">
+                        <p className="text-xs truncate" style={{ color: theme.colors.textSecondary }}>
                           {org.email}
                         </p>
                       </div>
                       {organization?.id === org.id && (
-                        <div className="h-2 w-2 rounded-full bg-[#23a55a] flex-shrink-0"></div>
+                        <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#23a55a' }}></div>
                       )}
                     </button>
                   ))}
@@ -147,10 +188,21 @@ export default function OrganizationSwitcher({ compact = false }: { compact?: bo
               )}
 
               {/* Add Organization */}
-              <div className="border-t border-[#202225] mt-2 pt-2">
-                <button className="w-full px-3 py-2 rounded text-left hover:bg-[#2d2f33] transition-colors flex items-center gap-3 text-[#b9bbbe] hover:text-white">
-                  <div className="h-10 w-10 rounded-full bg-[#36393f] flex items-center justify-center flex-shrink-0 border-2 border-dashed border-[#4f545c]">
-                    <Plus className="h-5 w-5" />
+              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+                <button 
+                  className="w-full px-3 py-2 rounded text-left transition-colors flex items-center gap-3"
+                  style={{ color: theme.colors.textSecondary }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                  }}
+                >
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-dashed" style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}>
+                    <Plus className="h-5 w-5" style={{ color: theme.colors.textSecondary }} />
                   </div>
                   <span className="text-sm font-medium">Create Organization</span>
                 </button>

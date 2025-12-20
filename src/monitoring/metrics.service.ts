@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PrometheusService } from './prometheus.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserStatus } from '../database/entities/user.entity';
-import { Organization, OrganizationStatus } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { User, UserStatus } from '../database/entities/users.entity';
+import { Organization, OrganizationStatus } from '../database/entities/organizations.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 
 @Injectable()
 export class MetricsService {

@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThan, LessThan } from 'typeorm';
-import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
-import { User } from '../database/entities/user.entity';
-import { Role } from '../database/entities/role.entity';
-import { Invitation } from '../database/entities/invitation.entity';
-import { AuditLog } from '../database/entities/audit-log.entity';
-import { Notification } from '../database/entities/notification.entity';
-import { Chat, ChatStatus } from '../database/entities/chat.entity';
-import { Message } from '../database/entities/message.entity';
-import { Payment, PaymentStatus } from '../database/entities/payment.entity';
-import { InvitationStatus } from '../database/entities/invitation.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
+import { User } from '../database/entities/users.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Invitation } from '../database/entities/invitations.entity';
+import { AuditLog } from '../database/entities/audit_logs.entity';
+import { Notification } from '../database/entities/notifications.entity';
+import { Chat, ChatStatus } from '../database/entities/chats.entity';
+import { Message } from '../database/entities/messages.entity';
+import { Payment, PaymentStatus } from '../database/entities/payments.entity';
+import { InvitationStatus } from '../database/entities/invitations.entity';
 import { CacheService } from '../common/services/cache.service';
 
 export interface TimeRange {

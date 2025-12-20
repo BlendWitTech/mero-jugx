@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, In } from 'typeorm';
-import { AuditLog } from '../database/entities/audit-log.entity';
+import { AuditLog } from '../database/entities/audit_logs.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { User } from '../database/entities/user.entity';
+} from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { User } from '../database/entities/users.entity';
 import { AuditLogQueryDto } from './dto/audit-log-query.dto';
 
 @Injectable()
@@ -260,9 +260,16 @@ export class AuditLogsService {
         queryBuilder.andWhere('audit_log.created_at >= :fromDate', {
           fromDate: query.from_date,
         });
-      } else if (query.to_date) {
+      } else       if (query.to_date) {
         queryBuilder.andWhere('audit_log.created_at <= :toDate', {
           toDate: query.to_date,
+        });
+      }
+
+      // Filter by severity
+      if (query.severity) {
+        queryBuilder.andWhere('audit_log.severity = :severity', {
+          severity: query.severity,
         });
       }
 
@@ -585,6 +592,7 @@ export class AuditLogsService {
     ipAddress?: string,
     userAgent?: string,
     metadata?: Record<string, any>,
+    severity: 'critical' | 'warning' | 'info' = 'info',
   ): Promise<AuditLog> {
     const auditLog = this.auditLogRepository.create({
       organization_id: organizationId,
@@ -597,6 +605,7 @@ export class AuditLogsService {
       ip_address: ipAddress,
       user_agent: userAgent,
       metadata: metadata,
+      severity,
     });
 
     return await this.auditLogRepository.save(auditLog);

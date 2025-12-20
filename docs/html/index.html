@@ -146,6 +146,14 @@
                 <li><a href="organization-guide.html">Organization Guide</a> - Manage your organization</li>
                 <li><a href="admin-guide.html">Admin Guide</a> - System administration</li>
             </ul>
+            
+            <h2 style="margin-top: 30px;">🔄 Reset & Setup</h2>
+            <ul>
+                <li><strong>Complete Reset:</strong> <code>npm run reset:all</code> - Removes everything (node_modules, dist, database, .env) and prepares for fresh setup</li>
+                <li><strong>Setup:</strong> <code>npm run setup</code> - Interactive setup (Manual or Docker) that installs dependencies, creates .env files, sets up database, runs migrations, and seeds data</li>
+                <li><strong>After Reset:</strong> Always run <code>npm run setup</code> after reset to set up everything fresh</li>
+                <li><strong>New Developer:</strong> Clone the project and run <code>npm run setup</code> - same process as after reset</li>
+            </ul>
         </div>
 
         <div class="docs-grid">
@@ -315,6 +323,37 @@
                 <li><a href="../../.github/BRANCH_PROTECTION_SETUP.md" target="_blank">Branch Protection Setup</a></li>
             </ul>
 
+            <h3 style="margin-top: 30px; color: #667eea;">Reset & Setup Process</h3>
+            <p style="margin-top: 10px;"><strong>Complete Reset (<code>npm run reset:all</code>):</strong></p>
+            <ul>
+                <li>Removes all <code>node_modules</code> (backend and frontend)</li>
+                <li>Removes all <code>dist</code> and <code>build</code> folders</li>
+                <li>Drops ALL database tables and data</li>
+                <li>Removes all <code>.env</code> files</li>
+                <li>Clears npm cache and logs</li>
+                <li>Stops Docker containers (optional volume removal)</li>
+                <li><strong>After reset:</strong> Run <code>npm run setup</code> to set up everything fresh</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Setup (<code>npm run setup</code>):</strong></p>
+            <ul>
+                <li>Prompts for setup method: <strong>Manual</strong> or <strong>Docker</strong></li>
+                <li><strong>Manual Setup:</strong> Requires local PostgreSQL and Redis installations</li>
+                <li><strong>Docker Setup:</strong> Uses Docker Compose for PostgreSQL and Redis (recommended)</li>
+                <li>Installs all dependencies (backend and frontend)</li>
+                <li>Creates comprehensive <code>.env</code> files with all defaults</li>
+                <li>Starts Docker containers (if using Docker setup)</li>
+                <li>Runs all database migrations (creates all tables)</li>
+                <li>Seeds all initial data (packages, permissions, roles, etc.)</li>
+                <li><strong>Result:</strong> Project is ready to run with <code>npm run dev</code></li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>For New Developers:</strong></p>
+            <ul>
+                <li>Clone the repository</li>
+                <li>Run <code>npm run setup</code></li>
+                <li>Choose Manual or Docker setup</li>
+                <li>Project is ready to use - same process as after reset</li>
+            </ul>
+
             <h3 style="margin-top: 30px; color: #667eea;">Environment Variables</h3>
             <p style="margin-top: 10px;">All setup scripts automatically create comprehensive <code>.env</code> files with defaults that allow the project to work immediately.</p>
             <ul>
@@ -323,6 +362,7 @@
                 <li><strong>Default Values:</strong> All variables have defaults - project works out of the box</li>
                 <li><strong>eSewa Test Credentials:</strong> Included by default (works immediately)</li>
                 <li><strong>JWT Secrets:</strong> Auto-generated during setup</li>
+                <li><strong>Created During Setup:</strong> <code>.env</code> files are created with all values during setup</li>
             </ul>
 
             <h3 style="margin-top: 30px; color: #667eea;">What Gets Seeded</h3>

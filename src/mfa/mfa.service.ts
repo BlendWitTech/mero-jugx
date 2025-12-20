@@ -11,12 +11,12 @@ import { RedisService } from '../common/services/redis.service';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
-import { User } from '../database/entities/user.entity';
-import { Organization } from '../database/entities/organization.entity';
+import { User } from '../database/entities/users.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
+} from '../database/entities/organization_members.entity';
 import { SetupMfaDto } from './dto/setup-mfa.dto';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
 import { DisableMfaDto } from './dto/disable-mfa.dto';

@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { PackageFeature, PackageFeatureType } from '../entities/package-feature.entity';
+import { PackageFeature, PackageFeatureType } from '../entities/package_features.entity';
 
 export async function seedPackageFeatures(dataSource: DataSource): Promise<void> {
   const featureRepository = dataSource.getRepository(PackageFeature);
@@ -39,6 +39,15 @@ export async function seedPackageFeatures(dataSource: DataSource): Promise<void>
       value: null, // null = unlimited
       price: 5.0,
       description: 'Enable team chat, group messaging, audio and video calls',
+      is_active: true,
+    },
+    {
+      name: 'Ticket System',
+      slug: 'ticket-system',
+      type: PackageFeatureType.SUPPORT,
+      value: null, // null = unlimited
+      price: 5.0,
+      description: 'Enable ticket management system with time tracking, task assignments, and activity history',
       is_active: true,
     },
   ];

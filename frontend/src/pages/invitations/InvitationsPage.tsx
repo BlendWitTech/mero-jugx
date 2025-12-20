@@ -7,6 +7,8 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Plus, X, Mail, Clock, CheckCircle, XCircle, UserPlus, Shield, Sparkles, History, ChevronDown, Mail as MailIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const invitationSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,6 +21,8 @@ type InvitationFormData = z.infer<typeof invitationSchema>;
 export default function InvitationsPage() {
   const queryClient = useQueryClient();
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
+  const { theme } = useTheme();
+  const { hasPermission } = usePermissions();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [historyModal, setHistoryModal] = useState<{ email: string; invitations: any[] } | null>(null);
 
@@ -31,14 +35,22 @@ export default function InvitationsPage() {
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
   });
 
-  // Fetch roles for the dropdown
+  // Fetch assignable roles for the dropdown (roles the user can assign)
   const { data: roles, refetch: refetchRoles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: ['assignable-roles'],
     queryFn: async () => {
-      const response = await api.get('/roles');
-      return response.data || [];
+      try {
+        const response = await api.get('/roles/assignable');
+        return response.data || [];
+      } catch (error: any) {
+        // If user doesn't have roles.assign permission, return empty array
+        if (error.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
-    enabled: _hasHydrated && isAuthenticated && !!accessToken,
+    enabled: _hasHydrated && isAuthenticated && !!accessToken && hasPermission('invitations.create'),
   });
 
   // Listen for package update events to refresh roles
@@ -109,25 +121,27 @@ export default function InvitationsPage() {
   };
 
   return (
-    <div className="w-full p-6">
-      <div className="mb-6">
+    <div className="w-full p-6" style={{ backgroundColor: theme.colors.background, color: theme.colors.text }}>
+        <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#5865f2] rounded-lg">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary }}>
               <MailIcon className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">Invitations</h1>
-              <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage user invitations to your organization</p>
+              <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: theme.colors.text }}>Invitations</h1>
+              <p className="mt-2 text-sm sm:text-base" style={{ color: theme.colors.textSecondary }}>Manage user invitations to your organization</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Invitation
-          </button>
+          {hasPermission('invitations.create') && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn btn-primary flex items-center whitespace-nowrap"
+            >
+              <Plus className="mr-2 h-4 w-4 flex-shrink-0" />
+              <span>Create Invitation</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -142,13 +156,13 @@ export default function InvitationsPage() {
                 reset();
               }}
             ></div>
-            <div className="inline-block align-bottom bg-[#2f3136] rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div className="inline-block align-bottom rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full" style={{ backgroundColor: theme.colors.surface }}>
               {/* Header with gradient */}
-              <div className="bg-gradient-to-r from-[#5865f2] to-[#4752c4] px-6 py-5">
+              <div className="px-6 py-5" style={{ background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})` }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="h-12 w-12 rounded-full bg-[#2f3136]/20 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
                         <UserPlus className="h-6 w-6 text-white" />
                       </div>
                     </div>
@@ -162,7 +176,9 @@ export default function InvitationsPage() {
                       setShowCreateModal(false);
                       reset();
                     }}
-                    className="text-white/80 hover:text-white hover:bg-[#2f3136]/10 rounded-lg p-2 transition-colors"
+                    className="text-white/80 hover:text-white rounded-lg p-2 transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -170,22 +186,28 @@ export default function InvitationsPage() {
               </div>
 
               {/* Form Content */}
-              <div className="bg-[#2f3136] px-6 py-6">
+              <div className="px-6 py-6" style={{ backgroundColor: theme.colors.surface }}>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   {/* Email Field */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-white mb-2">
+                    <label htmlFor="email" className="block text-sm font-semibold mb-2" style={{ color: theme.colors.text }}>
                       Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-gray-400" />
+                        <Mail className="h-5 w-5" style={{ color: theme.colors.textSecondary }} />
                       </div>
                       <input
                         id="email"
                         type="email"
                         {...register('email')}
-                        className="input pl-10 w-full border-[#202225] focus:ring-primary-500 focus:border-primary-500"
+                        className="input pl-10 w-full focus:ring-2 transition-colors"
+                        style={{ 
+                          backgroundColor: theme.colors.surface,
+                          border: `1px solid ${theme.colors.border}`,
+                          color: theme.colors.text,
+                          '--tw-ring-color': theme.colors.primary
+                        }}
                         placeholder="colleague@example.com"
                       />
                     </div>
@@ -198,27 +220,39 @@ export default function InvitationsPage() {
 
                   {/* Role Field */}
                   <div>
-                    <label htmlFor="role_id" className="block text-sm font-semibold text-white mb-2">
+                    <label htmlFor="role_id" className="block text-sm font-semibold mb-2" style={{ color: theme.colors.text }}>
                       Assign Role <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Shield className="h-5 w-5 text-gray-400" />
+                        <Shield className="h-5 w-5" style={{ color: theme.colors.textSecondary }} />
                       </div>
                       <select
                         id="role_id"
                         {...register('role_id', { valueAsNumber: true })}
-                        className="input pl-10 w-full border-[#202225] focus:ring-primary-500 focus:border-primary-500 appearance-none bg-[#2f3136]"
+                        className="input pl-10 w-full focus:ring-2 appearance-none transition-colors"
+                        style={{ 
+                          backgroundColor: theme.colors.surface,
+                          border: `1px solid ${theme.colors.border}`,
+                          color: theme.colors.text,
+                          '--tw-ring-color': theme.colors.primary
+                        }}
+                        disabled={!roles || roles.length === 0}
                       >
-                        <option value="">Choose a role...</option>
+                        <option value="">
+                          {!roles || roles.length === 0 
+                            ? 'No assignable roles available' 
+                            : 'Choose a role...'}
+                        </option>
                         {roles?.filter((role: any) => !role.is_organization_owner).map((role: any) => (
                           <option key={role.id} value={role.id}>
                             {role.name}{role.is_default ? ' (Default)' : ''}
+                            {role.hierarchy_level && ` - Level ${role.hierarchy_level}`}
                           </option>
                         ))}
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <svg className="h-5 w-5" style={{ color: theme.colors.textSecondary }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                         </svg>
                       </div>
@@ -228,25 +262,33 @@ export default function InvitationsPage() {
                         <span className="mr-1">⚠</span> {errors.role_id.message}
                       </p>
                     )}
-                    <p className="mt-2 text-xs text-[#8e9297]">
+                    <p className="mt-2 text-xs" style={{ color: theme.colors.textSecondary }}>
                       <Sparkles className="h-3 w-3 inline mr-1" />
-                      Organization Owner role cannot be assigned via invitations
+                      {roles && roles.length > 0 
+                        ? 'Only roles with lower authority than your role can be assigned. Organization Owner role cannot be assigned via invitations.'
+                        : 'You do not have permission to assign any roles, or no roles are available for assignment based on your role hierarchy level.'}
                     </p>
                   </div>
 
                   {/* Message Field */}
                   <div>
-                    <label htmlFor="message" className="block text-sm font-semibold text-white mb-2">
-                      Personal Message <span className="text-gray-400 font-normal">(Optional)</span>
+                    <label htmlFor="message" className="block text-sm font-semibold mb-2" style={{ color: theme.colors.text }}>
+                      Personal Message <span className="font-normal" style={{ color: theme.colors.textSecondary }}>(Optional)</span>
                     </label>
                     <textarea
                       id="message"
                       {...register('message')}
                       rows={4}
-                      className="input w-full border-[#202225] focus:ring-primary-500 focus:border-primary-500 resize-none"
+                      className="input w-full resize-none focus:ring-2 transition-colors"
+                      style={{ 
+                        backgroundColor: theme.colors.surface,
+                        border: `1px solid ${theme.colors.border}`,
+                        color: theme.colors.text,
+                        '--tw-ring-color': theme.colors.primary
+                      }}
                       placeholder="Hi! I'd like to invite you to join our organization. Looking forward to working together!"
                     />
-                    <p className="mt-1 text-xs text-[#8e9297]">
+                    <p className="mt-1 text-xs" style={{ color: theme.colors.textSecondary }}>
                       {(watch('message') || '').length} / 500 characters
                     </p>
                     {errors.message && (
@@ -257,21 +299,35 @@ export default function InvitationsPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-end space-x-3 pt-4 border-t border-[#202225]">
+                  <div className="flex justify-end space-x-3 pt-4" style={{ borderTop: `1px solid ${theme.colors.border}` }}>
                     <button
                       type="button"
                       onClick={() => {
                         setShowCreateModal(false);
                         reset();
                       }}
-                      className="px-4 py-2 text-sm font-medium text-[#b9bbbe] bg-[#2f3136] border border-[#202225] rounded-lg hover:bg-[#36393f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                      className="px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 transition-colors"
+                      style={{ 
+                        color: theme.colors.textSecondary,
+                        backgroundColor: theme.colors.surface,
+                        border: `1px solid ${theme.colors.border}`
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.background}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.surface}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={createMutation.isPending}
-                      className="px-6 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                      className="px-6 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                      style={{ backgroundColor: theme.colors.primary }}
+                      onMouseEnter={(e) => {
+                        if (!createMutation.isPending) e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!createMutation.isPending) e.currentTarget.style.backgroundColor = theme.colors.primary;
+                      }}
                     >
                       {createMutation.isPending ? (
                         <>
@@ -299,34 +355,34 @@ export default function InvitationsPage() {
       {/* Statistics Cards */}
       {data && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
               <Mail className="h-8 w-8 text-yellow-500 mr-3" />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Pending</p>
-                <p className="text-2xl font-semibold text-white">
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Pending</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>
                   {data.invitations?.filter((inv: any) => inv.status === 'pending' && !isExpired(inv.expires_at)).length || 0}
                 </p>
               </div>
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Accepted</p>
-                <p className="text-2xl font-semibold text-white">
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Accepted</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>
                   {data.invitations?.filter((inv: any) => inv.status === 'accepted').length || 0}
                 </p>
               </div>
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
-              <XCircle className="h-8 w-8 text-[#8e9297] mr-3" />
+              <XCircle className="h-8 w-8 mr-3" style={{ color: theme.colors.textSecondary }} />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Expired/Cancelled</p>
-                <p className="text-2xl font-semibold text-white">
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Expired/Cancelled</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>
                   {data.invitations?.filter((inv: any) => 
                     inv.status === 'expired' || inv.status === 'cancelled' || isExpired(inv.expires_at)
                   ).length || 0}
@@ -338,36 +394,36 @@ export default function InvitationsPage() {
       )}
 
       {isLoading ? (
-        <div className="card animate-pulse">
-          <div className="h-64 bg-[#36393f] rounded"></div>
+        <div className="card animate-pulse" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
+          <div className="h-64 rounded" style={{ backgroundColor: theme.colors.background }}></div>
         </div>
       ) : (
-        <div className="card mt-4">
+        <div className="card mt-4" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[#202225]">
-              <thead className="bg-[#36393f]">
+            <table className="min-w-full" style={{ borderColor: theme.colors.border }}>
+              <thead style={{ backgroundColor: theme.colors.background }}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Expires
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Invited By
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-[#2f3136] divide-y divide-[#202225]">
+              <tbody style={{ backgroundColor: theme.colors.background }}>
                 {data?.invitations && data.invitations.length > 0 ? (() => {
                   // Group invitations by email
                   const groupedByEmail: Record<string, any[]> = {};
@@ -396,11 +452,16 @@ export default function InvitationsPage() {
                     ) || latestInvitation;
 
                     return (
-                      <tr key={email} className="hover:bg-[#36393f]">
+                      <tr 
+                        key={email} 
+                        style={{ borderTop: `1px solid ${theme.colors.border}` }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.surface}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <Mail className="h-5 w-5 text-gray-400 mr-2" />
-                            <span className="text-sm font-medium text-white">{email}</span>
+                            <Mail className="h-5 w-5 mr-2" style={{ color: theme.colors.textSecondary }} />
+                            <span className="text-sm font-medium" style={{ color: theme.colors.text }}>{email}</span>
                             {invitations.length > 1 && (
                               <button
                                 onClick={() => setHistoryModal({ email, invitations })}
@@ -415,11 +476,11 @@ export default function InvitationsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {pendingInvitation.role ? (
-                            <span className="px-2 py-1 text-xs font-medium text-[#b9bbbe] bg-[#393c43] rounded-full">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full" style={{ color: theme.colors.textSecondary, backgroundColor: theme.colors.surface }}>
                               {pendingInvitation.role.name}
                             </span>
                           ) : (
-                            <span className="text-sm text-gray-400">N/A</span>
+                            <span className="text-sm" style={{ color: theme.colors.textSecondary }}>N/A</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -435,8 +496,9 @@ export default function InvitationsPage() {
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : latestInvitation.status === 'accepted'
                                     ? 'bg-green-100 text-green-800'
-                                    : 'bg-[#393c43] text-[#dcddde]'
+                                    : ''
                                 }`}
+                                style={invExpired && latestInvitation.status === 'pending' || latestInvitation.status === 'pending' || latestInvitation.status === 'accepted' ? {} : { backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}
                               >
                                 {invExpired && latestInvitation.status === 'pending' 
                                   ? 'Expired' 
@@ -446,7 +508,7 @@ export default function InvitationsPage() {
                           })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center text-sm text-[#8e9297]">
+                          <div className="flex items-center text-sm" style={{ color: theme.colors.textSecondary }}>
                             <Clock className="h-4 w-4 mr-1" />
                             {formatDate(pendingInvitation.expires_at)}
                             {expired && hasPending && (
@@ -454,21 +516,21 @@ export default function InvitationsPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#8e9297]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: theme.colors.textSecondary }}>
                           {pendingInvitation.inviter ? (
                             <span className="flex items-center">
-                              <span className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center mr-2">
-                                <span className="text-primary-600 font-medium text-xs">
+                              <span className="h-8 w-8 rounded-full flex items-center justify-center mr-2" style={{ backgroundColor: theme.colors.primary + '1A' }}>
+                                <span className="font-medium text-xs" style={{ color: theme.colors.primary }}>
                                   {pendingInvitation.inviter.first_name?.[0]?.toUpperCase() || ''}
                                   {pendingInvitation.inviter.last_name?.[0]?.toUpperCase() || ''}
                                 </span>
                               </span>
-                              <span>
+                              <span style={{ color: theme.colors.text }}>
                                 {pendingInvitation.inviter.first_name} {pendingInvitation.inviter.last_name}
                               </span>
                             </span>
                           ) : (
-                            <span className="text-gray-400 italic">Unknown</span>
+                            <span className="italic" style={{ color: theme.colors.textSecondary }}>Unknown</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -493,7 +555,7 @@ export default function InvitationsPage() {
                             <div className="text-right">
                               {latestInvitation.canceller ? (
                                 <>
-                                  <div className="text-xs text-[#8e9297] mb-1">Cancelled by</div>
+                                  <div className="text-xs mb-1" style={{ color: theme.colors.textSecondary }}>Cancelled by</div>
                                   <div className="flex items-center justify-end">
                                     <span className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center mr-2">
                                       <span className="text-red-600 font-medium text-xs">

@@ -31,6 +31,7 @@
                 <h2>Table of Contents</h2>
                 <ul>
                     <li><a href="#overview">Organization Overview</a></li>
+                    <li><a href="#setup-reset">Setup & Reset</a></li>
                     <li><a href="#member-management">Member Management</a></li>
                     <li><a href="#roles-permissions">Roles & Permissions</a></li>
                     <li><a href="#organization-settings">Organization Settings</a></li>
@@ -41,6 +42,41 @@
                     <li><a href="#api-reference">Complete API Reference</a></li>
                 </ul>
             </div>
+            
+            <h2 id="setup-reset">Setup & Reset</h2>
+            <p>This section covers how to set up and reset the Mero Jugx project, which is essential for organization administrators and developers.</p>
+            
+            <h3>Complete Reset</h3>
+            <p>To completely reset the project and remove everything:</p>
+            <pre><code>npm run reset:all</code></pre>
+            <p><strong>What gets removed:</strong></p>
+            <ul>
+                <li>All <code>node_modules</code> (backend and frontend)</li>
+                <li>All <code>dist</code> and <code>build</code> folders</li>
+                <li>ALL database tables and data</li>
+                <li>All <code>.env</code> files</li>
+                <li>npm cache and logs</li>
+                <li>Docker containers (optional volume removal)</li>
+            </ul>
+            <p><strong>After reset:</strong> Run <code>npm run setup</code> to set up everything fresh.</p>
+            
+            <h3>Setup</h3>
+            <p>To set up the project (for new developers or after reset):</p>
+            <pre><code>npm run setup</code></pre>
+            <p>The setup script will prompt you to choose:</p>
+            <ul>
+                <li><strong>Manual Setup:</strong> Requires local PostgreSQL and Redis installations</li>
+                <li><strong>Docker Setup:</strong> Uses Docker Compose for PostgreSQL and Redis (recommended)</li>
+            </ul>
+            <p><strong>What setup does:</strong></p>
+            <ul>
+                <li>Installs all dependencies (backend and frontend)</li>
+                <li>Creates comprehensive <code>.env</code> files with all values (allows project to work immediately)</li>
+                <li>Starts Docker containers (if using Docker setup)</li>
+                <li>Runs all database migrations (creates all tables)</li>
+                <li>Seeds all initial data (packages, permissions, roles, etc.)</li>
+            </ul>
+            <p><strong>For new developers:</strong> Clone the repository and run <code>npm run setup</code> - same process as after reset.</p>
 
             <h2 id="overview">Organization Overview</h2>
             <p>Organizations are workspaces where teams collaborate. Each organization has:</p>

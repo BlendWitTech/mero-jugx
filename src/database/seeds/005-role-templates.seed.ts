@@ -1,8 +1,8 @@
 import { DataSource } from 'typeorm';
-import { Package } from '../entities/package.entity';
-import { RoleTemplate } from '../entities/role-template.entity';
-import { RoleTemplatePermission } from '../entities/role-template-permission.entity';
-import { Permission } from '../entities/permission.entity';
+import { Package } from '../entities/packages.entity';
+import { RoleTemplate } from '../entities/role_templates.entity';
+import { RoleTemplatePermission } from '../entities/role_template_permissions.entity';
+import { Permission } from '../entities/permissions.entity';
 
 export async function seedRoleTemplates(dataSource: DataSource): Promise<void> {
   const packageRepository = dataSource.getRepository(Package);

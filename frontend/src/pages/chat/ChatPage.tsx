@@ -5,8 +5,9 @@ import { chatService, Chat, Message } from '../../services/chatService';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Socket } from 'socket.io-client';
-import { Send, Plus, Phone, Video, MoreVertical, Search, Users, Star, X, UserPlus } from 'lucide-react';
+import { Send, Plus, Phone, Video, MoreVertical, Search, Users, Star, X, UserPlus, Loader2, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getErrorMessage, logError } from '../../utils/errorHandler';
 import api from '../../services/api';
 
 export default function ChatPage() {
@@ -191,7 +192,8 @@ export default function ChatPage() {
       const result = await chatService.getMessages(organization.id, chatId);
       setMessages(result.messages.reverse());
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to load messages');
+      logError(error, 'Load Messages');
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -209,7 +211,8 @@ export default function ChatPage() {
 
       setMessageText('');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to send message');
+      logError(error, 'Send Message');
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -470,56 +473,73 @@ export default function ChatPage() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-[#202225] scrollbar-track-transparent">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.sender_id === currentUser?.id ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.sender_id !== currentUser?.id && (
-                    <div className="w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center text-white text-xs flex-shrink-0">
-                      {message.sender?.first_name?.charAt(0).toUpperCase() || '?'}
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      message.sender_id === currentUser?.id
-                        ? 'bg-[#5865f2] text-white'
-                        : 'bg-[#2f3136] text-white'
-                    }`}
-                  >
-                    {message.sender_id !== currentUser?.id && (
-                      <div className="text-xs text-[#8e9297] mb-1">
-                        {message.sender?.first_name} {message.sender?.last_name}
-                      </div>
-                    )}
-                    <div>{message.content}</div>
-                    <div className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-3 text-[#8e9297]" />
+                    <p className="text-[#b9bbbe]">No messages yet. Start the conversation!</p>
                   </div>
                 </div>
-              ))}
+              ) : (
+                messages.map((message, index) => {
+                  const isCurrentUser = message.sender_id === currentUser?.id;
+                  const showAvatar = !isCurrentUser && (
+                    index === 0 || messages[index - 1]?.sender_id !== message.sender_id
+                  );
+                  
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 items-end group ${isCurrentUser ? 'justify-end' : 'justify-start'} animate-slideUp`}
+                    >
+                      {showAvatar && (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5865f2] to-[#4752c4] flex items-center justify-center text-white text-xs flex-shrink-0 shadow-lg">
+                          {message.sender?.first_name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                      )}
+                      {!showAvatar && <div className="w-8 flex-shrink-0"></div>}
+                      <div
+                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-lg transition-all duration-300 ${
+                          isCurrentUser
+                            ? 'bg-gradient-to-br from-[#5865f2] to-[#4752c4] text-white group-hover:shadow-[#5865f2]/30'
+                            : 'bg-gradient-to-br from-[#2f3136] to-[#36393f] text-white border border-[#202225]/50 group-hover:border-[#5865f2]/30'
+                        }`}
+                      >
+                        {!isCurrentUser && message.sender && showAvatar && (
+                          <div className="text-xs font-semibold text-[#b9bbbe] mb-1.5">
+                            {message.sender.first_name} {message.sender.last_name}
+                          </div>
+                        )}
+                        <div className="text-sm leading-relaxed break-words">{message.content}</div>
+                        <div className={`text-xs mt-1.5 ${isCurrentUser ? 'text-white/70' : 'text-[#8e9297]'}`}>
+                          {new Date(message.created_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}
-            <div className="bg-[#2f3136] border-t border-[#202225] px-6 py-4">
-              <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-t from-[#2f3136] to-[#36393f] border-t border-[#202225]/50 px-6 py-4 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
                 <input
                   type="text"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 bg-[#202225] border border-[#202225] rounded-lg text-white placeholder-[#8e9297] focus:outline-none focus:ring-2 focus:ring-[#5865f2]"
+                  className="flex-1 px-4 py-3 bg-[#202225]/80 backdrop-blur-sm border border-[#202225]/50 rounded-xl text-white placeholder-[#8e9297] focus:outline-none focus:ring-2 focus:ring-[#5865f2]/50 focus:border-[#5865f2]/50 transition-all duration-300"
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageText.trim()}
-                  className="p-3 bg-[#5865f2] text-white rounded-lg hover:bg-[#4752c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-3 bg-gradient-to-br from-[#5865f2] to-[#4752c4] text-white rounded-xl hover:from-[#4752c4] hover:to-[#5865f2] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-[#5865f2]/30 hover:scale-105 active:scale-95"
                 >
                   <Send className="h-5 w-5" />
                 </button>
@@ -748,35 +768,40 @@ function CreateGroupModal({ onClose, onSuccess }: any) {
               />
             </div>
             <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-thin">
-              {filteredMembers?.map((member: any) => {
-                const isSelected = selectedMembers.includes(member.id);
-                return (
-                  <button
-                    key={member.id}
-                    onClick={() => handleToggleMember(member.id)}
-                    className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors ${
-                      isSelected
-                        ? 'bg-[#5865f2]/20 border-2 border-[#5865f2]'
-                        : 'bg-[#202225] hover:bg-[#393c43] border-2 border-transparent'
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-semibold">
-                      {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-white font-medium">
-                        {member.first_name} {member.last_name}
+              {filteredMembers
+                ?.filter((member: any) => {
+                  const { user: currentUser } = useAuthStore.getState();
+                  return member.id !== currentUser?.id; // Hide creator from selection
+                })
+                .map((member: any) => {
+                  const isSelected = selectedMembers.includes(member.id);
+                  return (
+                    <button
+                      key={member.id}
+                      onClick={() => handleToggleMember(member.id)}
+                      className={`w-full p-3 rounded-lg flex items-center gap-3 transition-colors ${
+                        isSelected
+                          ? 'bg-[#5865f2]/20 border-2 border-[#5865f2]'
+                          : 'bg-[#202225] hover:bg-[#393c43] border-2 border-transparent'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-semibold">
+                        {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
                       </div>
-                      <div className="text-sm text-[#8e9297]">{member.email}</div>
-                    </div>
-                    {isSelected && (
-                      <div className="w-5 h-5 rounded-full bg-[#5865f2] flex items-center justify-center">
-                        <X className="h-3 w-3 text-white" />
+                      <div className="flex-1 text-left">
+                        <div className="text-white font-medium">
+                          {member.first_name} {member.last_name}
+                        </div>
+                        <div className="text-sm text-[#8e9297]">{member.email}</div>
                       </div>
-                    )}
-                  </button>
-                );
-              })}
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-full bg-[#5865f2] flex items-center justify-center">
+                          <X className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           </div>
         </div>

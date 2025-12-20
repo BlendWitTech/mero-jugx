@@ -7,6 +7,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { chatService } from '../services/chatService';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function RightSidebar({ 
   isCollapsed, 
@@ -17,8 +18,9 @@ export default function RightSidebar({
   onCollapse?: () => void;
   onExpand?: () => void;
 }) {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isOrganizationOwner } = usePermissions();
   const { organization } = useAuthStore();
+  const { theme } = useTheme();
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const queryClient = useQueryClient();
 
@@ -26,8 +28,15 @@ export default function RightSidebar({
   const { data: currentPackage } = useQuery({
     queryKey: ['current-package'],
     queryFn: async () => {
-      const response = await api.get('/organizations/me/package');
-      return response.data;
+      try {
+        const response = await api.get('/organizations/me/package');
+        return response.data;
+      } catch (error: any) {
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return null;
+        }
+        throw error;
+      }
     },
     enabled: !!organization?.id,
     retry: false,
@@ -118,17 +127,29 @@ export default function RightSidebar({
 
   return (
     <>
-      <div className="w-[240px] h-full bg-[#2f3136] flex flex-col border-l border-[#202225] transition-all duration-300">
+      <div 
+        className="w-[240px] h-full flex flex-col border-l transition-all duration-300"
+        style={{ 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border 
+        }}
+      >
         {/* Header */}
-        <div className="h-12 px-4 border-b border-[#202225] flex items-center justify-between flex-shrink-0">
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wide">
+        <div 
+          className="h-12 px-4 border-b flex items-center justify-between flex-shrink-0"
+          style={{ borderColor: theme.colors.border }}
+        >
+          <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.colors.text }}>
             Quick Access
           </h2>
           <button
             onClick={() => {
               onCollapse?.();
             }}
-            className="text-[#b9bbbe] hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: theme.colors.textSecondary }}
+            onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.text}
+            onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
             title="Collapse sidebar"
           >
             <ChevronRight className="h-5 w-5" />
@@ -136,17 +157,19 @@ export default function RightSidebar({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#202225] scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent" style={{ scrollbarColor: `${theme.colors.border} transparent` }}>
           <div className="p-4 space-y-4">
             {/* Support Section */}
-            <QuickAccessSection
-              title="Support"
-              icon={Ticket}
-              items={[
-                { label: 'Tickets', icon: Ticket, href: '/tickets' },
-                { label: 'Chat with Admin', icon: MessageSquare, href: '/chat/admin' },
-              ]}
-            />
+            {((isOrganizationOwner || hasPermission('tickets.view')) || (isOrganizationOwner || hasPermission('admin_chat.access'))) && (
+              <QuickAccessSection
+                title="Support"
+                icon={Ticket}
+                items={[
+                  ...((isOrganizationOwner || hasPermission('tickets.view')) ? [{ label: 'Tickets', icon: Ticket, href: `/org/${organization?.slug}/tickets` }] : []),
+                  ...((isOrganizationOwner || hasPermission('admin_chat.access')) ? [{ label: 'Chat with Admin', icon: MessageSquare, href: `/org/${organization?.slug}/chat/admin` }] : []),
+                ]}
+              />
+            )}
 
             {/* Online Users Section */}
             {hasPermission('users.view') && (
@@ -178,9 +201,9 @@ export default function RightSidebar({
 
             {/* Chat Access Alert */}
             {!hasChatAccess && (
-              <div className="p-3 bg-[#ed4245]/10 border border-[#ed4245]/20 rounded-lg">
-                <p className="text-xs text-[#ed4245] font-medium mb-1">Chat Not Available</p>
-                <p className="text-xs text-[#8e9297]">
+              <div className="p-3 rounded-lg" style={{ backgroundColor: `${theme.colors.accent}10`, border: `1px solid ${theme.colors.accent}20` }}>
+                <p className="text-xs font-medium mb-1" style={{ color: theme.colors.accent }}>Chat Not Available</p>
+                <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
                   Purchase the chat app or ask the organization to unlock this feature.
                 </p>
               </div>
@@ -201,11 +224,12 @@ export default function RightSidebar({
 }
 
 function QuickAccessSection({ title, icon: Icon, items }: any) {
+  const { theme } = useTheme();
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <Icon className="h-4 w-4 text-[#8e9297]" />
-        <h3 className="text-xs font-semibold text-[#8e9297] uppercase tracking-wide">
+        <Icon className="h-4 w-4" style={{ color: theme.colors.textSecondary }} />
+        <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme.colors.textSecondary }}>
           {title}
         </h3>
       </div>
@@ -216,7 +240,16 @@ function QuickAccessSection({ title, icon: Icon, items }: any) {
             <a
               key={item.label}
               href={item.href}
-              className="flex items-center gap-2 px-2 py-1.5 rounded text-sm text-[#96989d] hover:bg-[#393c43] hover:text-[#dcddde] transition-colors group"
+              className="flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors group"
+              style={{ color: theme.colors.textSecondary }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
             >
               <ItemIcon className="h-4 w-4 flex-shrink-0" />
               <span>{item.label}</span>
@@ -240,6 +273,7 @@ function OnlineUsersSection({
   const [isExpanded, setIsExpanded] = useState(true);
   const { user: currentUser, organization } = useAuthStore();
   const { hasPermission, isOrganizationOwner } = usePermissions();
+  const { theme } = useTheme();
   // Organization owners should always be able to view users
   const canViewUsers = hasPermission('users.view') || isOrganizationOwner;
 
@@ -299,11 +333,8 @@ function OnlineUsersSection({
         }
       }
     } catch (error: any) {
-      if (error.response?.status === 403) {
-        toast.error('Chat feature is not available. Please upgrade to Platinum or Diamond package, or purchase the Chat System feature.');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to open chat');
-      }
+      // Error toast is already handled by API interceptor
+      // No need to show duplicate toast here
     }
   };
 
@@ -322,28 +353,31 @@ function OnlineUsersSection({
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center justify-between w-full mb-2 group"
+        style={{ color: theme.colors.textSecondary }}
+        onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.text}
+        onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
       >
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-[#8e9297] group-hover:text-[#dcddde] transition-colors" />
-          <h3 className="text-xs font-semibold text-[#8e9297] uppercase tracking-wide group-hover:text-[#dcddde] transition-colors">
+          <Users className="h-4 w-4 transition-colors" />
+          <h3 className="text-xs font-semibold uppercase tracking-wide transition-colors">
             Online Now
           </h3>
         </div>
         {isExpanded ? (
-          <ChevronUp className="h-4 w-4 text-[#8e9297] group-hover:text-[#dcddde] transition-colors" />
+          <ChevronUp className="h-4 w-4 transition-colors" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-[#8e9297] group-hover:text-[#dcddde] transition-colors" />
+          <ChevronDown className="h-4 w-4 transition-colors" />
         )}
       </button>
 
       {isExpanded && (
         <div className="space-y-2">
           {!canViewUsers ? (
-            <div className="text-xs text-[#8e9297] px-2">No permission to view users</div>
+            <div className="text-xs px-2" style={{ color: theme.colors.textSecondary }}>No permission to view users</div>
           ) : isLoading ? (
-            <div className="text-xs text-[#8e9297] px-2">Loading...</div>
+            <div className="text-xs px-2" style={{ color: theme.colors.textSecondary }}>Loading...</div>
           ) : error ? (
-            <div className="text-xs text-[#ed4245] px-2">Failed to load users</div>
+            <div className="text-xs px-2" style={{ color: '#ed4245' }}>Failed to load users</div>
           ) : members && members.length > 0 ? (
             <>
               {members.map((member: any) => {
@@ -352,7 +386,9 @@ function OnlineUsersSection({
                   <button
                     key={member.id}
                     onClick={() => handleUserClick(member.id, `${member.first_name} ${member.last_name}`.trim())}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#393c43] transition-colors group relative"
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors group relative"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.border}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <div className="relative flex-shrink-0">
                       {member.avatar_url ? (
@@ -362,7 +398,7 @@ function OnlineUsersSection({
                           className="h-8 w-8 rounded-full"
                         />
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-[#5865f2] flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.colors.primary }}>
                           <span className="text-xs font-semibold text-white">
                             {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
                           </span>
@@ -370,18 +406,18 @@ function OnlineUsersSection({
                       )}
                       {/* Show green dot for active users (online status tracking can be added later) */}
                       {member.status === 'active' && (
-                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#23a55a] border-2 border-[#2f3136]"></div>
+                        <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-[#23a55a] border-2" style={{ borderColor: theme.colors.surface }}></div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-medium text-[#dcddde] truncate">
+                      <p className="text-sm font-medium truncate" style={{ color: theme.colors.text }}>
                         {member.first_name} {member.last_name}
                       </p>
                       {/* Show "Active now" for active users (online status tracking can be added later) */}
                       {member.status === 'active' && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3 text-[#8e9297]" />
-                          <span className="text-xs text-[#8e9297]">Active now</span>
+                          <Clock className="h-3 w-3" style={{ color: theme.colors.textSecondary }} />
+                          <span className="text-xs" style={{ color: theme.colors.textSecondary }}>Active now</span>
                         </div>
                       )}
                     </div>
@@ -396,7 +432,7 @@ function OnlineUsersSection({
               })}
             </>
           ) : (
-            <div className="text-xs text-[#8e9297] px-2">No one online</div>
+            <div className="text-xs px-2" style={{ color: theme.colors.textSecondary }}>No one online</div>
           )}
         </div>
       )}
@@ -418,6 +454,7 @@ function GroupsSection({
   getUnreadCount: (chatId: string) => number;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { theme } = useTheme();
 
   return (
     <div>
@@ -425,32 +462,44 @@ function GroupsSection({
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-2 group flex-1"
+          style={{ color: theme.colors.textSecondary }}
+          onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.text}
+          onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
         >
-          <Hash className="h-4 w-4 text-[#8e9297] group-hover:text-[#dcddde] transition-colors" />
-          <h3 className="text-xs font-semibold text-[#8e9297] uppercase tracking-wide group-hover:text-[#dcddde] transition-colors">
+          <Hash className="h-4 w-4 transition-colors" />
+          <h3 className="text-xs font-semibold uppercase tracking-wide transition-colors">
             Groups
           </h3>
         </button>
         {canCreateGroup && (
           <button
             onClick={onCreateGroup}
-            className="p-1 text-[#8e9297] hover:text-[#dcddde] hover:bg-[#393c43] rounded transition-colors"
+            className="p-1 rounded transition-colors"
+            style={{ color: theme.colors.textSecondary }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.backgroundColor = theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textSecondary;
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
             title="Create Group"
           >
             <Plus className="h-4 w-4" />
           </button>
         )}
         {isExpanded ? (
-          <ChevronUp className="h-4 w-4 text-[#8e9297] ml-1" />
+          <ChevronUp className="h-4 w-4 ml-1" style={{ color: theme.colors.textSecondary }} />
         ) : (
-          <ChevronDown className="h-4 w-4 text-[#8e9297] ml-1" />
+          <ChevronDown className="h-4 w-4 ml-1" style={{ color: theme.colors.textSecondary }} />
         )}
       </div>
 
       {isExpanded && (
         <div className="space-y-1">
           {groups.length === 0 ? (
-            <div className="text-xs text-[#8e9297] px-2">No groups yet</div>
+            <div className="text-xs px-2" style={{ color: theme.colors.textSecondary }}>No groups yet</div>
           ) : (
             groups.map((group) => {
               const unreadCount = getUnreadCount(group.id);
@@ -458,10 +507,12 @@ function GroupsSection({
                 <button
                   key={group.id}
                   onClick={() => onOpenChat(group.id)}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#393c43] transition-colors text-left relative"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors text-left relative"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.border}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <Hash className="h-4 w-4 text-[#8e9297] flex-shrink-0" />
-                  <span className="text-sm text-[#dcddde] truncate flex-1">{group.name || 'Unnamed Group'}</span>
+                  <Hash className="h-4 w-4 flex-shrink-0" style={{ color: theme.colors.textSecondary }} />
+                  <span className="text-sm truncate flex-1" style={{ color: theme.colors.text }}>{group.name || 'Unnamed Group'}</span>
                   {unreadCount > 0 && (
                     <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-[#ed4245] text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
                       {unreadCount > 999 ? '999+' : unreadCount}
@@ -483,15 +534,24 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const { organization } = useAuthStore();
   const { user: currentUser } = useAuthStore();
+  const { theme } = useTheme();
 
   // Fetch members for group selection
   const { data: membersData } = useQuery({
     queryKey: ['group-members'],
     queryFn: async () => {
-      const response = await api.get('/users', { params: { limit: 100 } });
-      return response.data.users || [];
+      try {
+        const response = await api.get('/users', { params: { limit: 100 } });
+        return response.data.users || [];
+      } catch (error: any) {
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: !!organization?.id,
+    retry: false,
   });
 
   // Include all active members (including current user) - they can choose to include/exclude themselves
@@ -518,19 +578,22 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#2f3136] rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="rounded-lg p-6 max-w-md w-full mx-4" style={{ backgroundColor: theme.colors.surface }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-white">Create Group</h2>
+          <h2 className="text-xl font-semibold" style={{ color: theme.colors.text }}>Create Group</h2>
           <button
             onClick={onClose}
-            className="text-[#b9bbbe] hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: theme.colors.textSecondary }}
+            onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.text}
+            onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#dcddde] mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>
               Group Name *
             </label>
             <input
@@ -538,12 +601,18 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter group name"
-              className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#5865f2]"
+              className="w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 resize-none"
+              style={{ 
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                '--tw-ring-color': theme.colors.primary
+              }}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#dcddde] mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>
               Description (optional)
             </label>
             <textarea
@@ -551,52 +620,70 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter group description"
               rows={2}
-              className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#5865f2] resize-none"
+              className="w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 resize-none"
+              style={{ 
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                '--tw-ring-color': theme.colors.primary
+              }}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#dcddde] mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>
               Add Members ({selectedMembers.length} selected)
             </label>
-            <div className="mb-2 px-2 py-1.5 bg-[#36393f] rounded-lg">
-              <p className="text-xs text-[#8e9297]">
-                Creating group as: <span className="text-[#dcddde] font-medium">{creatorName}</span>
+            <div className="mb-2 px-2 py-1.5 rounded-lg" style={{ backgroundColor: theme.colors.background }}>
+              <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                Creating group as: <span className="font-medium" style={{ color: theme.colors.text }}>{creatorName}</span>
               </p>
             </div>
-            <div className="max-h-48 overflow-y-auto bg-[#40444b] rounded-lg p-2 space-y-1 scrollbar-thin scrollbar-thumb-[#202225] scrollbar-track-transparent">
+            <div className="max-h-48 overflow-y-auto rounded-lg p-2 space-y-1 scrollbar-thin scrollbar-track-transparent" style={{ backgroundColor: theme.colors.background, scrollbarColor: `${theme.colors.border} transparent` }}>
               {availableMembers.length === 0 ? (
-                <p className="text-xs text-[#8e9297] px-2 py-2">No members available</p>
+                <p className="text-xs px-2 py-2" style={{ color: theme.colors.textSecondary }}>No members available</p>
               ) : (
-                availableMembers.map((member: any) => {
-                  const isCurrentUser = member.id === currentUser?.id;
-                  const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown';
-                  
-                  return (
-                    <button
-                      key={member.id}
-                      type="button"
-                      onClick={() => toggleMember(member.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
-                        selectedMembers.includes(member.id)
-                          ? 'bg-[#5865f2] text-white'
-                          : 'hover:bg-[#36393f] text-[#dcddde]'
-                      } ${isCurrentUser ? 'ring-1 ring-[#5865f2]/50' : ''}`}
-                    >
-                      <div className="h-8 w-8 rounded-full bg-[#5865f2] flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-white">
-                          {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
+                availableMembers
+                  .filter((member: any) => member.id !== currentUser?.id) // Hide creator from selection
+                  .map((member: any) => {
+                    const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Unknown';
+                    const isSelected = selectedMembers.includes(member.id);
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => toggleMember(member.id)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors"
+                        style={isSelected ? {
+                          backgroundColor: theme.colors.primary,
+                          color: '#ffffff'
+                        } : {
+                          color: theme.colors.text
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = theme.colors.background;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: theme.colors.primary }}>
+                          <span className="text-xs font-semibold text-white">
+                            {`${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-sm truncate flex-1">
+                          {memberName}
                         </span>
-                      </div>
-                      <span className="text-sm truncate flex-1">
-                        {memberName}
-                        {isCurrentUser && <span className="text-xs text-[#8e9297] ml-1">(You)</span>}
-                      </span>
-                      {selectedMembers.includes(member.id) && (
-                        <span className="ml-auto text-xs">✓</span>
-                      )}
-                    </button>
-                  );
-                })
+                        {isSelected && (
+                          <span className="ml-auto text-xs">✓</span>
+                        )}
+                      </button>
+                    );
+                  })
               )}
             </div>
           </div>
@@ -604,14 +691,34 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-[#40444b] hover:bg-[#36393f] text-white rounded transition-colors"
+              className="flex-1 px-4 py-2 rounded transition-colors"
+              style={{ 
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.border}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.background}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
-              className="flex-1 px-4 py-2 bg-[#5865f2] hover:bg-[#4752c4] text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: theme.colors.primary,
+                color: '#ffffff'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = theme.colors.primary;
+                }
+              }}
             >
               Create
             </button>

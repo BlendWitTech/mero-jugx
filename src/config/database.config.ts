@@ -15,7 +15,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       password: this.configService.get<string>('DB_PASSWORD', 'postgres'),
       database: this.configService.get<string>('DB_NAME', 'mero_jugx'),
       entities: [__dirname + '/../database/entities/**/*.entity{.ts,.js}'],
-      migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
+      migrations: [__dirname + '/../database/migrations/[0-9]*-*.ts'],
       migrationsTableName: 'migrations',
       synchronize: false, // Always false when using migrations to avoid conflicts
       logging: this.configService.get<boolean>('DB_LOGGING', true),

@@ -5,15 +5,15 @@ import { UserRolesController } from './user-roles.controller';
 import { RoleTemplatesController } from './role-templates.controller';
 import { RolesService } from './roles.service';
 import { RoleTemplatesService } from './role-templates.service';
-import { Role } from '../database/entities/role.entity';
-import { Permission } from '../database/entities/permission.entity';
-import { RolePermission } from '../database/entities/role-permission.entity';
-import { RoleTemplate } from '../database/entities/role-template.entity';
-import { RoleTemplatePermission } from '../database/entities/role-template-permission.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember } from '../database/entities/organization-member.entity';
-import { Notification } from '../database/entities/notification.entity';
-import { Package } from '../database/entities/package.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Permission } from '../database/entities/permissions.entity';
+import { RolePermission } from '../database/entities/role_permissions.entity';
+import { RoleTemplate } from '../database/entities/role_templates.entity';
+import { RoleTemplatePermission } from '../database/entities/role_template_permissions.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { OrganizationMember } from '../database/entities/organization_members.entity';
+import { Notification } from '../database/entities/notifications.entity';
+import { Package } from '../database/entities/packages.entity';
 import { CommonModule } from '../common/common.module';
 
 @Module({

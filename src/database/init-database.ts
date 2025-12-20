@@ -37,28 +37,28 @@ export async function initializeDatabase(): Promise<void> {
       );
     `);
 
-    // Run migrations if migrations table doesn't exist or if there are pending migrations
-    if (!migrationsTableExists[0]?.exists) {
-      console.log('📋 Running migrations (first time setup)...');
+    // Always run migrations - this is safe as it only runs pending migrations
+    // TypeORM's runMigrations() automatically skips already-executed migrations
+    console.log('📋 Running migrations...');
+    
+    try {
       const migrations = await AppDataSource.runMigrations();
       if (migrations.length > 0) {
+        console.log(`  ✓ Applied ${migrations.length} migration(s):`);
         migrations.forEach((migration) => {
-          console.log(`  ✓ Applied migration: ${migration.name}`);
-        });
-      }
-      console.log('  ✓ Migrations completed.\n');
-    } else {
-      // Check for pending migrations
-      const hasPendingMigrations = await AppDataSource.showMigrations();
-      if (hasPendingMigrations) {
-        console.log('📋 Found pending migration(s). Running...');
-        const migrations = await AppDataSource.runMigrations();
-        migrations.forEach((migration) => {
-          console.log(`  ✓ Applied migration: ${migration.name}`);
+          console.log(`    - ${migration.name}`);
         });
         console.log('  ✓ Migrations completed.\n');
       } else {
-        console.log('✓ All migrations are up to date.\n');
+        console.log('  ✓ All migrations are up to date.\n');
+      }
+    } catch (error: any) {
+      // If migrations fail, provide helpful error message
+      console.error('  ❌ Error running migrations:', error?.message || error);
+      if (error?.message?.includes('already exists')) {
+        console.log('  ℹ Some migrations may have been partially applied. Continuing...\n');
+      } else {
+        throw error;
       }
     }
 

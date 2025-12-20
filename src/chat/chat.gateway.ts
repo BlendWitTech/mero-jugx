@@ -12,10 +12,10 @@ import { UseGuards, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
-import { User } from '../database/entities/user.entity';
+import { User } from '../database/entities/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -381,7 +381,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('call:offer')
   async handleCallOffer(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; otherUserId: string; callType: 'audio' | 'video'; offer: RTCSessionDescriptionInit },
+    @MessageBody() data: { chatId: string; otherUserId: string; callType: 'audio' | 'video'; offer: any },
   ) {
     try {
       if (!client.userId || !client.organizationId) {
@@ -425,7 +425,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('call:answer')
   async handleCallAnswer(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; otherUserId: string; answer: RTCSessionDescriptionInit },
+    @MessageBody() data: { chatId: string; otherUserId: string; answer: any },
   ) {
     try {
       if (!client.userId || !client.organizationId) {
@@ -450,7 +450,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('call:ice-candidate')
   async handleIceCandidate(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; candidate: RTCIceCandidateInit },
+    @MessageBody() data: { chatId: string; candidate: any },
   ) {
     try {
       if (!client.userId || !client.organizationId) {

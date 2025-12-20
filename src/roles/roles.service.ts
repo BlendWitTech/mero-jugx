@@ -7,16 +7,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { Role } from '../database/entities/role.entity';
-import { Permission } from '../database/entities/permission.entity';
-import { RolePermission } from '../database/entities/role-permission.entity';
-import { Organization } from '../database/entities/organization.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Permission } from '../database/entities/permissions.entity';
+import { RolePermission } from '../database/entities/role_permissions.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { Notification } from '../database/entities/notification.entity';
-import { Package } from '../database/entities/package.entity';
+} from '../database/entities/organization_members.entity';
+import { Notification } from '../database/entities/notifications.entity';
+import { Package } from '../database/entities/packages.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignRoleDto } from './dto/assign-role.dto';
@@ -684,6 +684,100 @@ export class RolesService {
     }
     // Default to 3 if not set
     return 3;
+  }
+
+  async getAssignableRoles(userId: string, organizationId: string): Promise<Role[]> {
+    // Verify user is member and has permission
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role'],
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    // Check permission (roles.assign)
+    if (membership.role.is_organization_owner) {
+      // Organization owner has all permissions
+    } else {
+      const roleWithPermissions = await this.roleRepository.findOne({
+        where: { id: membership.role_id },
+        relations: ['role_permissions', 'role_permissions.permission'],
+      });
+
+      const hasPermission = roleWithPermissions?.role_permissions?.some(
+        (rp) => rp.permission.slug === 'roles.assign',
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenException('You do not have permission to assign roles');
+      }
+    }
+
+    // Get organization
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+      relations: ['package'],
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // Get all available roles for the organization
+    const defaultRoles = await this.roleRepository.find({
+      where: {
+        organization_id: null,
+        is_default: true,
+        is_active: true,
+      },
+    });
+
+    const orgRoles = organization.package.slug !== 'freemium'
+      ? await this.roleRepository.find({
+          where: {
+            organization_id: organizationId,
+            is_active: true,
+          },
+        })
+      : [];
+
+    const allRoles = [...defaultRoles, ...orgRoles];
+
+    // Get requesting user's hierarchy level
+    const requestingRoleLevel = this.getRoleHierarchyLevel(membership.role);
+
+    // Filter roles based on hierarchy:
+    // - Organization owners can assign any role (except other owners)
+    // - Other users can only assign roles with hierarchy level > their own
+    const assignableRoles = allRoles.filter((role) => {
+      // Cannot assign organization owner role
+      if (role.is_organization_owner) {
+        return false;
+      }
+
+      // Organization owners can assign any role except owner
+      if (membership.role.is_organization_owner) {
+        return true;
+      }
+
+      // Get role hierarchy level
+      const roleLevel = this.getRoleHierarchyLevel(role);
+
+      // Can only assign roles with higher hierarchy level (lower number = higher authority)
+      // So we can only assign roles where level > requesting user's level
+      // This means: roleLevel < requestingRoleLevel is NOT allowed
+      // We need: roleLevel >= requestingRoleLevel (but roleLevel cannot equal requestingRoleLevel)
+      // Actually, we want: roleLevel > requestingRoleLevel (role has lower authority)
+      return roleLevel > requestingRoleLevel;
+    });
+
+    return assignableRoles;
   }
 
   private async assignPermissionsToRole(roleId: number, permissionIds: number[]): Promise<void> {

@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsBoolean } from 'class-validator';
-import { ChatMemberRole } from '../../database/entities/chat-member.entity';
+import { ChatMemberRole } from '../../database/entities/chat_members.entity';
 
 export class UpdateMemberDto {
   @IsEnum(ChatMemberRole)

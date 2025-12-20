@@ -7,17 +7,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
-import { Chat, ChatType, ChatStatus } from '../database/entities/chat.entity';
-import { ChatMember, ChatMemberRole, ChatMemberStatus } from '../database/entities/chat-member.entity';
-import { Message, MessageType, MessageStatus } from '../database/entities/message.entity';
-import { MessageAttachment } from '../database/entities/message-attachment.entity';
-import { MessageReadStatus } from '../database/entities/message-read-status.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
-import { User } from '../database/entities/user.entity';
-import { Package } from '../database/entities/package.entity';
-import { OrganizationPackageFeature, OrganizationPackageFeatureStatus } from '../database/entities/organization-package-feature.entity';
-import { PackageFeature } from '../database/entities/package-feature.entity';
+import { Chat, ChatType, ChatStatus } from '../database/entities/chats.entity';
+import { ChatMember, ChatMemberRole, ChatMemberStatus } from '../database/entities/chat_members.entity';
+import { Message, MessageType, MessageStatus } from '../database/entities/messages.entity';
+import { MessageAttachment } from '../database/entities/message_attachments.entity';
+import { MessageReadStatus } from '../database/entities/message_read_status.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
+import { User } from '../database/entities/users.entity';
+import { Package } from '../database/entities/packages.entity';
+import { OrganizationPackageFeature, OrganizationPackageFeatureStatus } from '../database/entities/organization_package_features.entity';
+import { PackageFeature } from '../database/entities/package_features.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -27,6 +27,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
+import { Ticket, TicketPriority, TicketSource, TicketStatus } from '../database/entities/tickets.entity';
 
 @Injectable()
 export class ChatService {
@@ -55,6 +56,8 @@ export class ChatService {
     private orgFeatureRepository: Repository<OrganizationPackageFeature>,
     @InjectRepository(PackageFeature)
     private featureRepository: Repository<PackageFeature>,
+    @InjectRepository(Ticket)
+    private ticketRepository: Repository<Ticket>,
     private dataSource: DataSource,
     private auditLogsService: AuditLogsService,
     private notificationHelper: NotificationHelperService,
@@ -137,36 +140,70 @@ export class ChatService {
     // Verify membership
     await this.verifyMembership(userId, organizationId);
 
+    // Normalize member_ids to array
+    const memberIds = dto.member_ids || [];
+
     // For direct chats, ensure exactly 2 members
     if (dto.type === ChatType.DIRECT) {
-      if (dto.member_ids.length !== 1) {
+      if (memberIds.length !== 1) {
         throw new BadRequestException('Direct chat must have exactly one other member');
       }
 
       // Check if direct chat already exists
-      const existingDirectChat = await this.findDirectChat(organizationId, userId, dto.member_ids[0]);
+      const existingDirectChat = await this.findDirectChat(organizationId, userId, memberIds[0]);
       if (existingDirectChat) {
         return existingDirectChat;
       }
     } else {
       // For group chats, check permission
-      // TODO: Check if user has 'chat.create_group' permission
       if (!dto.name) {
         throw new BadRequestException('Group chat must have a name');
       }
+
+      // Check if user has 'chat.create_group' permission
+      // Organization Owner and Admin should always have access
+      const member = await this.memberRepository.findOne({
+        where: {
+          user_id: userId,
+          organization_id: organizationId,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+        relations: ['role', 'role.role_permissions', 'role.role_permissions.permission'],
+      });
+
+      if (!member) {
+        throw new ForbiddenException('You are not a member of this organization');
+      }
+
+      // Organization Owner and Admin (slug: 'admin') can always create group chats
+      const isOwner = member.role?.is_organization_owner;
+      const isAdmin = member.role?.slug === 'admin' && member.role?.is_system_role;
+      const hasPermission =
+        isOwner ||
+        isAdmin ||
+        member.role?.role_permissions?.some(
+          (rp) => rp.permission?.slug === 'chat.create_group',
+        ) ||
+        false;
+
+      if (!hasPermission) {
+        throw new ForbiddenException('You do not have permission to create group chats');
+      }
     }
 
-    // Verify all members exist and are in the organization
-    const members = await this.memberRepository.find({
-      where: {
-        user_id: In([userId, ...dto.member_ids]),
-        organization_id: organizationId,
-        status: OrganizationMemberStatus.ACTIVE,
-      },
-    });
+    // Verify all members exist and are in the organization (only if members are provided)
+    if (memberIds.length > 0) {
+      const members = await this.memberRepository.find({
+        where: {
+          user_id: In([userId, ...memberIds]),
+          organization_id: organizationId,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+      });
 
-    if (members.length !== dto.member_ids.length + 1) {
-      throw new BadRequestException('Some members are not part of this organization');
+      if (members.length !== memberIds.length + 1) {
+        throw new BadRequestException('Some members are not part of this organization');
+      }
     }
 
     // Create chat
@@ -191,7 +228,7 @@ export class ChatService {
         status: ChatMemberStatus.ACTIVE,
       }),
       // Other members
-      ...dto.member_ids.map((memberId) =>
+      ...memberIds.map((memberId) =>
         this.chatMemberRepository.create({
           chat_id: savedChat.id,
           user_id: memberId,
@@ -210,7 +247,7 @@ export class ChatService {
     // Create notifications for other members (chat initiated)
     // For direct chats, notify the other person
     // For group chats, notify all members except creator
-    const otherMembers = dto.member_ids;
+    const otherMembers = memberIds;
     for (const memberId of otherMembers) {
       await this.notificationHelper.createNotification(
         memberId,
@@ -666,12 +703,75 @@ export class ChatService {
     );
 
     // Check for mentions in message content
-    const mentionRegex = /@(\w+)/g;
-    const mentionedUsernames: string[] = [];
+    // Support formats: @username, @firstname, @firstname.lastname, @email, @userId
+    const mentionRegex = /@([\w.-]+@?[\w.-]*)/g;
+    const mentionedStrings: string[] = [];
+    const mentionedUserIds: string[] = [];
+    
     if (dto.content) {
       const matches = dto.content.match(mentionRegex);
       if (matches) {
-        mentionedUsernames.push(...matches.map((m) => m.substring(1)));
+        mentionedStrings.push(...matches.map((m) => m.substring(1).trim()));
+      }
+    }
+
+    // Get all chat members to match mentions
+    const allChatMembers = await this.memberRepository.find({
+      where: {
+        user_id: In(chat.members.map(m => m.user_id)),
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    // Match mentions to actual users
+    for (const mentionStr of mentionedStrings) {
+      const lowerMention = mentionStr.toLowerCase();
+      
+      // Try to match by user ID (if mention is a UUID)
+      if (lowerMention.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        const matchedMember = allChatMembers.find(m => m.user_id.toLowerCase() === lowerMention);
+        if (matchedMember && !mentionedUserIds.includes(matchedMember.user_id)) {
+          mentionedUserIds.push(matchedMember.user_id);
+        }
+        continue;
+      }
+
+      // Try to match by email
+      if (lowerMention.includes('@')) {
+        const matchedMember = allChatMembers.find(m => 
+          m.user?.email?.toLowerCase() === lowerMention
+        );
+        if (matchedMember && !mentionedUserIds.includes(matchedMember.user_id)) {
+          mentionedUserIds.push(matchedMember.user_id);
+        }
+        continue;
+      }
+
+      // Try to match by first name, last name, or full name
+      for (const member of allChatMembers) {
+        if (!member.user) continue;
+        
+        const firstName = member.user.first_name?.toLowerCase() || '';
+        const lastName = member.user.last_name?.toLowerCase() || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        const reverseFullName = `${lastName} ${firstName}`.trim();
+        
+        if (
+          firstName === lowerMention ||
+          lastName === lowerMention ||
+          fullName === lowerMention ||
+          reverseFullName === lowerMention ||
+          fullName.includes(lowerMention) ||
+          firstName.startsWith(lowerMention) ||
+          lastName.startsWith(lowerMention)
+        ) {
+          if (!mentionedUserIds.includes(member.user_id)) {
+            mentionedUserIds.push(member.user_id);
+          }
+          break;
+        }
       }
     }
 
@@ -685,16 +785,12 @@ export class ChatService {
       .andWhere('status = :status', { status: ChatMemberStatus.ACTIVE })
       .execute();
 
+    // Store mentions for notification purposes (we'll track in notifications)
+
     // Create notifications for chat members
     for (const member of chatMembers) {
       // Check if user is mentioned
-      const isMentioned = mentionedUsernames.some((username) => {
-        const memberUser = member.user;
-        if (!memberUser) return false;
-        const fullName = `${memberUser.first_name} ${memberUser.last_name}`.trim().toLowerCase();
-        const email = memberUser.email.toLowerCase();
-        return fullName.includes(username.toLowerCase()) || email.includes(username.toLowerCase());
-      });
+      const isMentioned = mentionedUserIds.includes(member.user_id);
 
       // Get member user details
       const memberUser = await this.userRepository.findOne({ where: { id: member.user_id } });
@@ -1177,6 +1273,96 @@ export class ChatService {
     );
 
     return csvContent;
+  }
+
+  /**
+   * Flag a chat thread to create a ticket
+   */
+  async flagThread(
+    userId: string,
+    organizationId: string,
+    chatId: string,
+    dto: any, // CreateTicketFromChatDto
+  ) {
+    const chat = await this.findOne(userId, organizationId, chatId);
+
+    // Verify message exists and belongs to this chat
+    const message = await this.messageRepository.findOne({
+      where: { id: dto.message_id, chat_id: chatId },
+      relations: ['sender'],
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found in this chat');
+    }
+
+    const priority = dto.priority
+      ? (dto.priority as TicketPriority)
+      : TicketPriority.MEDIUM;
+
+    // Build description with additional context
+    let description = dto.description || dto.message_excerpt || `Ticket created from chat message:\n\n${message.content || ''}`;
+    
+    // Add additional context based on chat type
+    if (chat.type === ChatType.GROUP) {
+      description += `\n\n--- Chat Details ---\n`;
+      description += `Chat Type: Group Chat\n`;
+      description += `Chat Name: ${chat.name || 'Unnamed Group'}\n`;
+      if (dto.participant_ids && dto.participant_ids.length > 0) {
+        description += `Participants: ${dto.participant_ids.length} member(s)\n`;
+      }
+    } else if (chat.type === ChatType.DIRECT) {
+      description += `\n\n--- Chat Details ---\n`;
+      description += `Chat Type: Direct Chat\n`;
+    }
+
+    if (dto.sender_name) {
+      description += `Message Sender: ${dto.sender_name}\n`;
+    }
+
+    if (dto.related_issue) {
+      description += `\n--- Related Issue ---\n${dto.related_issue}\n`;
+    }
+
+    if (dto.urgency_reason && priority === TicketPriority.HIGH) {
+      description += `\n--- Urgency Reason ---\n${dto.urgency_reason}\n`;
+    }
+
+    const ticket = this.ticketRepository.create({
+      organization_id: organizationId,
+      created_by: userId,
+      assignee_id: dto.assignee_id || null,
+      title: dto.title || `Ticket from ${chat.type === ChatType.GROUP ? 'group chat' : 'chat'}: ${chat.name || 'Chat'}`,
+      description,
+      priority,
+      status: TicketStatus.OPEN,
+      source: TicketSource.CHAT_FLAG,
+      chat_id: chatId,
+      message_id: dto.message_id,
+      tags: dto.tags || [],
+      attachment_urls: dto.attachment_urls || null,
+    });
+
+    const savedTicket = await this.ticketRepository.save(ticket);
+
+    // Audit log
+    await this.auditLogsService.createAuditLog(
+      organizationId,
+      userId,
+      'ticket.created_from_chat',
+      'ticket',
+      savedTicket.id,
+      null,
+      {
+        chat_id: chatId,
+        message_id: dto.message_id,
+        source: TicketSource.CHAT_FLAG,
+        chat_type: chat.type,
+        chat_name: chat.name,
+      },
+    );
+
+    return savedTicket;
   }
 }
 

@@ -128,13 +128,16 @@ export const authService = {
   },
 
   async forgotPassword(email: string) {
+    console.log('[AuthService] forgotPassword called with email:', email);
     const response = await api.post('/auth/forgot-password', { email });
+    console.log('[AuthService] forgotPassword response:', response.data);
     return response.data;
   },
 
   async resetPassword(token: string, newPassword: string) {
+    console.log('[AuthService] resetPassword called with token:', token.substring(0, 10), '... (length:', token.length, ')');
     const response = await api.post('/auth/reset-password', {
-      token,
+      token: token.trim(), // Ensure no whitespace
       new_password: newPassword,
     });
     return response.data;

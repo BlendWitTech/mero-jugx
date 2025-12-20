@@ -11,27 +11,124 @@ export class EmailTemplatesService {
 
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+          <meta http-equiv="X-UA-Compatible" content="IE=edge">
+          <meta name="x-apple-disable-message-reformatting">
           <title>${title || appName}</title>
+          <!--[if mso]>
+          <noscript>
+            <xml>
+              <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+              </o:OfficeDocumentSettings>
+            </xml>
+          </noscript>
+          <![endif]-->
           <style>
+            /* Reset styles */
+            body, table, td, p, a, li, blockquote {
+              -webkit-text-size-adjust: 100%;
+              -ms-text-size-adjust: 100%;
+            }
+            table, td {
+              mso-table-lspace: 0pt;
+              mso-table-rspace: 0pt;
+            }
+            img {
+              -ms-interpolation-mode: bicubic;
+              border: 0;
+              outline: none;
+              text-decoration: none;
+            }
+            
+            /* Base styles */
             body {
+              margin: 0;
+              padding: 0;
+              width: 100% !important;
+              height: 100% !important;
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
               line-height: 1.6;
-              color: #333;
+              color: #333333;
+              background-color: #f4f4f4;
+              -webkit-font-smoothing: antialiased;
+              -moz-osx-font-smoothing: grayscale;
+            }
+            
+            /* Container */
+            .email-wrapper {
+              width: 100%;
+              background-color: #f4f4f4;
+              padding: 0;
+              margin: 0;
+            }
+            
+            .email-container {
               max-width: 600px;
               margin: 0 auto;
-              padding: 20px;
-              background-color: #f4f4f4;
-            }
-            .container {
               background-color: #ffffff;
-              border-radius: 8px;
-              padding: 30px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
+            
+            /* Content wrapper */
+            .content-wrapper {
+              padding: 20px;
+            }
+            
+            /* Mobile responsive */
+            @media only screen and (max-width: 600px) {
+              .email-container {
+                width: 100% !important;
+                max-width: 100% !important;
+              }
+              .content-wrapper {
+                padding: 15px !important;
+              }
+              .header h1 {
+                font-size: 22px !important;
+              }
+              .button {
+                width: 100% !important;
+                padding: 14px 20px !important;
+                font-size: 16px !important;
+              }
+              table {
+                width: 100% !important;
+              }
+              td {
+                display: block !important;
+                width: 100% !important;
+                padding: 10px 0 !important;
+                text-align: left !important;
+              }
+              .mobile-hide {
+                display: none !important;
+              }
+            }
+            
+            /* Tablet responsive */
+            @media only screen and (min-width: 601px) and (max-width: 1024px) {
+              .email-container {
+                max-width: 90% !important;
+              }
+              .content-wrapper {
+                padding: 25px !important;
+              }
+            }
+            
+            /* Desktop styles */
+            @media only screen and (min-width: 1025px) {
+              .email-container {
+                max-width: 600px;
+              }
+              .content-wrapper {
+                padding: 30px;
+              }
+            }
+            
+            /* Header */
             .header {
               text-align: center;
               margin-bottom: 30px;
@@ -42,49 +139,91 @@ export class EmailTemplatesService {
               color: #2563eb;
               margin: 0;
               font-size: 24px;
+              font-weight: 700;
             }
+            
+            /* Content */
             .content {
               margin: 20px 0;
             }
+            
+            /* Buttons */
             .button {
               display: inline-block;
-              padding: 12px 24px;
-              background-color: #2563eb;
-              color: #ffffff;
+              padding: 16px 32px;
+              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+              color: #ffffff !important;
               text-decoration: none;
-              border-radius: 6px;
+              border-radius: 8px;
               margin: 20px 0;
               font-weight: 600;
+              font-size: 16px;
+              text-align: center;
+              box-shadow: 0 4px 6px rgba(37,99,235,0.3);
             }
             .button:hover {
-              background-color: #1d4ed8;
+              background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+              box-shadow: 0 6px 8px rgba(37,99,235,0.4);
             }
+            
+            /* Links */
+            .link {
+              color: #2563eb;
+              word-break: break-all;
+              text-decoration: none;
+            }
+            .link:hover {
+              text-decoration: underline;
+            }
+            
+            /* Footer */
             .footer {
               margin-top: 30px;
               padding-top: 20px;
               border-top: 1px solid #e0e0e0;
               text-align: center;
               font-size: 12px;
-              color: #666;
+              color: #666666;
             }
-            .link {
-              color: #2563eb;
-              word-break: break-all;
+            
+            /* Tables */
+            table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            
+            /* Spacer */
+            .spacer {
+              height: 20px;
+              line-height: 20px;
+              font-size: 1px;
             }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>${appName}</h1>
-            </div>
-            <div class="content">
-              ${content}
-            </div>
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
-              <p>If you have any questions, please contact our support team.</p>
-            </div>
+          <div class="email-wrapper">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td align="center" style="padding: 20px 0;">
+                  <table role="presentation" class="email-container" cellspacing="0" cellpadding="0" border="0" width="600">
+                    <tr>
+                      <td class="content-wrapper">
+                        <div class="header">
+                          <h1>${appName}</h1>
+                        </div>
+                        <div class="content">
+                          ${content}
+                        </div>
+                        <div class="footer">
+                          <p>© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+                          <p>If you have any questions, please contact our support team.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </div>
         </body>
       </html>
@@ -1017,5 +1156,427 @@ export class EmailTemplatesService {
     `;
 
     return this.getBaseTemplate(content, 'New Invitation Created');
+  }
+
+  getAppSubscriptionExpiringEmail(
+    userName: string,
+    organizationName: string,
+    appName: string,
+    daysRemaining: number,
+  ): string {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const appsUrl = `${frontendUrl}/apps`;
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 12px; display: inline-block; border: 2px solid #f59e0b;">
+          <div style="font-size: 48px; margin-bottom: 10px;">⏰</div>
+          <h1 style="margin: 0; color: #92400e; font-size: 24px; font-weight: 700;">Subscription Expiring Soon</h1>
+        </div>
+      </div>
+
+      <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px;">
+        <p style="margin: 0 0 20px 0; color: #1e293b; font-size: 16px; line-height: 1.6;">
+          Hello <strong style="color: #1e293b;">${userName}</strong>,
+        </p>
+        
+        <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.7;">
+          Your organization <strong style="color: #1e293b;">${organizationName}</strong>'s 
+          <strong style="color: #2563eb;">${appName}</strong> subscription expires in 
+          <strong style="color: #f59e0b;">${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}</strong>.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+          <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 16px; margin-bottom: 10px;">📱 Action Required</p>
+          <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.6;">
+            To continue using <strong>${appName}</strong>, please renew your subscription before it expires. 
+            After expiration, you will lose access to this app's features.
+          </p>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${appsUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(245,158,11,0.3);">Renew Subscription</a>
+      </div>
+
+      <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 30px; border: 1px solid #e2e8f0;">
+        <p style="margin: 0; color: #64748b; font-size: 14px; text-align: center;">
+          <strong>Questions?</strong><br>
+          If you have any questions about your subscription or need assistance, please contact our support team.
+        </p>
+      </div>
+    `;
+
+    return this.getBaseTemplate(content, 'App Subscription Expiring Soon');
+  }
+
+  getAppSubscriptionExpiredEmail(
+    userName: string,
+    organizationName: string,
+    appName: string,
+  ): string {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const appsUrl = `${frontendUrl}/apps`;
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; display: inline-block; border: 2px solid #ef4444;">
+          <div style="font-size: 48px; margin-bottom: 10px;">⏰</div>
+          <h1 style="margin: 0; color: #991b1b; font-size: 24px; font-weight: 700;">Subscription Expired</h1>
+        </div>
+      </div>
+
+      <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px;">
+        <p style="margin: 0 0 20px 0; color: #1e293b; font-size: 16px; line-height: 1.6;">
+          Hello <strong style="color: #1e293b;">${userName}</strong>,
+        </p>
+        
+        <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.7;">
+          Your organization <strong style="color: #1e293b;">${organizationName}</strong>'s 
+          <strong style="color: #2563eb;">${appName}</strong> subscription has expired.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #ef4444;">
+          <p style="margin: 0; color: #991b1b; font-weight: 600; font-size: 16px; margin-bottom: 10px;">📱 Access Suspended</p>
+          <p style="margin: 0; color: #7f1d1d; font-size: 14px; line-height: 1.6;">
+            Your access to <strong>${appName}</strong> has been suspended. 
+            To restore access, please renew your subscription.
+          </p>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${appsUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(239,68,68,0.3);">Renew Subscription</a>
+      </div>
+
+      <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 30px; border: 1px solid #e2e8f0;">
+        <p style="margin: 0; color: #64748b; font-size: 14px; text-align: center;">
+          <strong>Questions?</strong><br>
+          If you have any questions about your subscription or need assistance, please contact our support team.
+        </p>
+      </div>
+    `;
+
+    return this.getBaseTemplate(content, 'App Subscription Expired');
+  }
+
+  getAppSubscriptionRenewalDueEmail(
+    userName: string,
+    organizationName: string,
+    appName: string,
+    amount: number,
+  ): string {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const appsUrl = `${frontendUrl}/apps`;
+
+    const formattedAmount = `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 20px; border-radius: 12px; display: inline-block; border: 2px solid #3b82f6;">
+          <div style="font-size: 48px; margin-bottom: 10px;">💳</div>
+          <h1 style="margin: 0; color: #1e40af; font-size: 24px; font-weight: 700;">Renewal Due</h1>
+        </div>
+      </div>
+
+      <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px;">
+        <p style="margin: 0 0 20px 0; color: #1e293b; font-size: 16px; line-height: 1.6;">
+          Hello <strong style="color: #1e293b;">${userName}</strong>,
+        </p>
+        
+        <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.7;">
+          Your organization <strong style="color: #1e293b;">${organizationName}</strong>'s 
+          <strong style="color: #2563eb;">${appName}</strong> subscription is due for renewal.
+        </p>
+
+        <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 16px; margin-bottom: 10px;">💰 Payment Required</p>
+          <p style="margin: 0; color: #1e3a8a; font-size: 14px; line-height: 1.6;">
+            Amount due: <strong style="font-size: 18px;">${formattedAmount}</strong><br>
+            Please complete payment to continue using <strong>${appName}</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${appsUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(59,130,246,0.3);">Complete Payment</a>
+      </div>
+
+      <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 30px; border: 1px solid #e2e8f0;">
+        <p style="margin: 0; color: #64748b; font-size: 14px; text-align: center;">
+          <strong>Questions?</strong><br>
+          If you have any questions about your subscription or need assistance, please contact our support team.
+        </p>
+      </div>
+    `;
+
+    return this.getBaseTemplate(content, 'App Subscription Renewal Due');
+  }
+
+  getAppAccessGrantedEmail(
+    name: string,
+    organizationName: string,
+    appName: string,
+    grantedByName: string,
+    isOwner: boolean = false,
+    isActionPerformer: boolean = false,
+  ): string {
+    const appUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001');
+    const appsUrl = `${appUrl}/apps`;
+
+    let content: string;
+
+    if (isActionPerformer) {
+      // Email to the person who granted access
+      content = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="color: white;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h2 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 10px 0;">App Access Granted</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 0;">You granted access successfully</p>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">
+          You have successfully granted access to <strong style="color: #2563eb;">${appName}</strong> 
+          for a user in <strong style="color: #1e293b;">${organizationName}</strong>.
+        </p>
+      `;
+    } else if (isOwner) {
+      // Email to organization owner
+      content = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="color: white;">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          <h2 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 10px 0;">App Access Granted</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 0;">Access granted in your organization</p>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">
+          <strong style="color: #2563eb;">${grantedByName}</strong> has granted access to 
+          <strong style="color: #1e293b;">${appName}</strong> for a user in your organization 
+          <strong style="color: #2563eb;">${organizationName}</strong>.
+        </p>
+      `;
+    } else {
+      // Email to the user who received access
+      content = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="color: white;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h2 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 10px 0;">App Access Granted</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 0;">You now have access to ${appName}</p>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">
+          <strong style="color: #2563eb;">${grantedByName}</strong> has granted you access to 
+          <strong style="color: #1e293b;">${appName}</strong> in <strong style="color: #2563eb;">${organizationName}</strong>.
+        </p>
+      `;
+    }
+
+    const commonContent = `
+      <div style="background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <div style="display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 12px; border-radius: 10px; margin-right: 15px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          <h3 style="margin: 0; color: #1e293b; font-size: 22px; font-weight: 700;">Access Details</h3>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #475569; width: 40%;">App:</td>
+            <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${appName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #475569;">Organization:</td>
+            <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${organizationName}</td>
+          </tr>
+          ${!isActionPerformer ? `
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #475569;">Granted By:</td>
+            <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${grantedByName}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${appsUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16,185,129,0.3);">View Apps</a>
+      </div>
+    `;
+
+    return this.getBaseTemplate(content + commonContent, 'App Access Granted');
+  }
+
+  getAppAccessRevokedEmail(
+    name: string,
+    organizationName: string,
+    appName: string,
+    revokedByName: string,
+    isOwner: boolean = false,
+    isActionPerformer: boolean = false,
+  ): string {
+    const appUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001');
+    const appsUrl = `${appUrl}/apps`;
+
+    let content: string;
+
+    if (isActionPerformer) {
+      // Email to the person who revoked access
+      content = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="color: white;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h2 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 10px 0;">App Access Revoked</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 0;">You revoked access successfully</p>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">
+          You have successfully revoked access to <strong style="color: #2563eb;">${appName}</strong> 
+          for a user in <strong style="color: #1e293b;">${organizationName}</strong>.
+        </p>
+      `;
+    } else if (isOwner) {
+      // Email to organization owner
+      content = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="color: white;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h2 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 10px 0;">App Access Revoked</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 0;">Access revoked in your organization</p>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">
+          <strong style="color: #2563eb;">${revokedByName}</strong> has revoked access to 
+          <strong style="color: #1e293b;">${appName}</strong> for a user in your organization 
+          <strong style="color: #2563eb;">${organizationName}</strong>.
+        </p>
+      `;
+    } else {
+      // Email to the user who lost access
+      content = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="color: white;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <h2 style="color: #1e293b; font-size: 28px; font-weight: 700; margin: 10px 0;">App Access Revoked</h2>
+          <p style="color: #64748b; font-size: 16px; margin: 0;">Your access to ${appName} has been revoked</p>
+        </div>
+        
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.7;">
+          <strong style="color: #2563eb;">${revokedByName}</strong> has revoked your access to 
+          <strong style="color: #1e293b;">${appName}</strong> in <strong style="color: #2563eb;">${organizationName}</strong>.
+        </p>
+      `;
+    }
+
+    const commonContent = `
+      <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #ef4444;">
+        <p style="margin: 0; color: #991b1b; font-weight: 600; font-size: 16px; margin-bottom: 10px;">⚠️ Access Removed</p>
+        <p style="margin: 0; color: #7f1d1d; font-size: 14px; line-height: 1.6;">
+          ${isActionPerformer 
+            ? 'The user will no longer be able to access this app.' 
+            : 'You will no longer be able to access this app. If you believe this is an error, please contact your organization administrator.'}
+        </p>
+      </div>
+      
+      <div style="background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <div style="display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 12px; border-radius: 10px; margin-right: 15px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          <h3 style="margin: 0; color: #1e293b; font-size: 22px; font-weight: 700;">Access Details</h3>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #475569; width: 40%;">App:</td>
+            <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${appName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #475569;">Organization:</td>
+            <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${organizationName}</td>
+          </tr>
+          ${!isActionPerformer ? `
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #475569;">Revoked By:</td>
+            <td style="padding: 12px 0; color: #1e293b; font-weight: 500;">${revokedByName}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+      
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${appsUrl}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(239,68,68,0.3);">View Apps</a>
+      </div>
+    `;
+
+    return this.getBaseTemplate(content + commonContent, 'App Access Revoked');
+  }
+
+  getMarketingEmail(name: string, content: string, organizationId: string): string {
+    const appUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const unsubscribeUrl = `${appUrl}/org/${organizationId}/settings?tab=notifications`;
+
+    const emailContent = `
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; margin: 25px 0; text-align: center;">
+        <h2 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">🎉 Special Update</h2>
+        <p style="margin: 15px 0 0 0; color: #f0f0f0; font-size: 16px;">Exclusive content just for you!</p>
+      </div>
+      
+      <div style="background: #ffffff; padding: 30px; border-radius: 12px; margin: 25px 0; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <p style="color: #475569; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">Hello <strong style="color: #1e293b;">${name}</strong>,</p>
+        <div style="color: #475569; font-size: 16px; line-height: 1.7;">
+          ${content}
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8fafc; border-radius: 8px;">
+        <p style="color: #64748b; font-size: 14px; margin: 0 0 10px 0;">Don't want to receive these emails?</p>
+        <a href="${unsubscribeUrl}" style="color: #64748b; text-decoration: underline; font-size: 14px;">Unsubscribe from marketing emails</a>
+      </div>
+    `;
+
+    return this.getBaseTemplate(emailContent, 'Marketing Update');
   }
 }

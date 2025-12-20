@@ -78,4 +78,13 @@ export class AuditLogQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Filter by severity level', 
+    enum: ['critical', 'warning', 'info'],
+    example: 'critical'
+  })
+  @IsOptional()
+  @IsEnum(['critical', 'warning', 'info'])
+  severity?: 'critical' | 'warning' | 'info';
 }

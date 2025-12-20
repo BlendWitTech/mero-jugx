@@ -1,7 +1,7 @@
 import { IsEnum, IsNumber, IsString, IsOptional, IsInt, Min } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaymentType, PaymentGateway } from '../../database/entities/payment.entity';
+import { PaymentType, PaymentGateway } from '../../database/entities/payments.entity';
 
 export class CreatePaymentDto {
   @ApiProperty({

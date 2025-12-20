@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import toast from 'react-hot-toast';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Shield, Sparkles, Mail } from 'lucide-react';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -114,85 +114,139 @@ export default function VerifyEmailPage() {
   }, [token, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#36393f] px-4">
-      <div className="bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] p-8 max-w-md w-full text-center">
-        {status === 'loading' && (
-          <>
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#5865f2]/20 mb-4">
-                <Loader2 className="h-10 w-10 text-[#5865f2] animate-spin" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Verifying Email</h2>
-            <p className="text-[#b9bbbe] mb-4">{message}</p>
-            <div className="w-full bg-[#202225] rounded-full h-2">
-              <div className="bg-[#5865f2] h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-            </div>
-          </>
-        )}
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-16 -left-8 w-80 h-80 bg-[#5865f2]/25 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[420px] h-[420px] bg-[#5865f2]/10 rounded-full blur-3xl" />
+      </div>
 
-        {status === 'success' && (
-          <>
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#23a55a]/20 mb-4 animate-scale-in">
-                <CheckCircle className="h-12 w-12 text-[#23a55a]" />
+      <div className="relative max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center z-10">
+        {/* Left: marketing / branding */}
+        <div className="hidden lg:flex flex-col gap-8 text-white animate-fadeIn">
+          <div className="inline-flex items-center gap-3 bg-[#2f3136]/80 border border-[#202225] rounded-full px-4 py-2 w-max">
+            <Sparkles className="w-4 h-4 text-[#faa61a]" />
+            <span className="text-xs font-medium text-[#b9bbbe]">
+              Secure email verification for your account
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <h1 className="text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight">
+              Verify your{' '}
+              <span className="bg-gradient-to-r from-[#ffffff] to-[#a5b4fc] bg-clip-text text-transparent">
+                Email Address
+              </span>
+            </h1>
+            <p className="text-sm text-[#b9bbbe] max-w-md">
+              We're confirming your email to ensure your account security and enable all features
+              of your Mero Jugx workspace.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm text-[#b9bbbe]">
+            <div className="bg-[#2f3136]/70 border border-[#202225] rounded-xl p-4 space-y-2">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#5865f2]/20 text-[#5865f2]">
+                <Shield className="w-4 h-4" />
               </div>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Verification Successful!</h2>
-            <p className="text-[#b9bbbe] mb-6">{message}</p>
-            <div className="bg-[#23a55a]/10 border border-[#23a55a]/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-[#23a55a]">
-                ✅ Your email address has been verified successfully. You can now login to your account.
+              <p className="font-semibold text-white text-sm">Account Security</p>
+              <p className="text-xs text-[#8e9297]">
+                Email verification helps protect your account from unauthorized access.
               </p>
             </div>
-            <p className="text-sm text-[#8e9297] mb-4">Redirecting to login page...</p>
-            <div className="w-full bg-[#202225] rounded-full h-2">
-              <div className="bg-[#23a55a] h-2 rounded-full animate-progress" style={{ width: '100%' }}></div>
-            </div>
-            <button
-              onClick={() => navigate('/login', { 
-                state: { 
-                  emailVerified: true,
-                  message: 'Email verified successfully! You can now login.' 
-                } 
-              })}
-              className="btn btn-primary mt-6 w-full"
-            >
-              Go to Login Now
-            </button>
-          </>
-        )}
-
-        {status === 'error' && (
-          <>
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#ed4245]/20 mb-4">
-                <XCircle className="h-12 w-12 text-[#ed4245]" />
+            <div className="bg-[#2f3136]/70 border border-[#202225] rounded-xl p-4 space-y-2">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#23a55a]/15 text-[#23a55a]">
+                <Mail className="w-4 h-4" />
               </div>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Verification Failed</h2>
-            <p className="text-[#b9bbbe] mb-6">{message}</p>
-            <div className="bg-[#ed4245]/10 border border-[#ed4245]/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-[#ed4245]">
-                ⚠️ The verification link is invalid or has expired. Please request a new verification email.
+              <p className="font-semibold text-white text-sm">Quick Process</p>
+              <p className="text-xs text-[#8e9297]">
+                Verification is instant once you click the link from your email.
               </p>
             </div>
-            <div className="space-y-3">
+          </div>
+        </div>
+
+        {/* Right: verification card */}
+        <div className="relative bg-[#2f3136]/95 backdrop-blur-md rounded-2xl shadow-2xl border border-[#202225] p-8 sm:p-10 space-y-6 animate-slideUp text-center">
+          {status === 'loading' && (
+            <>
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 bg-blue-100 dark:bg-blue-900/30">
+                  <Loader2 className="h-10 w-10 text-blue-600 dark:text-blue-400 animate-spin" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Verifying Email</h2>
+              <p className="text-[#b9bbbe] mb-6">{message}</p>
+              <div className="w-full bg-[#202225] rounded-full h-2">
+                <div className="bg-[#5865f2] h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+              </div>
+            </>
+          )}
+
+          {status === 'success' && (
+            <>
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 animate-scale-in"
+                     style={{ background: `linear-gradient(135deg, #23a55a20 0%, #10b98120 100%)` }}>
+                  <CheckCircle className="h-12 w-12 text-[#23a55a]" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Verification Successful!</h2>
+              <p className="text-[#b9bbbe] mb-6">{message}</p>
+              <div className="bg-[#23a55a]/10 border border-[#23a55a]/20 rounded-lg p-4 mb-6">
+                <p className="text-sm text-[#23a55a]">
+                  ✅ Your email address has been verified successfully. You can now login to your account.
+                </p>
+              </div>
+              <p className="text-sm text-[#8e9297] mb-4">Redirecting to login page...</p>
+              <div className="w-full bg-[#202225] rounded-full h-2 mb-6">
+                <div className="bg-[#23a55a] h-2 rounded-full animate-progress" style={{ width: '100%' }}></div>
+              </div>
               <button
-                onClick={() => navigate('/login')}
-                className="btn btn-primary w-full"
+                onClick={() => navigate('/login', { 
+                  state: { 
+                    emailVerified: true,
+                    message: 'Email verified successfully! You can now login.' 
+                  } 
+                })}
+                className="w-full py-3 rounded-xl font-semibold transition-all bg-[#5865f2] hover:bg-[#4752c4] text-white"
               >
-                Go to Login
+                Go to Login Now
               </button>
-              <button
-                onClick={() => navigate('/register')}
-                className="btn btn-secondary w-full"
-              >
-                Register Again
-              </button>
-            </div>
-          </>
-        )}
+            </>
+          )}
+
+          {status === 'error' && (
+            <>
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4"
+                     style={{ background: `linear-gradient(135deg, #ed424520 0%, #dc262620 100%)` }}>
+                  <XCircle className="h-12 w-12 text-[#ed4245]" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Verification Failed</h2>
+              <p className="text-[#b9bbbe] mb-6">{message}</p>
+              <div className="bg-[#ed4245]/10 border border-[#ed4245]/20 rounded-lg p-4 mb-6">
+                <p className="text-sm text-[#ed4245]">
+                  ⚠️ The verification link is invalid or has expired. Please request a new verification email.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="w-full py-3 rounded-xl font-semibold transition-all bg-[#5865f2] hover:bg-[#4752c4] text-white"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="w-full py-3 rounded-xl font-semibold transition-all bg-[#393c43] hover:bg-[#404249] text-white"
+                >
+                  Register Again
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

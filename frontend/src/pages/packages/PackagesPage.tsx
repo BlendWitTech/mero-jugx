@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { Package, Check, Loader2, CreditCard, X, Calendar, ChevronDown, ChevronUp, Sparkles, Globe, Edit2, Save } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../contexts/ThemeContext';
 import toast from 'react-hot-toast';
 import {
   convertUSDToNPR,
@@ -14,6 +15,7 @@ import { formatLimit } from '../../utils/formatLimit';
 
 export default function PackagesPage() {
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
+  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [isNepal] = useState(() => isNepalRegion());
   const { hasPermission } = usePermissions();
@@ -755,50 +757,52 @@ export default function PackagesPage() {
   };
 
   return (
-    <div className="w-full p-6">
+    <div className="w-full p-6" style={{ backgroundColor: theme.colors.background, color: theme.colors.text }}>
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#5865f2] rounded-lg">
+          <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary }}>
             <Package className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">Packages</h1>
-            <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage your organization package and features</p>
+            <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: theme.colors.text }}>Packages</h1>
+            <p className="mt-2 text-sm sm:text-base" style={{ color: theme.colors.textSecondary }}>Manage your organization package and features</p>
           </div>
         </div>
       </div>
 
       {isLoadingCurrent || isLoadingPackages || isLoadingFeatures ? (
-        <div className="card animate-pulse">
-          <div className="h-8 bg-[#36393f] rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-[#36393f] rounded w-1/2"></div>
+        <div className="card animate-pulse" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
+          <div className="h-8 rounded w-1/4 mb-4" style={{ backgroundColor: theme.colors.background }}></div>
+          <div className="h-4 rounded w-1/2" style={{ backgroundColor: theme.colors.background }}></div>
         </div>
       ) : (
         <>
           {/* Current Package - Collapsible */}
           {currentPackage && (
-            <div className="card mb-4 overflow-hidden">
+            <div className="card mb-4 overflow-hidden" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
               <button
                 onClick={() => setIsCurrentPackageExpanded(!isCurrentPackageExpanded)}
-                className="w-full flex items-center justify-between p-4 hover:bg-[#393c43] transition-colors"
+                className="w-full flex items-center justify-between p-4 transition-colors"
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.background}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <div className="flex items-center flex-1">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 mr-4">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-lg mr-4" style={{ background: `linear-gradient(to bottom right, ${theme.colors.primary}, ${theme.colors.secondary})` }}>
                     <Package className="h-6 w-6 text-white" />
                   </div>
                   <div className="text-left flex-1">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold text-white">
+                      <h2 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
                         {getPackageDisplayName()}
                       </h2>
                       {currentPackage?.active_features && currentPackage.active_features.length > 0 && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-[#5865f2]/20 to-[#5865f2]/30 text-[#5865f2] border border-[#5865f2]/30 rounded-full flex items-center gap-1">
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full flex items-center gap-1" style={{ background: `linear-gradient(to right, ${theme.colors.primary}33, ${theme.colors.primary}4D)`, color: theme.colors.primary, border: `1px solid ${theme.colors.primary}4D` }}>
                           <Sparkles className="h-3 w-3" />
                           Upgraded
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-[#b9bbbe] mt-1">
+                    <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
                       {formatLimit(currentPackage?.current_limits?.users)} users, {formatLimit(currentPackage?.current_limits?.roles)} roles
                     </p>
                   </div>
@@ -815,7 +819,7 @@ export default function PackagesPage() {
                     
                     return (
                       <div className="text-right">
-                        <p className="text-xl font-bold text-[#5865f2]">
+                        <p className="text-xl font-bold" style={{ color: theme.colors.primary }}>
                           {totalPrice === 0 
                             ? 'Free' 
                             : isNepal
@@ -823,28 +827,28 @@ export default function PackagesPage() {
                               : `${formatCurrency(totalPrice, 'USD')} (${formatCurrency(convertUSDToNPR(totalPrice), 'NPR')})`}
                         </p>
                         {totalPrice > 0 && (
-                          <p className="text-xs text-[#8e9297]">per month</p>
+                          <p className="text-xs" style={{ color: theme.colors.textSecondary }}>per month</p>
                         )}
                       </div>
                     );
                   })()}
                   {isCurrentPackageExpanded ? (
-                    <ChevronUp className="h-5 w-5 text-[#8e9297]" />
+                    <ChevronUp className="h-5 w-5" style={{ color: theme.colors.textSecondary }} />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-[#8e9297]" />
+                    <ChevronDown className="h-5 w-5" style={{ color: theme.colors.textSecondary }} />
                   )}
                 </div>
               </button>
 
               {isCurrentPackageExpanded && (
-                <div className="px-4 pb-4 border-t border-[#202225] pt-4 space-y-4">
+                <div className="px-4 pb-4 pt-4 space-y-4" style={{ borderTop: `1px solid ${theme.colors.border}` }}>
 
                   {/* Package Expiration */}
                   {currentPackage?.package_expires_at && (
-                    <div className="flex items-center justify-between p-3 bg-[#202225] rounded-lg border border-[#36393f]">
-                      <div className="flex items-center text-sm text-[#b9bbbe]">
-                        <Calendar className="h-4 w-4 mr-2 text-[#5865f2]" />
-                        <span>Expires on: <strong className="text-white">{formatDate(currentPackage.package_expires_at)}</strong></span>
+                    <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: theme.colors.background, border: `1px solid ${theme.colors.border}` }}>
+                      <div className="flex items-center text-sm" style={{ color: theme.colors.textSecondary }}>
+                        <Calendar className="h-4 w-4 mr-2" style={{ color: theme.colors.primary }} />
+                        <span>Expires on: <strong style={{ color: theme.colors.text }}>{formatDate(currentPackage.package_expires_at)}</strong></span>
                       </div>
                       {(() => {
                         const daysRemaining = getDaysRemaining(currentPackage.package_expires_at);
@@ -866,14 +870,14 @@ export default function PackagesPage() {
 
                   {/* Auto-Renewal Toggle */}
                   {currentPackage?.package && currentPackage.package.price > 0 && canUpgradePackage && (
-                    <div className="flex items-center justify-between p-3 bg-[#202225] rounded-lg border border-[#36393f]">
+                    <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: theme.colors.background, border: `1px solid ${theme.colors.border}` }}>
                       <div className="flex items-center gap-3 flex-1">
-                        <div className="p-2 bg-[#5865f2]/20 rounded-lg">
-                          <Calendar className="h-4 w-4 text-[#5865f2]" />
+                        <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary + '33' }}>
+                          <Calendar className="h-4 w-4" style={{ color: theme.colors.primary }} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-white">Auto-Renewal</p>
-                          <p className="text-xs text-[#8e9297] mt-0.5">Automatically renew when package expires</p>
+                          <p className="text-sm font-medium" style={{ color: theme.colors.text }}>Auto-Renewal</p>
+                          <p className="text-xs mt-0.5" style={{ color: theme.colors.textSecondary }}>Automatically renew when package expires</p>
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
@@ -884,7 +888,23 @@ export default function PackagesPage() {
                           disabled={toggleAutoRenewMutation.isPending}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-[#36393f] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#5865f2]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#2f3136] after:border-[#36393f] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865f2]"></div>
+                        <div 
+                          className="w-11 h-6 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:border after:rounded-full after:h-5 after:w-5 after:transition-all"
+                          style={{ 
+                            backgroundColor: theme.colors.surface,
+                            '--tw-ring-color': theme.colors.primary + '4D'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!currentPackage?.package_auto_renew) {
+                              e.currentTarget.style.backgroundColor = theme.colors.border;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!currentPackage?.package_auto_renew) {
+                              e.currentTarget.style.backgroundColor = theme.colors.surface;
+                            }
+                          }}
+                        ></div>
                       </label>
                     </div>
                   )}
@@ -929,12 +949,13 @@ export default function PackagesPage() {
                             return (
                               <div
                                 key={feature.id}
-                                className="p-4 bg-gradient-to-br from-[#202225] to-[#2f3136] border border-[#36393f] rounded-lg"
+                                className="p-4 rounded-lg"
+                                style={{ background: `linear-gradient(to bottom right, ${theme.colors.background}, ${theme.colors.surface})`, border: `1px solid ${theme.colors.border}` }}
                               >
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-[#5865f2]" />
-                                    <span className="text-sm font-medium text-white">
+                                    <Sparkles className="h-5 w-5" style={{ color: theme.colors.primary }} />
+                                    <span className="text-sm font-medium" style={{ color: theme.colors.text }}>
                                       {feature.feature?.type === 'user_upgrade' 
                                         ? `+${feature.feature.value || 'Unlimited'} Users`
                                         : feature.feature?.type === 'role_upgrade'
@@ -944,7 +965,7 @@ export default function PackagesPage() {
                                   </div>
                                 </div>
                                 <div className="mt-2">
-                                  <p className="text-2xl font-bold text-[#5865f2]">
+                                  <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
                                     {isNepal
                                       ? formatCurrency(convertUSDToNPR(featurePrice), 'NPR')
                                       : formatCurrency(featurePrice, 'USD')}
@@ -964,14 +985,14 @@ export default function PackagesPage() {
 
           {/* Organization URL Editor */}
           {canEditSlug && organization && (
-            <div className="card mb-4">
+            <div className="card mb-4" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-[#5865f2]/20 rounded-lg">
-                  <Globe className="h-5 w-5 text-[#5865f2]" />
+                <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary + '33' }}>
+                  <Globe className="h-5 w-5" style={{ color: theme.colors.primary }} />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold text-white">Organization URL</h2>
-                  <p className="text-sm text-[#8e9297] mt-1">
+                  <h2 className="text-lg font-semibold" style={{ color: theme.colors.text }}>Organization URL</h2>
+                  <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
                     Customize your organization's URL slug
                   </p>
                 </div>
@@ -979,19 +1000,19 @@ export default function PackagesPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#b9bbbe] mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
                     Current URL
                   </label>
-                  <div className="flex items-center gap-2 p-3 bg-[#202225] rounded-lg border border-[#36393f]">
-                    <span className="text-sm text-[#8e9297]">https://yourdomain.com/org/</span>
-                    <span className="text-sm font-medium text-white">{organization.slug || 'your-slug'}</span>
+                  <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: theme.colors.background, border: `1px solid ${theme.colors.border}` }}>
+                    <span className="text-sm" style={{ color: theme.colors.textSecondary }}>https://yourdomain.com/org/</span>
+                    <span className="text-sm font-medium" style={{ color: theme.colors.text }}>{organization.slug || 'your-slug'}</span>
                   </div>
                 </div>
 
                 {isEditingSlug ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-[#b9bbbe] mb-2">
+                      <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
                         New URL Slug
                       </label>
                       <input
@@ -1016,10 +1037,16 @@ export default function PackagesPage() {
                           setNewSlug(value);
                         }}
                         placeholder="your-organization-slug"
-                        className="w-full px-4 py-2 bg-[#202225] border border-[#36393f] rounded-lg text-white placeholder-[#8e9297] focus:outline-none focus:ring-2 focus:ring-[#5865f2] focus:border-transparent"
+                        className="w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 transition-colors"
+                        style={{ 
+                          backgroundColor: theme.colors.background,
+                          border: `1px solid ${theme.colors.border}`,
+                          color: theme.colors.text,
+                          '--tw-ring-color': theme.colors.primary
+                        }}
                         disabled={updateSlugMutation.isPending}
                       />
-                      <p className="mt-1 text-xs text-[#8e9297]">
+                      <p className="mt-1 text-xs" style={{ color: theme.colors.textSecondary }}>
                         Only lowercase letters, numbers, and hyphens. Must be 3-50 characters.
                       </p>
                     </div>
@@ -1035,7 +1062,18 @@ export default function PackagesPage() {
                           }
                         }}
                         disabled={updateSlugMutation.isPending || newSlug.length < 3 || newSlug.length > 50 || newSlug === organization.slug}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#5865f2] text-white rounded-lg hover:bg-[#4752c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: theme.colors.primary, color: '#ffffff' }}
+                        onMouseEnter={(e) => {
+                          if (!updateSlugMutation.isPending && newSlug.length >= 3 && newSlug.length <= 50 && newSlug !== organization.slug) {
+                            e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!updateSlugMutation.isPending && newSlug.length >= 3 && newSlug.length <= 50 && newSlug !== organization.slug) {
+                            e.currentTarget.style.backgroundColor = theme.colors.primary;
+                          }
+                        }}
                       >
                         {updateSlugMutation.isPending ? (
                           <>
@@ -1055,7 +1093,23 @@ export default function PackagesPage() {
                           setNewSlug(organization.slug || '');
                         }}
                         disabled={updateSlugMutation.isPending}
-                        className="px-4 py-2 bg-[#393c43] text-[#b9bbbe] rounded-lg hover:bg-[#404249] transition-colors disabled:opacity-50"
+                        className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        style={{ 
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.textSecondary
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!updateSlugMutation.isPending) {
+                            e.currentTarget.style.backgroundColor = theme.colors.background;
+                            e.currentTarget.style.color = theme.colors.text;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!updateSlugMutation.isPending) {
+                            e.currentTarget.style.backgroundColor = theme.colors.surface;
+                            e.currentTarget.style.color = theme.colors.textSecondary;
+                          }
+                        }}
                       >
                         Cancel
                       </button>
@@ -1067,7 +1121,19 @@ export default function PackagesPage() {
                       setIsEditingSlug(true);
                       setNewSlug(organization.slug || '');
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#393c43] text-[#b9bbbe] rounded-lg hover:bg-[#404249] transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      backgroundColor: theme.colors.surface,
+                      color: theme.colors.textSecondary
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.background;
+                      e.currentTarget.style.color = theme.colors.text;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
                   >
                     <Edit2 className="h-4 w-4" />
                     Edit URL
@@ -1105,14 +1171,27 @@ export default function PackagesPage() {
                   return (
                     <div
                       key={pkg.id}
-                      className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-xl flex flex-col h-full ${
-                        isCurrentPackage
-                          ? 'border-[#5865f2] bg-gradient-to-br from-[#5865f2]/20 to-[#5865f2]/10 shadow-lg'
-                          : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f]'
-                      }`}
+                      className="relative overflow-hidden rounded-xl transition-all duration-300 hover:shadow-xl flex flex-col h-full"
+                      style={isCurrentPackage
+                        ? { 
+                            border: `2px solid ${theme.colors.primary}`,
+                            background: `linear-gradient(to bottom right, ${theme.colors.primary}33, ${theme.colors.primary}1A)`,
+                            boxShadow: `0 10px 15px -3px ${theme.colors.primary}33`,
+                            backgroundColor: theme.colors.surface
+                          }
+                        : { 
+                            border: `2px solid ${theme.colors.border}`,
+                            backgroundColor: theme.colors.surface
+                          }
+                      }
+                      onMouseEnter={(e) => {
+                        if (!isCurrentPackage) {
+                          e.currentTarget.style.borderColor = theme.colors.border;
+                        }
+                      }}
                     >
                       {isCurrentPackage && (
-                        <div className="absolute top-0 right-0 bg-gradient-to-br from-[#5865f2] to-[#4752c4] text-white px-3 py-1 text-xs font-semibold rounded-bl-lg">
+                        <div className="absolute top-0 right-0 px-3 py-1 text-xs font-semibold rounded-bl-lg text-white" style={{ background: `linear-gradient(to bottom right, ${theme.colors.primary}, ${theme.colors.secondary})` }}>
                           Current
                         </div>
                       )}
@@ -1121,21 +1200,13 @@ export default function PackagesPage() {
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className={`p-2 rounded-lg ${
-                                isCurrentPackage 
-                                  ? 'bg-[#5865f2]/20' 
-                                  : 'bg-[#393c43]'
-                              }`}>
-                                <Package className={`h-5 w-5 ${
-                                  isCurrentPackage 
-                                    ? 'text-[#5865f2]' 
-                                    : 'text-[#8e9297]'
-                                }`} />
+                              <div className="p-2 rounded-lg" style={{ backgroundColor: isCurrentPackage ? theme.colors.primary + '33' : theme.colors.surface }}>
+                                <Package className="h-5 w-5" style={{ color: isCurrentPackage ? theme.colors.primary : theme.colors.textSecondary }} />
                               </div>
-                              <h3 className="text-xl font-bold text-white">{pkg.name}</h3>
+                              <h3 className="text-xl font-bold" style={{ color: theme.colors.text }}>{pkg.name}</h3>
                             </div>
                             {pkg.description && (
-                              <p className="text-sm text-[#8e9297]">{pkg.description}</p>
+                              <p className="text-sm" style={{ color: theme.colors.textSecondary }}>{pkg.description}</p>
                             )}
                           </div>
                         </div>
@@ -1143,50 +1214,50 @@ export default function PackagesPage() {
                         <div className="mb-6">
                           {pkg.price === 0 ? (
                             <div className="text-center py-4">
-                              <div className="text-5xl font-bold bg-gradient-to-r from-[#5865f2] to-[#4752c4] bg-clip-text text-transparent mb-2">
+                              <div className="text-5xl font-bold mb-2" style={{ background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                 Free
                               </div>
-                              <p className="text-sm text-[#8e9297]">Forever</p>
+                              <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Forever</p>
                             </div>
                           ) : (
-                            <div className="text-center py-4 bg-gradient-to-br from-[#202225] to-[#2f3136] rounded-xl border border-[#36393f] p-4">
-                              <div className="flex items-baseline justify-center gap-2 mb-2">
-                                <span className="text-5xl font-bold bg-gradient-to-r from-[#5865f2] to-[#4752c4] bg-clip-text text-transparent">
+                            <div className="text-center py-4 rounded-xl p-4" style={{ background: `linear-gradient(to bottom right, ${theme.colors.background}, ${theme.colors.surface})`, border: `1px solid ${theme.colors.border}` }}>
+                              <div className="flex items-baseline justify-center gap-2 mb-2 flex-wrap">
+                                <span className="text-5xl font-bold" style={{ background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                   {isNepal ? formatCurrency(convertUSDToNPR(pkg.price), 'NPR') : formatCurrency(pkg.price, 'USD')}
                                 </span>
+                                <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                                  {isNepal ? (
+                                    <span>({formatCurrency(pkg.price, 'USD')} USD)</span>
+                                  ) : (
+                                    <span>({formatCurrency(convertUSDToNPR(pkg.price), 'NPR')} NPR)</span>
+                                  )}
+                                </span>
                               </div>
-                              <div className="text-xs text-[#8e9297] mb-1">
-                                {isNepal ? (
-                                  <span>{formatCurrency(pkg.price, 'USD')} USD</span>
-                                ) : (
-                                  <span>{formatCurrency(convertUSDToNPR(pkg.price), 'NPR')} NPR</span>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium text-[#b9bbbe] mt-2">per month</p>
+                              <p className="text-sm font-medium mt-2" style={{ color: theme.colors.textSecondary }}>per month</p>
                             </div>
                           )}
                         </div>
 
                         <div className="mb-4 space-y-3 flex-1">
-                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: theme.colors.surface }}>
                             <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                            <span className="text-sm text-[#b9bbbe]">
-                              <strong>{formatLimit(pkg.base_user_limit)}</strong> users included
+                            <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                              <strong style={{ color: theme.colors.text }}>{formatLimit(pkg.base_user_limit)}</strong> users included
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: theme.colors.surface }}>
                             <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                            <span className="text-sm text-[#b9bbbe]">
-                              <strong>{pkg.base_role_limit}</strong> base roles
+                            <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                              <strong style={{ color: theme.colors.text }}>{pkg.base_role_limit}</strong> base roles
                               {pkg.additional_role_limit > 0 && (
-                                <span className="text-xs text-[#8e9297] ml-1">
+                                <span className="text-xs ml-1" style={{ color: theme.colors.textSecondary, opacity: 0.8 }}>
                                   (+{pkg.additional_role_limit} additional)
                                 </span>
                               )}
                             </span>
                           </div>
                           {/* Chat System - show for all packages */}
-                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: theme.colors.surface }}>
                             {pkg.slug === 'platinum' || pkg.slug === 'diamond' ? (
                               <>
                                 <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -1203,8 +1274,26 @@ export default function PackagesPage() {
                               </>
                             )}
                           </div>
+                          {/* Ticket System - show for all packages */}
+                          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: theme.colors.surface }}>
+                            {pkg.slug === 'platinum' || pkg.slug === 'diamond' ? (
+                              <>
+                                <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                                <span className="text-sm text-green-500">
+                                  <strong>Ticket System</strong> included
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-5 w-5 text-red-500 flex-shrink-0" />
+                                <span className="text-sm text-red-500">
+                                  <strong>Ticket System</strong>
+                                </span>
+                              </>
+                            )}
+                          </div>
                           {/* Custom Organization URL - show for all packages */}
-                          <div className="flex items-center gap-2 p-2 bg-[#36393f] rounded-lg">
+                          <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: theme.colors.surface }}>
                             {pkg.slug === 'basic' || pkg.slug === 'platinum' || pkg.slug === 'diamond' ? (
                               <>
                                 <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -1228,7 +1317,7 @@ export default function PackagesPage() {
                           // Don't show purchase button for freemium
                           if (pkg.slug === 'freemium') {
                             return (
-                              <button className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
+                              <button className="w-full py-3 px-4 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                                 <Check className="h-5 w-5 mr-2" />
                                 {isCurrentPackage ? 'Current Package' : 'Default Package'}
                               </button>
@@ -1245,7 +1334,7 @@ export default function PackagesPage() {
 
                           if (isCurrentPackage) {
                             return (
-                              <button className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
+                              <button className="w-full py-3 px-4 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                                 <Check className="h-5 w-5 mr-2" />
                                 Current Package
                               </button>
@@ -1256,7 +1345,7 @@ export default function PackagesPage() {
                           if (isUpgrade || !hasActiveSubscription) {
                             if (!canUpgradePackage) {
                               return (
-                                <div className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg text-center text-sm">
+                                <div className="w-full py-3 px-4 font-semibold rounded-lg text-center text-sm" style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                                   Upgrade not available
                                 </div>
                               );
@@ -1265,7 +1354,23 @@ export default function PackagesPage() {
                               <button
                                 onClick={() => handlePackageUpgrade(pkg)}
                                 disabled={createPackagePaymentMutation.isPending || calculateUpgradePriceMutation.isPending}
-                                className="w-full py-3 px-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3 px-4 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                  background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})`,
+                                  color: '#ffffff'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!createPackagePaymentMutation.isPending && !calculateUpgradePriceMutation.isPending) {
+                                    e.currentTarget.style.background = `linear-gradient(to right, ${theme.colors.secondary}, ${theme.colors.primary})`;
+                                    e.currentTarget.style.boxShadow = `0 10px 15px -3px ${theme.colors.primary}33`;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!createPackagePaymentMutation.isPending && !calculateUpgradePriceMutation.isPending) {
+                                    e.currentTarget.style.background = `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})`;
+                                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                                  }
+                                }}
                               >
                                 {(createPackagePaymentMutation.isPending || calculateUpgradePriceMutation.isPending) ? (
                                   <>
@@ -1285,7 +1390,7 @@ export default function PackagesPage() {
                           // Show disabled button for downgrades when subscription is active
                           if (isDowngrade && hasActiveSubscription) {
                             return (
-                              <button className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled>
+                              <button className="w-full py-3 px-4 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center" disabled style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                                 <X className="h-5 w-5 mr-2" />
                                 Downgrade Not Available
                               </button>
@@ -1295,7 +1400,7 @@ export default function PackagesPage() {
                           // Default: show purchase button
                           if (!canUpgradePackage) {
                             return (
-                              <div className="w-full py-3 px-4 bg-[#393c43] text-[#8e9297] font-semibold rounded-lg text-center text-sm">
+                              <div className="w-full py-3 px-4 font-semibold rounded-lg text-center text-sm" style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                                 Purchase not available
                               </div>
                             );
@@ -1304,7 +1409,22 @@ export default function PackagesPage() {
                             <button
                               onClick={() => handlePackageUpgrade(pkg)}
                               disabled={createPackagePaymentMutation.isPending}
-                              className="w-full py-3 px-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full py-3 px-4 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                              style={{ 
+                                background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})`
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!createPackagePaymentMutation.isPending) {
+                                  e.currentTarget.style.background = `linear-gradient(to right, ${theme.colors.secondary}, ${theme.colors.primary})`;
+                                  e.currentTarget.style.boxShadow = `0 10px 15px -3px ${theme.colors.primary}33`;
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!createPackagePaymentMutation.isPending) {
+                                  e.currentTarget.style.background = `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.secondary})`;
+                                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                                }
+                              }}
                             >
                               {createPackagePaymentMutation.isPending ? (
                                 <>
@@ -1337,7 +1457,7 @@ export default function PackagesPage() {
           {/* Available Features */}
           {features && features.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-white mb-4">Available Features</h2>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.text }}>Available Features</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {features.map((feature: any) => {
                   // Check if this feature is active/purchased
@@ -1348,19 +1468,19 @@ export default function PackagesPage() {
                   return (
                     <div
                       key={feature.id}
-                      className={`card ${
-                        isActive
-                          ? 'border-2 border-[#5865f2] bg-[#5865f2]/10'
-                          : ''
-                      }`}
+                      className="card rounded-lg p-4"
+                      style={isActive
+                        ? { border: `2px solid ${theme.colors.primary}`, backgroundColor: theme.colors.primary + '1A' }
+                        : { backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }
+                      }
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="text-md font-semibold text-white">{feature.name}</h3>
+                        <h3 className="text-md font-semibold" style={{ color: theme.colors.text }}>{feature.name}</h3>
                         <div className="flex items-center gap-2">
                           {isActive && (
-                            <Check className="h-5 w-5 text-[#5865f2]" />
+                            <Check className="h-5 w-5" style={{ color: theme.colors.primary }} />
                           )}
-                          <span className="px-2 py-1 text-xs font-medium bg-[#393c43] text-[#b9bbbe] rounded">
+                          <span className="px-2 py-1 text-xs font-medium rounded" style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                             {feature.type === 'user_upgrade' 
                               ? 'User Upgrade' 
                               : feature.type === 'role_upgrade'
@@ -1372,18 +1492,18 @@ export default function PackagesPage() {
                         </div>
                       </div>
                       {feature.description && (
-                        <p className="text-sm text-[#8e9297] mb-3">{feature.description}</p>
+                        <p className="text-sm mb-3" style={{ color: theme.colors.textSecondary }}>{feature.description}</p>
                       )}
                       <div className="flex items-center justify-between">
                         <div>
                           {feature.value && (
-                            <p className="text-sm text-[#b9bbbe]">
+                            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
                               Value: {feature.value === null ? 'Unlimited' : feature.value}
                             </p>
                           )}
                         </div>
                         <div>
-                          <p className="text-lg font-bold text-primary-600">
+                          <p className="text-lg font-bold" style={{ color: theme.colors.primary }}>
                             {feature.price === 0 ? (
                               'Free'
                             ) : (
@@ -1392,14 +1512,14 @@ export default function PackagesPage() {
                                 {isNepal ? (
                                   <>
                                     {formatCurrency(convertUSDToNPR(feature.price), 'NPR')}
-                                    <span className="text-xs font-normal text-[#8e9297] ml-1">
+                                    <span className="text-xs font-normal ml-1" style={{ color: theme.colors.textSecondary }}>
                                       ({formatCurrency(feature.price, 'USD')})
                                     </span>
                                   </>
                                 ) : (
                                   <>
                                     {formatCurrency(feature.price, 'USD')}
-                                    <span className="text-xs font-normal text-[#8e9297] ml-1">
+                                    <span className="text-xs font-normal ml-1" style={{ color: theme.colors.textSecondary }}>
                                       ({formatCurrency(convertUSDToNPR(feature.price), 'NPR')})
                                     </span>
                                   </>
@@ -1415,6 +1535,17 @@ export default function PackagesPage() {
                             onClick={() => handleFeaturePurchase(feature)}
                             disabled={createFeaturePaymentMutation.isPending}
                             className="btn btn-primary w-full mt-4 flex items-center justify-center"
+                            style={{ backgroundColor: theme.colors.primary, color: '#ffffff' }}
+                            onMouseEnter={(e) => {
+                              if (!createFeaturePaymentMutation.isPending) {
+                                e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!createFeaturePaymentMutation.isPending) {
+                                e.currentTarget.style.backgroundColor = theme.colors.primary;
+                              }
+                            }}
                           >
                             {createFeaturePaymentMutation.isPending ? (
                               <>
@@ -1429,12 +1560,12 @@ export default function PackagesPage() {
                             )}
                           </button>
                         ) : (
-                          <div className="w-full mt-4 py-2 px-4 bg-[#393c43] text-[#8e9297] text-center text-sm rounded-lg">
+                          <div className="w-full mt-4 py-2 px-4 text-center text-sm rounded-lg" style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
                             Purchase not available
                           </div>
                         )
                       ) : (
-                        <button className="btn btn-secondary w-full mt-4" disabled>
+                        <button className="btn btn-secondary w-full mt-4" disabled style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary, border: `1px solid ${theme.colors.border}` }}>
                           <Check className="h-4 w-4 mr-2 inline" />
                           Active
                         </button>
@@ -1450,101 +1581,130 @@ export default function PackagesPage() {
 
       {/* Payment Method Selection Modal */}
       {showPaymentModal && pendingPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-[#2f3136] rounded-xl shadow-2xl max-w-lg w-full p-6 animate-slideUp">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-fadeIn backdrop-blur-sm" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+          <div className="rounded-xl shadow-2xl max-w-lg w-full p-6 animate-slideUp" style={{ backgroundColor: theme.colors.background, border: `1px solid ${theme.colors.border}` }}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-white">Select Payment Method</h2>
+              <h2 className="text-2xl font-bold" style={{ color: theme.colors.text }}>Select Payment Method</h2>
               <button
                 onClick={() => {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
                 }}
-                className="text-gray-400 hover:text-[#8e9297] transition-colors"
+                className="transition-colors"
+                style={{ color: theme.colors.textSecondary }}
+                onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.text}
+                onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             {/* Item Details */}
-            <div className="mb-4 p-4 bg-gradient-to-br from-[#202225] to-[#2f3136] rounded-lg border border-[#36393f]">
-              <p className="text-sm font-medium text-[#b9bbbe] mb-1">Purchasing:</p>
-              <p className="text-lg font-semibold text-white mb-3">
+            <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
+              <p className="text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Purchasing:</p>
+              <p className="text-lg font-semibold mb-3" style={{ color: theme.colors.text }}>
                 {pendingPayment.type === 'package' ? pendingPayment.item.name : pendingPayment.item.name}
               </p>
               
               {/* Subscription Period Selection (only for packages) */}
               {pendingPayment.type === 'package' && pendingPayment.item.price > 0 && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-[#b9bbbe] mb-2">Subscription Period</label>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    {(['3_months', '6_months', '1_year', 'custom'] as const).map((period) => (
-                      <button
-                        key={period}
-                        type="button"
-                        onClick={async () => {
-                          setSelectedPeriod(period);
-                          // Recalculate upgrade price when period changes
-                          if (upgradePriceInfo && upgradePriceInfo.can_upgrade) {
-                            try {
-                              const priceInfo = await calculateUpgradePriceMutation.mutateAsync({
-                                package_id: pendingPayment.item.id,
-                                period: period,
-                                custom_months: period === 'custom' ? customMonths : undefined,
-                              });
-                              setUpgradePriceInfo(priceInfo);
-                            } catch (error) {
-                              console.error('Error recalculating upgrade price:', error);
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>Subscription Period</label>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {(['3_months', '6_months', '1_year', 'custom'] as const).map((period) => (
+                        <button
+                          key={period}
+                          type="button"
+                          onClick={async () => {
+                            setSelectedPeriod(period);
+                            // Recalculate upgrade price when period changes
+                            if (upgradePriceInfo && upgradePriceInfo.can_upgrade) {
+                              try {
+                                const priceInfo = await calculateUpgradePriceMutation.mutateAsync({
+                                  package_id: pendingPayment.item.id,
+                                  period: period,
+                                  custom_months: period === 'custom' ? customMonths : undefined,
+                                });
+                                setUpgradePriceInfo(priceInfo);
+                              } catch (error) {
+                                console.error('Error recalculating upgrade price:', error);
+                              }
                             }
-                          }
-                        }}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
-                          selectedPeriod === period
-                            ? 'border-[#5865f2] bg-[#5865f2]/20 text-white'
-                            : 'border-[#202225] bg-[#2f3136] text-[#b9bbbe] hover:border-[#36393f]'
-                        }`}
-                      >
-                        {period === '3_months' ? '3 Months' : 
-                         period === '6_months' ? '6 Months (4% off)' :
-                         period === '1_year' ? '1 Year (7.5% off)' :
-                         'Custom'}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedPeriod === 'custom' && (
-                    <div className="mt-2">
-                      <label className="block text-xs font-medium text-[#8e9297] mb-1">Number of Months</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={customMonths}
-                        onChange={async (e) => {
-                          const months = Math.max(1, parseInt(e.target.value) || 12);
-                          setCustomMonths(months);
-                          // Recalculate upgrade price when custom months change
-                          if (upgradePriceInfo && upgradePriceInfo.can_upgrade && selectedPeriod === 'custom') {
-                            try {
-                              const priceInfo = await calculateUpgradePriceMutation.mutateAsync({
-                                package_id: pendingPayment.item.id,
-                                period: 'custom',
-                                custom_months: months,
-                              });
-                              setUpgradePriceInfo(priceInfo);
-                            } catch (error) {
-                              console.error('Error recalculating upgrade price:', error);
+                          }}
+                          className="px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all"
+                          style={{
+                            borderColor: selectedPeriod === period ? theme.colors.primary : theme.colors.border,
+                            backgroundColor: selectedPeriod === period ? `${theme.colors.primary}33` : theme.colors.surface,
+                            color: selectedPeriod === period ? theme.colors.text : theme.colors.textSecondary,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedPeriod !== period) {
+                              e.currentTarget.style.borderColor = theme.colors.border;
+                              e.currentTarget.style.backgroundColor = theme.colors.background;
                             }
-                          }
-                        }}
-                        className="w-full px-3 py-2 text-sm border border-[#36393f] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      />
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedPeriod !== period) {
+                              e.currentTarget.style.borderColor = theme.colors.border;
+                              e.currentTarget.style.backgroundColor = theme.colors.surface;
+                            }
+                          }}
+                        >
+                          {period === '3_months' ? '3 Months' : 
+                           period === '6_months' ? '6 Months (4% off)' :
+                           period === '1_year' ? '1 Year (7.5% off)' :
+                           'Custom'}
+                        </button>
+                      ))}
+                    </div>
+                    {selectedPeriod === 'custom' && (
+                      <div className="mt-2">
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Number of Months</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={customMonths}
+                          onChange={async (e) => {
+                            const months = Math.max(1, parseInt(e.target.value) || 12);
+                            setCustomMonths(months);
+                            // Recalculate upgrade price when custom months change
+                            if (upgradePriceInfo && upgradePriceInfo.can_upgrade && selectedPeriod === 'custom') {
+                              try {
+                                const priceInfo = await calculateUpgradePriceMutation.mutateAsync({
+                                  package_id: pendingPayment.item.id,
+                                  period: 'custom',
+                                  custom_months: months,
+                                });
+                                setUpgradePriceInfo(priceInfo);
+                              } catch (error) {
+                                console.error('Error recalculating upgrade price:', error);
+                              }
+                            }
+                          }}
+                          className="w-full px-3 py-2 text-sm rounded-lg focus:ring-2 transition-colors"
+                          style={{
+                            backgroundColor: theme.colors.surface,
+                            border: `1px solid ${theme.colors.border}`,
+                            color: theme.colors.text,
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = theme.colors.primary;
+                            e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.colors.primary}33`;
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = theme.colors.border;
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        />
                       {customMonths > 12 && (
-                        <p className="mt-1 text-xs text-[#23a55a] font-medium">✓ 10% discount applied</p>
+                        <p className="mt-1 text-xs font-medium" style={{ color: '#23a55a' }}>✓ 10% discount applied</p>
                       )}
                       {customMonths === 12 && (
-                        <p className="mt-1 text-xs text-[#23a55a] font-medium">✓ 7.5% discount applied</p>
+                        <p className="mt-1 text-xs font-medium" style={{ color: '#23a55a' }}>✓ 7.5% discount applied</p>
                       )}
                       {customMonths >= 6 && customMonths < 12 && (
-                        <p className="mt-1 text-xs text-[#23a55a] font-medium">✓ 4% discount applied</p>
+                        <p className="mt-1 text-xs font-medium" style={{ color: '#23a55a' }}>✓ 4% discount applied</p>
                       )}
                     </div>
                   )}
@@ -1562,43 +1722,43 @@ export default function PackagesPage() {
                     const finalPrice = showProratedCredit ? upgradePriceInfo.final_price : subscription.discountedPrice;
 
                     return (
-                      <div className="mt-3 p-3 bg-[#2f3136] rounded-lg border border-[#202225]">
+                      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-[#8e9297]">New Package Price:</span>
-                          <span className="text-sm font-medium text-[#b9bbbe]">
+                          <span className="text-sm" style={{ color: theme.colors.textSecondary }}>New Package Price:</span>
+                          <span className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
                             {formatCurrency(subscription.discountedPrice, 'USD')}
                           </span>
                         </div>
                         {subscription.discountPercent > 0 && (
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-[#8e9297]">Period Discount ({subscription.discountPercent}%):</span>
-                            <span className="text-sm font-medium text-[#23a55a]">
+                            <span className="text-sm" style={{ color: theme.colors.textSecondary }}>Period Discount ({subscription.discountPercent}%):</span>
+                            <span className="text-sm font-medium" style={{ color: '#23a55a' }}>
                               -{formatCurrency(subscription.originalPrice - subscription.discountedPrice, 'USD')}
                             </span>
                           </div>
                         )}
                         {showProratedCredit && (
                           <>
-                            <div className="flex items-center justify-between mb-1 mt-2 pt-2 border-t border-[#202225]">
-                              <span className="text-sm text-[#8e9297]">Prorated Credit ({upgradePriceInfo.remaining_days} days remaining):</span>
-                              <span className="text-sm font-medium text-[#5865f2]">
+                            <div className="flex items-center justify-between mb-1 mt-2 pt-2" style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+                              <span className="text-sm" style={{ color: theme.colors.textSecondary }}>Prorated Credit ({upgradePriceInfo.remaining_days} days remaining):</span>
+                              <span className="text-sm font-medium" style={{ color: theme.colors.primary }}>
                                 -{formatCurrency(upgradePriceInfo.prorated_credit, 'USD')}
                               </span>
                             </div>
-                            <div className="text-xs text-[#8e9297] mt-1">
+                            <div className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>
                               Credit from remaining subscription time
                             </div>
                           </>
                         )}
-                        <div className="flex items-center justify-between pt-2 border-t border-[#202225] mt-2">
-                          <span className="text-base font-semibold text-white">Final Price:</span>
-                          <span className="text-xl font-bold text-[#5865f2]">
+                        <div className="flex items-center justify-between pt-2 mt-2" style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+                          <span className="text-base font-semibold" style={{ color: theme.colors.text }}>Final Price:</span>
+                          <span className="text-xl font-bold" style={{ color: theme.colors.primary }}>
                             {selectedGateway === 'stripe'
                               ? formatCurrency(finalPrice, 'USD')
                               : formatCurrency(convertUSDToNPR(finalPrice), 'NPR')}
                           </span>
                         </div>
-                        <p className="text-xs text-[#8e9297] mt-1">
+                        <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>
                           {subscription.months} month{subscription.months !== 1 ? 's' : ''} • {formatCurrency(subscription.monthlyPrice, 'USD')}/month
                         </p>
                       </div>
@@ -1610,12 +1770,12 @@ export default function PackagesPage() {
               {/* Feature or Package without period */}
               {(pendingPayment.type === 'feature' || (pendingPayment.type === 'package' && pendingPayment.item.price === 0)) && (
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-primary-600">
+                  <span className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
                     {selectedGateway === 'stripe' 
                       ? formatCurrency(pendingPayment.item.price, 'USD')
                       : formatCurrency(convertUSDToNPR(pendingPayment.item.price), 'NPR')}
                   </span>
-                  <span className="text-sm text-[#8e9297]">
+                  <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
                     {selectedGateway === 'stripe' 
                       ? `(${formatCurrency(convertUSDToNPR(pendingPayment.item.price), 'NPR')})`
                       : `(${formatCurrency(pendingPayment.item.price, 'USD')})`}
@@ -1627,11 +1787,23 @@ export default function PackagesPage() {
             {/* Payment Methods */}
             <div className="space-y-3 mb-4">
               <label 
-                className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${
-                  selectedGateway === 'esewa' 
-                    ? 'border-[#5865f2] bg-[#5865f2]/20 shadow-md' 
-                    : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f] hover:shadow-sm'
-                }`}
+                className="flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all"
+                style={{
+                  borderColor: selectedGateway === 'esewa' ? theme.colors.primary : theme.colors.border,
+                  backgroundColor: selectedGateway === 'esewa' ? `${theme.colors.primary}33` : theme.colors.surface,
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedGateway !== 'esewa') {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedGateway !== 'esewa') {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.backgroundColor = theme.colors.surface;
+                  }
+                }}
               >
                 <input
                   type="radio"
@@ -1639,27 +1811,40 @@ export default function PackagesPage() {
                   value="esewa"
                   checked={selectedGateway === 'esewa'}
                   onChange={(e) => setSelectedGateway(e.target.value as 'esewa' | 'stripe')}
-                  className="mt-1 mr-4 w-5 h-5 text-[#5865f2] focus:ring-[#5865f2]"
+                  className="mt-1 mr-4 w-5 h-5"
+                  style={{ accentColor: theme.colors.primary }}
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-lg font-semibold text-white">eSewa</span>
-                    <span className="text-xs font-medium bg-[#5865f2]/20 text-[#5865f2] px-3 py-1 rounded-full border border-[#5865f2]/30">NPR</span>
+                    <span className="text-lg font-semibold" style={{ color: theme.colors.text }}>eSewa</span>
+                    <span className="text-xs font-medium px-3 py-1 rounded-full border" style={{ backgroundColor: `${theme.colors.primary}33`, color: theme.colors.primary, borderColor: `${theme.colors.primary}4D` }}>NPR</span>
                   </div>
-                  <p className="text-sm text-[#b9bbbe]">Pay with eSewa wallet (Nepalese Rupees)</p>
-                  <p className="text-xs text-[#8e9297] mt-1">Includes 13% VAT</p>
+                  <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Pay with eSewa wallet (Nepalese Rupees)</p>
+                  <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>Includes 13% VAT</p>
                 </div>
                 {selectedGateway === 'esewa' && (
-                  <Check className="w-5 h-5 text-[#5865f2] ml-2" />
+                  <Check className="w-5 h-5 ml-2" style={{ color: theme.colors.primary }} />
                 )}
               </label>
 
               <label 
-                className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${
-                  selectedGateway === 'stripe' 
-                    ? 'border-[#5865f2] bg-[#5865f2]/20 shadow-md' 
-                    : 'border-[#202225] bg-[#2f3136] hover:border-[#36393f] hover:shadow-sm'
-                }`}
+                className="flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all"
+                style={{
+                  borderColor: selectedGateway === 'stripe' ? theme.colors.primary : theme.colors.border,
+                  backgroundColor: selectedGateway === 'stripe' ? `${theme.colors.primary}33` : theme.colors.surface,
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedGateway !== 'stripe') {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedGateway !== 'stripe') {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.backgroundColor = theme.colors.surface;
+                  }
+                }}
               >
                 <input
                   type="radio"
@@ -1667,18 +1852,19 @@ export default function PackagesPage() {
                   value="stripe"
                   checked={selectedGateway === 'stripe'}
                   onChange={(e) => setSelectedGateway(e.target.value as 'esewa' | 'stripe')}
-                  className="mt-1 mr-4 w-5 h-5 text-[#5865f2] focus:ring-[#5865f2]"
+                  className="mt-1 mr-4 w-5 h-5"
+                  style={{ accentColor: theme.colors.primary }}
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-lg font-semibold text-white">Stripe</span>
-                    <span className="text-xs font-medium bg-[#23a55a]/20 text-[#23a55a] px-3 py-1 rounded-full border border-[#23a55a]/30">USD</span>
+                    <span className="text-lg font-semibold" style={{ color: theme.colors.text }}>Stripe</span>
+                    <span className="text-xs font-medium px-3 py-1 rounded-full border" style={{ backgroundColor: '#23a55a33', color: '#23a55a', borderColor: '#23a55a4D' }}>USD</span>
                   </div>
-                  <p className="text-sm text-[#b9bbbe]">Pay with credit/debit card (US Dollars)</p>
-                  <p className="text-xs text-[#8e9297] mt-1">Visa, Mastercard, Amex accepted</p>
+                  <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Pay with credit/debit card (US Dollars)</p>
+                  <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>Visa, Mastercard, Amex accepted</p>
                 </div>
                 {selectedGateway === 'stripe' && (
-                  <Check className="w-5 h-5 text-[#5865f2] ml-2" />
+                  <Check className="w-5 h-5 ml-2" style={{ color: theme.colors.primary }} />
                 )}
               </label>
             </div>
@@ -1690,14 +1876,41 @@ export default function PackagesPage() {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
                 }}
-                className="flex-1 px-4 py-3 border-2 border-[#36393f] rounded-lg text-[#b9bbbe] font-medium hover:bg-[#36393f] transition-colors"
+                className="flex-1 px-4 py-3 border-2 rounded-lg font-medium transition-colors"
+                style={{
+                  borderColor: theme.colors.border,
+                  color: theme.colors.textSecondary,
+                  backgroundColor: theme.colors.surface,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.surface;
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmPayment}
                 disabled={createPackagePaymentMutation.isPending || createFeaturePaymentMutation.isPending}
-                className="flex-1 px-4 py-3 bg-[#5865f2] text-white rounded-lg font-medium hover:bg-[#4752c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg"
+                className="flex-1 px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg"
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  color: '#ffffff',
+                }}
+                onMouseEnter={(e) => {
+                  if (!createPackagePaymentMutation.isPending && !createFeaturePaymentMutation.isPending) {
+                    e.currentTarget.style.backgroundColor = theme.colors.secondary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!createPackagePaymentMutation.isPending && !createFeaturePaymentMutation.isPending) {
+                    e.currentTarget.style.backgroundColor = theme.colors.primary;
+                  }
+                }}
               >
                 {(createPackagePaymentMutation.isPending || createFeaturePaymentMutation.isPending) ? (
                   <>

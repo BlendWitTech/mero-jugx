@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,8 +6,9 @@ import { Repository } from 'typeorm';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../../database/entities/organization-member.entity';
-import { Role } from '../../database/entities/role.entity';
+} from '../../database/entities/organization_members.entity';
+import { Role } from '../../database/entities/roles.entity';
+import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -17,6 +18,8 @@ export class PermissionsGuard implements CanActivate {
     private memberRepository: Repository<OrganizationMember>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+    @Inject(forwardRef(() => AuditLogsService))
+    private auditLogsService: AuditLogsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -75,6 +78,34 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasAllPermissions) {
+      // Log unauthorized access attempt as critical severity
+      const request = context.switchToHttp().getRequest();
+      try {
+        await this.auditLogsService.createAuditLog(
+          user.organizationId,
+          user.userId,
+          'unauthorized_access_attempt',
+          'permission',
+          requiredPermissions.join(','),
+          null,
+          {
+            requested_permissions: requiredPermissions,
+            user_permissions: userPermissions,
+            endpoint: request.url,
+            method: request.method,
+          },
+          request.ip,
+          request.headers['user-agent'],
+          {
+            missing_permissions: requiredPermissions.filter(p => !userPermissions.includes(p)),
+          },
+          'critical', // Critical severity for unauthorized access
+        );
+      } catch (error) {
+        // Don't fail the request if audit logging fails
+        console.error('Failed to log unauthorized access attempt:', error);
+      }
+
       throw new ForbiddenException(
         `You do not have the required permissions: ${requiredPermissions.join(', ')}`,
       );

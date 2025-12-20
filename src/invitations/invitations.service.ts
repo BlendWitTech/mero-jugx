@@ -9,20 +9,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { Invitation, InvitationStatus } from '../database/entities/invitation.entity';
-import { Organization } from '../database/entities/organization.entity';
+import { Invitation, InvitationStatus } from '../database/entities/invitations.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { User, UserStatus } from '../database/entities/user.entity';
-import { Role } from '../database/entities/role.entity';
+} from '../database/entities/organization_members.entity';
+import { User, UserStatus } from '../database/entities/users.entity';
+import { Role } from '../database/entities/roles.entity';
 import {
   EmailVerification,
   EmailVerificationType,
-} from '../database/entities/email-verification.entity';
-import { Notification } from '../database/entities/notification.entity';
-import { Session } from '../database/entities/session.entity';
+} from '../database/entities/email_verifications.entity';
+import { Notification } from '../database/entities/notifications.entity';
+import { Session } from '../database/entities/sessions.entity';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import { InvitationQueryDto } from './dto/invitation-query.dto';
@@ -185,6 +185,23 @@ export class InvitationsService {
       if (!role.is_default || role.organization_id !== null) {
         throw new BadRequestException(
           'Freemium accounts can only use default roles. Please upgrade your package to use custom roles.',
+        );
+      }
+    }
+
+    // Check if user can assign this role based on hierarchy level
+    // Get requesting user's role hierarchy level
+    const requestingRoleLevel = this.getRoleHierarchyLevel(membership.role);
+    const targetRoleLevel = this.getRoleHierarchyLevel(role);
+
+    // Organization owners can assign any role (except owner, already checked)
+    if (!membership.role.is_organization_owner) {
+      // Users can only assign roles with hierarchy level > their own
+      // (roles with lower authority than themselves - higher number = lower authority)
+      // Example: User with level 2 (Admin) can assign roles with level 3, 4, 5, etc.
+      if (targetRoleLevel <= requestingRoleLevel) {
+        throw new ForbiddenException(
+          `You cannot assign roles that are equal to or higher than your own role level. Your role level is ${requestingRoleLevel}, and the selected role level is ${targetRoleLevel}. You can only assign roles with hierarchy level greater than ${requestingRoleLevel}.`,
         );
       }
     }

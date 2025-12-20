@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { EmailService } from './services/email.service';
@@ -8,11 +8,15 @@ import { SentryService } from './services/sentry.service';
 import { AppLoggerService } from './services/logger.service';
 import { CacheService } from './services/cache.service';
 import { CsrfGuard } from './guards/csrf.guard';
-import { OrganizationMember } from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
+import { OrganizationMember } from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OrganizationMember, Role])],
+  imports: [
+    TypeOrmModule.forFeature([OrganizationMember, Role]),
+    forwardRef(() => AuditLogsModule),
+  ],
   providers: [
     PermissionsGuard,
     EmailService,
@@ -24,6 +28,7 @@ import { Role } from '../database/entities/role.entity';
     CsrfGuard,
   ],
   exports: [
+    TypeOrmModule,
     PermissionsGuard,
     EmailService,
     EmailTemplatesService,
@@ -32,6 +37,7 @@ import { Role } from '../database/entities/role.entity';
     AppLoggerService,
     CacheService,
     CsrfGuard,
+    forwardRef(() => AuditLogsModule),
   ],
 })
 export class CommonModule {}

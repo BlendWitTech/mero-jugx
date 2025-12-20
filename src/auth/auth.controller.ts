@@ -75,6 +75,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Request password reset' })
   @ApiResponse({ status: 200, description: 'Password reset email sent' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    console.log(`[Forgot Password Controller] Received request for email: ${dto.email}`);
     return this.authService.forgotPassword(dto.email);
   }
 
@@ -85,6 +86,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   @ApiResponse({ status: 400, description: 'Invalid or expired token' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
+    // Log token for debugging (first 10 chars only for security)
+    console.log(`[Password Reset] Received token: ${dto.token?.substring(0, 10)}... (length: ${dto.token?.length})`);
     return this.authService.resetPassword(dto.token, dto.new_password);
   }
 

@@ -43,6 +43,27 @@
                 </ul>
             </div>
 
+            <h2 id="setup-reset">Setup & Reset (For Developers)</h2>
+            <p>If you're setting up the project for the first time or need to reset everything:</p>
+            
+            <h3>Complete Reset</h3>
+            <p>To completely reset the project:</p>
+            <pre><code>npm run reset:all</code></pre>
+            <p>This removes everything: node_modules, dist folders, database tables, .env files, and cache.</p>
+            
+            <h3>Setup</h3>
+            <p>After cloning or resetting, run:</p>
+            <pre><code>npm run setup</code></pre>
+            <p>Choose Manual or Docker setup. The script will:</p>
+            <ul>
+                <li>Install all dependencies</li>
+                <li>Create .env files with all values</li>
+                <li>Set up database (Docker or local)</li>
+                <li>Run all migrations</li>
+                <li>Seed initial data</li>
+            </ul>
+            <p>See <a href="index.html#setup-commands">Setup & Commands</a> in the main documentation for complete details.</p>
+            
             <h2 id="getting-started">Getting Started</h2>
 
             <h3>Creating an Account</h3>

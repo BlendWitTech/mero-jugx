@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Activity, Eye, X, Filter, Calendar, User, FileText, Search, AlertCircle, FileText as FileTextIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../contexts/ThemeContext';
 import toast from 'react-hot-toast';
 
 interface AuditLog {
@@ -14,6 +15,7 @@ interface AuditLog {
   user_id: string | null;
   metadata: any;
   created_at: string;
+  severity?: 'critical' | 'warning' | 'info';
   user?: {
     id: string;
     first_name: string;
@@ -32,12 +34,15 @@ interface AuditLogsResponse {
 
 export default function AuditLogsPage() {
   const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('');
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('');
   const [userIdFilter, setUserIdFilter] = useState<string>('');
+  const [severityFilter, setSeverityFilter] = useState<'critical' | 'warning' | 'info' | ''>('');
+  const [selectedUserSearch, setSelectedUserSearch] = useState<string>('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedLog, setSelectedLog] = useState<any>(null);
@@ -56,7 +61,7 @@ export default function AuditLogsPage() {
   });
 
   const { data, isLoading, error } = useQuery<AuditLogsResponse>({
-    queryKey: ['audit-logs', page, search, actionFilter, entityTypeFilter, userIdFilter, dateFrom, dateTo],
+    queryKey: ['audit-logs', page, search, actionFilter, entityTypeFilter, userIdFilter, severityFilter, dateFrom, dateTo],
     queryFn: async () => {
       const params: any = {
         page,
@@ -66,6 +71,7 @@ export default function AuditLogsPage() {
       if (actionFilter) params.action = actionFilter;
       if (entityTypeFilter) params.entity_type = entityTypeFilter;
       if (userIdFilter) params.user_id = userIdFilter;
+      if (severityFilter) params.severity = severityFilter;
       if (dateFrom) params.from_date = dateFrom;
       if (dateTo) params.to_date = dateTo;
 
@@ -116,10 +122,43 @@ export default function AuditLogsPage() {
     setActionFilter('');
     setEntityTypeFilter('');
     setUserIdFilter('');
+    setSeverityFilter('');
+    setSelectedUserSearch('');
     setDateFrom('');
     setDateTo('');
     setSearch('');
     setPage(1);
+  };
+
+  // Get severity color and label
+  const getSeverityInfo = (severity?: 'critical' | 'warning' | 'info') => {
+    switch (severity) {
+      case 'critical':
+        return { 
+          color: '#ed4245', 
+          bgColor: '#ed424520', 
+          borderColor: '#ed424533',
+          label: 'Critical',
+          icon: '🔴'
+        };
+      case 'warning':
+        return { 
+          color: '#faa61a', 
+          bgColor: '#faa61a20', 
+          borderColor: '#faa61a33',
+          label: 'Warning',
+          icon: '🟡'
+        };
+      case 'info':
+      default:
+        return { 
+          color: '#23a55a', 
+          bgColor: '#23a55a20', 
+          borderColor: '#23a55a33',
+          label: 'Info',
+          icon: '🟢'
+        };
+    }
   };
 
   const formatDateTime = (dateString: string) => {
@@ -642,7 +681,7 @@ export default function AuditLogsPage() {
   if (hasPermissionError || (error && (error as any)?.response?.status === 403)) {
     return (
       <div>
-        <div className="card bg-[#ed4245]/10 border-2 border-[#ed4245]/20">
+        <div className="card rounded-lg p-4" style={{ backgroundColor: '#ed4245' + '1A', border: `2px solid #ed4245` + '33' }}>
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
               <AlertCircle className="h-8 w-8 text-[#ed4245]" />
@@ -666,16 +705,16 @@ export default function AuditLogsPage() {
   }
 
   return (
-    <div className="w-full p-6">
+    <div className="w-full p-6" style={{ backgroundColor: theme.colors.background, color: theme.colors.text }}>
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#5865f2] rounded-lg">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary }}>
               <FileTextIcon className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">Audit Logs</h1>
-              <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Track all activities and changes in your organization</p>
+              <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: theme.colors.text }}>Audit Logs</h1>
+              <p className="mt-2 text-sm sm:text-base" style={{ color: theme.colors.textSecondary }}>Track all activities and changes in your organization</p>
             </div>
           </div>
           <button
@@ -691,39 +730,39 @@ export default function AuditLogsPage() {
       {/* Statistics Cards */}
       {stats && typeof stats === 'object' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
               <Activity className="h-8 w-8 text-primary-500 mr-3" />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Total Logs</p>
-                <p className="text-2xl font-semibold text-white">{(stats as any)?.total_logs || 0}</p>
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Total Logs</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>{(stats as any)?.total_logs || 0}</p>
               </div>
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
               <User className="h-8 w-8 text-blue-500 mr-3" />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Unique Users</p>
-                <p className="text-2xl font-semibold text-white">{(stats as any)?.unique_users || 0}</p>
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Unique Users</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>{(stats as any)?.unique_users || 0}</p>
               </div>
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
               <FileText className="h-8 w-8 text-green-500 mr-3" />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Actions Today</p>
-                <p className="text-2xl font-semibold text-white">{(stats as any)?.actions_today || 0}</p>
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Actions Today</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>{(stats as any)?.actions_today || 0}</p>
               </div>
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
             <div className="flex items-center">
               <Calendar className="h-8 w-8 text-purple-500 mr-3" />
               <div>
-                <p className="text-sm text-[#b9bbbe]">Actions This Week</p>
-                <p className="text-2xl font-semibold text-white">{(stats as any)?.actions_this_week || 0}</p>
+                <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Actions This Week</p>
+                <p className="text-2xl font-semibold" style={{ color: theme.colors.text }}>{(stats as any)?.actions_this_week || 0}</p>
               </div>
             </div>
           </div>
@@ -732,10 +771,10 @@ export default function AuditLogsPage() {
 
       {/* Filters */}
       {showFilters && (
-        <div className="card mb-4">
+        <div className="card mb-4" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#b9bbbe] mb-1">Search</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -751,11 +790,70 @@ export default function AuditLogsPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#b9bbbe] mb-1">User</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>User</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={selectedUserSearch}
+                  onChange={(e) => {
+                    setSelectedUserSearch(e.target.value);
+                    // Filter users as user types
+                    const matchingUser = usersData?.find((u: any) => 
+                      `${u.first_name} ${u.last_name}`.toLowerCase().includes(e.target.value.toLowerCase()) ||
+                      u.email.toLowerCase().includes(e.target.value.toLowerCase())
+                    );
+                    if (matchingUser) {
+                      setUserIdFilter(matchingUser.id);
+                    } else if (e.target.value === '') {
+                      setUserIdFilter('');
+                    }
+                    setPage(1);
+                  }}
+                  placeholder="Search user..."
+                  className="input"
+                  list="users-list"
+                />
+                <datalist id="users-list">
+                  {usersData?.map((user: any) => (
+                    <option key={user.id} value={`${user.first_name} ${user.last_name} (${user.email})`} data-id={user.id} />
+                  ))}
+                </datalist>
+                {userIdFilter && (
+                  <button
+                    onClick={() => {
+                      setUserIdFilter('');
+                      setSelectedUserSearch('');
+                      setPage(1);
+                    }}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  >
+                    <X className="h-4 w-4" style={{ color: theme.colors.textSecondary }} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Severity</label>
               <select
-                value={userIdFilter}
+                value={severityFilter}
                 onChange={(e) => {
-                  setUserIdFilter(e.target.value);
+                  setSeverityFilter(e.target.value as 'critical' | 'warning' | 'info' | '');
+                  setPage(1);
+                }}
+                className="input"
+              >
+                <option value="">All Severities</option>
+                <option value="critical">🔴 Critical</option>
+                <option value="warning">🟡 Warning</option>
+                <option value="info">🟢 Info</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Action</label>
+              <select
+                value={actionFilter}
+                onChange={(e) => {
+                  setActionFilter(e.target.value);
                   setPage(1);
                 }}
                 className="input"
@@ -769,7 +867,7 @@ export default function AuditLogsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#b9bbbe] mb-1">Action Type</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Action Type</label>
               <select
                 value={actionFilter}
                 onChange={(e) => {
@@ -787,7 +885,7 @@ export default function AuditLogsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#b9bbbe] mb-1">Entity Type</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Entity Type</label>
               <select
                 value={entityTypeFilter}
                 onChange={(e) => {
@@ -805,7 +903,7 @@ export default function AuditLogsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#b9bbbe] mb-1">Date Range</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.textSecondary }}>Date Range</label>
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="date"
@@ -830,7 +928,7 @@ export default function AuditLogsPage() {
               </div>
             </div>
           </div>
-          {(actionFilter || entityTypeFilter || userIdFilter || dateFrom || dateTo || search) && (
+          {(actionFilter || entityTypeFilter || userIdFilter || severityFilter || dateFrom || dateTo || search) && (
             <div className="mt-4 flex justify-end">
               <button
                 onClick={clearFilters}
@@ -844,7 +942,7 @@ export default function AuditLogsPage() {
       )}
 
       {error && (
-        <div className="card bg-red-50 border border-red-200 mb-4">
+        <div className="card rounded-lg p-4 mb-4" style={{ backgroundColor: '#ef4444' + '1A', border: `1px solid #ef4444` + '33' }}>
           <p className="text-red-800">
             Error loading audit logs: {error instanceof Error ? error.message : 'Unknown error'}
           </p>
@@ -860,40 +958,83 @@ export default function AuditLogsPage() {
           </div>
         </div>
       ) : (
-        <div className="card mt-4">
+        <div className="card mt-4" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[#202225]">
-              <thead className="bg-[#2f3136]">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-2/5">
+            <table className="min-w-full" style={{ borderColor: theme.colors.border }}>
+              <thead style={{ backgroundColor: theme.colors.surface }}>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-2/5" style={{ color: theme.colors.textSecondary }}>
                     Action & Description
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/6">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/6" style={{ color: theme.colors.textSecondary }}>
                     Item
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/6">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/6" style={{ color: theme.colors.textSecondary }}>
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/6">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/12" style={{ color: theme.colors.textSecondary }}>
+                    Severity
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/6" style={{ color: theme.colors.textSecondary }}>
                     Timestamp
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#8e9297] uppercase tracking-wider w-1/12">
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider w-1/12" style={{ color: theme.colors.textSecondary }}>
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-[#2f3136] divide-y divide-[#202225]">
+              <tbody style={{ backgroundColor: theme.colors.surface }}>
                 {data?.audit_logs && data.audit_logs.length > 0 ? (
-                  data.audit_logs.map((log: any) => (
-                    <tr key={log.id} className="hover:bg-[#36393f]">
+                  data.audit_logs.map((log: any) => {
+                    const isUnauthorizedAccess = log.action === 'unauthorized_access_attempt';
+                    const isCritical = log.severity === 'critical';
+                    const rowStyle = isUnauthorizedAccess || isCritical ? {
+                      borderTop: `1px solid ${theme.colors.border}`,
+                      borderLeft: `4px solid #ed4245`,
+                      backgroundColor: '#ed424510'
+                    } : {
+                      borderTop: `1px solid ${theme.colors.border}`
+                    };
+                    return (
+                    <tr 
+                      key={log.id} 
+                      style={rowStyle}
+                      onMouseEnter={(e) => {
+                        if (isUnauthorizedAccess || isCritical) {
+                          e.currentTarget.style.backgroundColor = '#ed424515';
+                        } else {
+                          e.currentTarget.style.backgroundColor = theme.colors.background;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isUnauthorizedAccess || isCritical) {
+                          e.currentTarget.style.backgroundColor = '#ed424510';
+                        } else {
+                          e.currentTarget.style.backgroundColor = theme.colors.surface;
+                        }
+                      }}
+                    >
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getActionColor(log.action)}`}>
-                            {getActionIcon(log.action)} {log.action.replace('.', ' ')}
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className="px-2 py-1 text-xs font-semibold rounded-full"
+                            style={isUnauthorizedAccess ? {
+                              backgroundColor: '#ed424520',
+                              border: `1px solid #ed4245`,
+                              color: '#ed4245'
+                            } : {}}
+                          >
+                            {isUnauthorizedAccess ? '🚫' : getActionIcon(log.action)} {isUnauthorizedAccess ? 'Unauthorized Access Attempt' : log.action.replace('.', ' ')}
                           </span>
                         </div>
-                        <div className="mt-1 text-sm text-[#b9bbbe]">
-                          {formatAuditLogMessage(log)}
+                        <div className="mt-1 text-sm" style={{ 
+                          color: isUnauthorizedAccess ? '#ed4245' : theme.colors.textSecondary,
+                          fontWeight: isUnauthorizedAccess ? 'medium' : 'normal'
+                        }}>
+                          {isUnauthorizedAccess 
+                            ? `User attempted to access ${log.metadata?.endpoint || 'a protected resource'} without required permissions: ${log.metadata?.missing_permissions?.join(', ') || log.entity_id || 'N/A'}`
+                            : formatAuditLogMessage(log)
+                          }
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -901,11 +1042,11 @@ export default function AuditLogsPage() {
                           const entityInfo = formatEntityReadable(log);
                           return (
                             <div>
-                              <div className="text-sm font-medium text-white">
+                              <div className="text-sm font-medium" style={{ color: theme.colors.text }}>
                                 {entityInfo.name}
                               </div>
                               {entityInfo.subtitle && (
-                                <div className="text-xs text-[#8e9297] mt-0.5">
+                                <div className="text-xs mt-0.5" style={{ color: theme.colors.textSecondary }}>
                                   {entityInfo.subtitle}
                                 </div>
                               )}
@@ -914,28 +1055,48 @@ export default function AuditLogsPage() {
                         })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-white">
+                        <div className="text-sm" style={{ color: theme.colors.text }}>
                           {log.user?.first_name} {log.user?.last_name}
                         </div>
-                        <div className="text-xs text-[#8e9297]">{log.user?.email}</div>
+                        <div className="text-xs" style={{ color: theme.colors.textSecondary }}>{log.user?.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#8e9297]">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(() => {
+                          const severityInfo = getSeverityInfo(log.severity);
+                          return (
+                            <span
+                              className="px-2 py-1 text-xs font-semibold rounded-full"
+                              style={{
+                                backgroundColor: severityInfo.bgColor,
+                                border: `1px solid ${severityInfo.borderColor}`,
+                                color: severityInfo.color
+                              }}
+                            >
+                              {severityInfo.icon} {severityInfo.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: theme.colors.textSecondary }}>
                         {formatDateTime(log.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleViewDetails(log)}
-                          className="text-primary-600 hover:text-primary-900"
+                          style={{ color: theme.colors.primary }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.secondary}
+                          onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.primary}
                         >
                           <Eye className="h-4 w-4 inline" />
                         </button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-[#8e9297]">
-                      <Activity className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                    <td colSpan={5} className="px-6 py-8 text-center" style={{ color: theme.colors.textSecondary }}>
+                      <Activity className="h-12 w-12 mx-auto mb-2" style={{ color: theme.colors.textSecondary }} />
                       <p>No audit logs found. {search && 'Try adjusting your filters.'}</p>
                     </td>
                   </tr>
@@ -945,8 +1106,8 @@ export default function AuditLogsPage() {
           </div>
 
           {data && (
-            <div className="mt-4 flex items-center justify-between px-6 py-4 border-t border-[#202225]">
-              <div className="text-sm text-[#b9bbbe]">
+            <div className="mt-4 flex items-center justify-between px-6 py-4" style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+              <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
                 {data.total > 0 ? (
                   <>
                     Showing {(data.page - 1) * data.limit + 1} to {Math.min(data.page * data.limit, data.total)} of {data.total} logs

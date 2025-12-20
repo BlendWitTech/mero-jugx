@@ -25,11 +25,6 @@ switch ($choice) {
             Write-Host ""
             Write-Host "Resetting everything..." -ForegroundColor Blue
             node scripts/run-script.js reset-all
-            
-            Write-Host ""
-            Write-Host "Reset complete! Running setup..." -ForegroundColor Green
-            Write-Host ""
-            node scripts/run-script.js setup
         } else {
             Write-Host "Reset cancelled." -ForegroundColor Yellow
         }
@@ -41,6 +36,8 @@ switch ($choice) {
         if ($response -eq "yes") {
             Write-Host ""
             Write-Host "Resetting database..." -ForegroundColor Blue
+            Write-Host "  This will drop all tables and data." -ForegroundColor Yellow
+            Write-Host "  Run 'npm run db:init' after reset to initialize database." -ForegroundColor Yellow
             node scripts/run-script.js reset-db
         } else {
             Write-Host "Database reset cancelled." -ForegroundColor Yellow

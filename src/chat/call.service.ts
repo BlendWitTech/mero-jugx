@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { CallSession, CallType, CallStatus } from '../database/entities/call-session.entity';
-import { CallParticipant, CallParticipantStatus } from '../database/entities/call-participant.entity';
-import { Chat } from '../database/entities/chat.entity';
-import { ChatMember, ChatMemberStatus } from '../database/entities/chat-member.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { CallSession, CallType, CallStatus } from '../database/entities/call_sessions.entity';
+import { CallParticipant, CallParticipantStatus } from '../database/entities/call_participants.entity';
+import { Chat } from '../database/entities/chats.entity';
+import { ChatMember, ChatMemberStatus } from '../database/entities/chat_members.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 import { CreateCallDto } from './dto/create-call.dto';
 import { WebRTCSignalDto } from './dto/webrtc-signal.dto';
 import { ChatService } from './chat.service';

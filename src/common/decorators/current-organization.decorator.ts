@@ -18,6 +18,15 @@ export const CurrentOrganization = createParamDecorator((data: string | undefine
       if (organization) {
         return organization.id || organization.organizationId;
       }
+      // Log warning if organization context is missing
+      if (user && !organizationId && !organization) {
+        console.warn('[CurrentOrganization] Organization context missing', {
+          hasUser: !!user,
+          userId: user?.userId || user?.id,
+          userKeys: user ? Object.keys(user) : [],
+        });
+        // Don't throw error, just return null - let the service handle it
+      }
       return null;
     }
     // For other properties, use the organization object

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, Or } from 'typeorm';
-import { User } from '../database/entities/user.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { Role } from '../database/entities/role.entity';
-import { Chat } from '../database/entities/chat.entity';
-import { Message } from '../database/entities/message.entity';
+import { User } from '../database/entities/users.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Chat } from '../database/entities/chats.entity';
+import { Message } from '../database/entities/messages.entity';
 import { CacheService } from '../common/services/cache.service';
 
 export interface SearchResult {

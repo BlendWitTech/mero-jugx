@@ -170,10 +170,18 @@ echo ""
 echo -e "${BLUE}=== Environment Configuration ===${NC}"
 echo ""
 
-# Create .env file
+# Create .env file using the create-env script
 if [ -f .env ]; then
     if ! prompt_yesno ".env file exists. Overwrite?" "n"; then
         echo "Keeping existing .env file"
+    else
+        echo "Creating .env file with all defaults..."
+        bash scripts/create-env.sh
+    fi
+else
+    echo "Creating .env file with all defaults..."
+    bash scripts/create-env.sh
+fi
         SKIP_ENV=true
     fi
 fi
@@ -345,8 +353,10 @@ echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo "1. Review your .env file"
 echo "2. Make sure PostgreSQL and Redis are running"
-echo "3. Run 'npm run start:dev' to start development servers"
-echo "4. Visit http://localhost:3001 to access the application"
+echo "3. Initialize database: npm run db:init"
+echo "   This will run migrations and seed base data (packages, permissions, roles, etc.)"
+echo "4. Start development servers: npm run dev"
+echo "5. Visit http://localhost:3001 to access the application"
 echo ""
 echo -e "${GREEN}Happy coding! 🎉${NC}"
 

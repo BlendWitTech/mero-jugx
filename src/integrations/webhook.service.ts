@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { Webhook, WebhookStatus, WebhookEvent } from '../database/entities/webhook.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { Webhook, WebhookStatus, WebhookEvent } from '../database/entities/webhooks.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 import * as crypto from 'crypto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 

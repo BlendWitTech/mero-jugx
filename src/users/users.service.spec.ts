@@ -2,15 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { UsersService } from './users.service';
-import { User } from '../database/entities/user.entity';
-import { OrganizationMember } from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { Session } from '../database/entities/session.entity';
-import { AuditLog } from '../database/entities/audit-log.entity';
-import { Notification } from '../database/entities/notification.entity';
+import { User } from '../database/entities/users.entity';
+import { OrganizationMember } from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Session } from '../database/entities/sessions.entity';
+import { AuditLog } from '../database/entities/audit_logs.entity';
+import { Notification } from '../database/entities/notifications.entity';
 import { EmailService } from '../common/services/email.service';
-import { UserStatus } from '../database/entities/user.entity';
-import { OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { UserStatus } from '../database/entities/users.entity';
+import { OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 
 describe('UsersService', () => {
   let service: UsersService;

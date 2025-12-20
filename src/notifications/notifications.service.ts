@@ -1,16 +1,16 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from '../database/entities/notification.entity';
+import { Notification } from '../database/entities/notifications.entity';
 import {
   NotificationPreference,
   NotificationPreferenceScope,
-} from '../database/entities/notification-preference.entity';
+} from '../database/entities/notification_preferences.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
+} from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
 import { NotificationQueryDto, NotificationReadStatus } from './dto/notification-query.dto';
 import { MarkReadDto } from './dto/mark-read.dto';
 import { NotificationPreferenceDto } from './dto/notification-preference.dto';
@@ -346,6 +346,7 @@ export class NotificationsService {
   ): Promise<{
     email_enabled: boolean;
     in_app_enabled: boolean;
+    marketing_email_subscribed: boolean;
     preferences: Record<string, any>;
     scope?: NotificationPreferenceScope;
   }> {
@@ -389,6 +390,7 @@ export class NotificationsService {
         return {
           email_enabled: preference.email_enabled,
           in_app_enabled: preference.in_app_enabled,
+          marketing_email_subscribed: preference.marketing_email_subscribed || false,
           preferences: preference.preferences || {},
           scope: preference.scope,
         };
@@ -398,6 +400,7 @@ export class NotificationsService {
       return {
         email_enabled: true,
         in_app_enabled: true,
+        marketing_email_subscribed: false,
         preferences: {},
         scope: preferenceScope,
       };
@@ -407,6 +410,7 @@ export class NotificationsService {
       return {
         email_enabled: true,
         in_app_enabled: true,
+        marketing_email_subscribed: false,
         preferences: {},
         scope: scope || NotificationPreferenceScope.PERSONAL,
       };
@@ -445,6 +449,24 @@ export class NotificationsService {
         ? organizationId 
         : organizationId; // Personal preferences are also per-organization
 
+      // Check if user can subscribe to marketing emails (only non-freemium packages)
+      let canSubscribeMarketing = false;
+      if (organizationId && dto.marketing_email_subscribed !== undefined) {
+        const membership = await this.memberRepository.findOne({
+          where: {
+            user_id: userId,
+            organization_id: organizationId,
+            status: OrganizationMemberStatus.ACTIVE,
+          },
+          relations: ['organization', 'organization.package'],
+        });
+
+        if (membership?.organization?.package) {
+          // Only allow marketing subscription for non-freemium packages
+          canSubscribeMarketing = membership.organization.package.slug !== 'freemium';
+        }
+      }
+
       // Find or create preference
       let preference = await this.preferenceRepository.findOne({
         where: {
@@ -461,6 +483,9 @@ export class NotificationsService {
           scope: preferenceScope,
           email_enabled: dto.email_enabled !== undefined ? dto.email_enabled : true,
           in_app_enabled: dto.in_app_enabled !== undefined ? dto.in_app_enabled : true,
+          marketing_email_subscribed: canSubscribeMarketing && dto.marketing_email_subscribed === true 
+            ? true 
+            : false,
           preferences: dto.preferences || {},
         });
       } else {
@@ -470,6 +495,19 @@ export class NotificationsService {
         }
         if (dto.in_app_enabled !== undefined) {
           preference.in_app_enabled = dto.in_app_enabled;
+        }
+        if (dto.marketing_email_subscribed !== undefined) {
+          // Only allow if package is not freemium
+          if (canSubscribeMarketing) {
+            preference.marketing_email_subscribed = dto.marketing_email_subscribed;
+          } else if (dto.marketing_email_subscribed === true) {
+            throw new ForbiddenException(
+              'Marketing email subscription is only available for non-freemium packages',
+            );
+          } else {
+            // Allow unsubscribing even for freemium
+            preference.marketing_email_subscribed = false;
+          }
         }
         if (dto.preferences !== undefined) {
           // Merge preferences instead of replacing
@@ -487,6 +525,7 @@ export class NotificationsService {
       preferences: {
         email_enabled: preference.email_enabled,
         in_app_enabled: preference.in_app_enabled,
+        marketing_email_subscribed: preference.marketing_email_subscribed || false,
         preferences: preference.preferences || {},
         scope: preference.scope,
       },

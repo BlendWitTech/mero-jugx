@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, LessThan, Between } from 'typeorm';
-import { TimeBasedPermission } from '../database/entities/time-based-permission.entity';
-import { Role } from '../database/entities/role.entity';
-import { Permission } from '../database/entities/permission.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { TimeBasedPermission } from '../database/entities/time_based_permissions.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Permission } from '../database/entities/permissions.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()

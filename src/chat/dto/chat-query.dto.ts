@@ -1,6 +1,6 @@
 import { IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ChatType, ChatStatus } from '../../database/entities/chat.entity';
+import { ChatType, ChatStatus } from '../../database/entities/chats.entity';
 
 export class ChatQueryDto {
   @IsOptional()

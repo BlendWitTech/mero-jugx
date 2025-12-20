@@ -28,6 +28,13 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { CommunicationModule } from './communication/communication.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { AppsModule } from './apps/apps.module';
+import { TicketsModule } from './tickets/tickets.module';
+import { BoardsModule } from './boards/boards.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { AdminChatModule } from './admin-chat/admin-chat.module';
+import { Invoice } from './database/entities/invoices.entity';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { SentryService } from './common/services/sentry.service';
 
@@ -80,6 +87,12 @@ import { SentryService } from './common/services/sentry.service';
     PermissionsModule,
     CommunicationModule,
     MonitoringModule,
+    AppsModule,
+    TicketsModule,
+    BoardsModule,
+    MarketplaceModule,
+    InvoicesModule,
+    AdminChatModule,
   ],
   controllers: [AppController],
   providers: [

@@ -12,15 +12,15 @@ import {
   PaymentStatus,
   PaymentGateway,
   PaymentType,
-} from '../database/entities/payment.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { User } from '../database/entities/user.entity';
+} from '../database/entities/payments.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { User } from '../database/entities/users.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { OrganizationPackageFeature } from '../database/entities/organization-package-feature.entity';
-import { Role } from '../database/entities/role.entity';
+} from '../database/entities/organization_members.entity';
+import { OrganizationPackageFeature } from '../database/entities/organization_package_features.entity';
+import { Role } from '../database/entities/roles.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { EsewaService } from './esewa.service';
 import { StripeService } from './stripe.service';

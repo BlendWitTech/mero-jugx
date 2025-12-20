@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsArray, IsEnum, IsDateString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ApiKeyStatus } from '../../database/entities/api-key.entity';
+import { ApiKeyStatus } from '../../database/entities/api_keys.entity';
 
 export class UpdateApiKeyDto {
   @ApiPropertyOptional({

@@ -2,10 +2,10 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Response } from 'express';
-import { User } from '../database/entities/user.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { Invitation, InvitationStatus } from '../database/entities/invitation.entity';
+import { User } from '../database/entities/users.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Invitation, InvitationStatus } from '../database/entities/invitations.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()

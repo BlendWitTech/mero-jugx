@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { NotificationHelperService } from './notification-helper.service';
-import { Notification } from '../database/entities/notification.entity';
-import { NotificationPreference } from '../database/entities/notification-preference.entity';
-import { OrganizationMember } from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
+import { Notification } from '../database/entities/notifications.entity';
+import { NotificationPreference } from '../database/entities/notification_preferences.entity';
+import { OrganizationMember } from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
 import { CommonModule } from '../common/common.module';
 
 @Module({

@@ -30,11 +30,6 @@ case $choice in
             echo ""
             echo "Resetting everything..."
             node scripts/run-script.js reset-all
-            
-            echo ""
-            echo "Reset complete! Running setup..."
-            echo ""
-            node scripts/run-script.js setup
         else
             echo "Reset cancelled."
         fi
@@ -46,6 +41,8 @@ case $choice in
         if [ "$response" = "yes" ]; then
             echo ""
             echo "Resetting database..."
+            echo "  This will drop all tables and data."
+            echo "  Run 'npm run db:init' after reset to initialize database."
             node scripts/run-script.js reset-db
         else
             echo "Database reset cancelled."

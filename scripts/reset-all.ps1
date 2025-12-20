@@ -1,327 +1,256 @@
-# Mero Jugx - Reset Everything and Initialize (PowerShell)
-# This script resets everything and then initializes the project
+﻿# Mero Jugx - Complete Reset Script (PowerShell)
+# This script removes EVERYTHING and prepares for fresh setup
+# WARNING: This will DELETE ALL DATA, node_modules, builds, database tables, and .env files
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Mero Jugx - Reset Everything and Initialize" -ForegroundColor Cyan
-Write-Host "=============================================" -ForegroundColor Cyan
+$SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
+$PROJECT_ROOT = Split-Path -Parent $SCRIPT_DIR
+
+Set-Location $PROJECT_ROOT
+
+Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║  Mero Jugx - Complete Reset Script                         ║" -ForegroundColor Cyan
+Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "WARNING: This will DELETE ALL DATA and reset the entire project!" -ForegroundColor Red
+Write-Host "⚠️  WARNING: This will DELETE EVERYTHING!" -ForegroundColor Red
+Write-Host ""
+Write-Host "This script will:"
+Write-Host "  ✗ Remove all node_modules (backend and frontend)"
+Write-Host "  ✗ Remove all dist/build folders"
+Write-Host "  ✗ Drop ALL database tables and data (including all chats, tickets, users, organizations)"
+Write-Host "  ✗ Remove .env files"
+Write-Host "  ✗ Clear npm cache"
+Write-Host "  ✗ Clear logs"
+Write-Host "  ✗ Clear uploads"
+Write-Host "  ✗ Stop Docker containers (if running)"
+Write-Host ""
+Write-Host "After reset, you need to:"
+Write-Host "  1. Run 'npm run setup' to set up everything fresh"
+Write-Host "  2. Run 'npm run db:init' to initialize database (create tables and seed data)"
 Write-Host ""
 
-$response = Read-Host "Are you absolutely sure? Type 'yes' to continue"
-if ($response -ne "yes") {
+$response = Read-Host "Are you absolutely sure? Type 'RESET' to continue"
+if ($response -ne "RESET") {
     Write-Host "Reset cancelled." -ForegroundColor Yellow
     exit 0
 }
 
 Write-Host ""
-Write-Host "Starting complete reset..." -ForegroundColor Blue
+Write-Host "Starting complete reset..." -ForegroundColor Green
 Write-Host ""
 
-# Step 1: Remove node_modules
-Write-Host "[1/7] Removing node_modules..." -ForegroundColor Blue
+# Step 1: Stop Docker containers
+Write-Host "[1/9] Stopping Docker containers..." -ForegroundColor Cyan
+try {
+    if (Get-Command docker-compose -ErrorAction SilentlyContinue) {
+        docker-compose down 2>$null
+    } elseif (Get-Command docker -ErrorAction SilentlyContinue) {
+        docker compose down 2>$null
+    }
+    Write-Host "  ✓ Docker containers stopped" -ForegroundColor Green
+} catch {
+    Write-Host "  ⚠ Docker not found or error stopping containers" -ForegroundColor Yellow
+}
+Write-Host ""
+
+# Step 2: Remove node_modules (with retry for locked files)
+Write-Host "[2/9] Removing node_modules..." -ForegroundColor Cyan
 if (Test-Path "node_modules") {
-    Remove-Item -Recurse -Force node_modules
-    Write-Host "  ✓ Backend node_modules removed" -ForegroundColor Green
+    # Try to remove, if fails due to locked files, use robocopy trick
+    try {
+        Remove-Item -Recurse -Force "node_modules" -ErrorAction Stop
+        Write-Host "  ✓ Backend node_modules removed" -ForegroundColor Green
+    } catch {
+        Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
+        # Use robocopy to delete by mirroring empty directory
+        $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+        robocopy $emptyDir "node_modules" /MIR /R:0 /W:0 | Out-Null
+        Remove-Item "node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✓ Backend node_modules removed" -ForegroundColor Green
+    }
 }
 if (Test-Path "frontend/node_modules") {
-    Remove-Item -Recurse -Force frontend/node_modules
-    Write-Host "  ✓ Frontend node_modules removed" -ForegroundColor Green
+    try {
+        Remove-Item -Recurse -Force "frontend/node_modules" -ErrorAction Stop
+        Write-Host "  ✓ Frontend node_modules removed" -ForegroundColor Green
+    } catch {
+        Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
+        $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+        robocopy $emptyDir "frontend/node_modules" /MIR /R:0 /W:0 | Out-Null
+        Remove-Item "frontend/node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✓ Frontend node_modules removed" -ForegroundColor Green
+    }
 }
 Write-Host ""
 
-# Step 2: Remove build artifacts
-Write-Host "[2/7] Removing build artifacts..." -ForegroundColor Blue
-if (Test-Path "dist") {
-    Remove-Item -Recurse -Force dist
-    Write-Host "  ✓ Backend dist removed" -ForegroundColor Green
-}
-if (Test-Path "frontend/dist") {
-    Remove-Item -Recurse -Force frontend/dist
-    Write-Host "  ✓ Frontend dist removed" -ForegroundColor Green
-}
-if (Test-Path "coverage") {
-    Remove-Item -Recurse -Force coverage
-    Write-Host "  ✓ Coverage reports removed" -ForegroundColor Green
-}
-if (Test-Path "frontend/coverage") {
-    Remove-Item -Recurse -Force frontend/coverage
-    Write-Host "  ✓ Frontend coverage removed" -ForegroundColor Green
+# Step 3: Remove build artifacts
+Write-Host "[3/9] Removing build artifacts..." -ForegroundColor Cyan
+@("dist", "frontend/dist", "frontend/build", "coverage", "frontend/coverage", ".next", "frontend/.next") | ForEach-Object {
+    if (Test-Path $_) {
+        Remove-Item -Recurse -Force $_
+        Write-Host "  ✓ $_ removed" -ForegroundColor Green
+    }
 }
 Write-Host ""
 
-# Step 3: Clear logs
-Write-Host "[3/7] Clearing logs..." -ForegroundColor Blue
+# Step 4: Clear logs
+Write-Host "[4/9] Clearing logs..." -ForegroundColor Cyan
 if (Test-Path "logs") {
-    Get-ChildItem logs | Remove-Item -Force
+    Get-ChildItem "logs" -File | Remove-Item -Force
     Write-Host "  ✓ Logs cleared" -ForegroundColor Green
 }
-if (Test-Path "error-log.txt") {
-    Clear-Content error-log.txt
-    Write-Host "  ✓ Error log cleared" -ForegroundColor Green
-}
-if (Test-Path "startup-log.txt") {
-    Clear-Content startup-log.txt
-    Write-Host "  ✓ Startup log cleared" -ForegroundColor Green
-}
-if (Test-Path "frontend-errors.log") {
-    Clear-Content frontend-errors.log
-    Write-Host "  ✓ Frontend error log cleared" -ForegroundColor Green
+@("error-log.txt", "startup-log.txt", "frontend-errors.log") | ForEach-Object {
+    if (Test-Path $_) {
+        Clear-Content $_ -ErrorAction SilentlyContinue
+        Write-Host "  ✓ $_ cleared" -ForegroundColor Green
+    }
 }
 Write-Host ""
 
-# Step 4: Clear cache
-Write-Host "[4/7] Clearing npm cache..." -ForegroundColor Blue
-npm cache clean --force 2>&1 | Out-Null
+# Step 5: Clear cache
+Write-Host "[5/9] Clearing npm cache..." -ForegroundColor Cyan
+$ErrorActionPreference = "SilentlyContinue"
+npm cache clean --force *>$null
 Set-Location frontend
-npm cache clean --force 2>&1 | Out-Null
+npm cache clean --force *>$null
 Set-Location ..
+$ErrorActionPreference = "Stop"
 Write-Host "  ✓ Cache cleared" -ForegroundColor Green
 Write-Host ""
 
-# Step 5: Reset database
-Write-Host "[5/7] Resetting database..." -ForegroundColor Blue
-Write-Host "  This will drop all tables, recreate them, and seed all data" -ForegroundColor Gray
-$envFileExists = Test-Path .env
-if (-not $envFileExists) {
-    Write-Host "  ⚠ .env file not found. Skipping database reset." -ForegroundColor Yellow
-    Write-Host ""
-} else {
-    $oldErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    npm run db:reset 2>&1 | Out-Null
-    $exitCode = $LASTEXITCODE
-    $ErrorActionPreference = $oldErrorAction
-    $isSuccess = ($exitCode -eq 0)
-    $msg = "  ✓ Database reset completed (tables created and seeded)"
-    $clr = "Green"
-    if (-not $isSuccess) {
-        $msg = "  ⚠ Database reset failed. You may need to run it manually."
-        $clr = "Yellow"
-    }
-    Write-Host $msg -ForegroundColor $clr
-    Write-Host ""
-}
-
-# Step 6: Reset environment files
-Write-Host "[6/7] Resetting environment files..." -ForegroundColor Blue
+# Step 6: Reset database (drop all tables and data, make database completely empty)
+Write-Host "[6/9] Resetting database..." -ForegroundColor Cyan
+Write-Host "  This will:"
+Write-Host "    - Drop ALL tables and data (including all chats, tickets, users, organizations, etc.)"
+Write-Host "    - Make the database completely empty"
+Write-Host "    - Note: You need to run 'npm run db:init' after setup to recreate tables and seed data"
 if (Test-Path ".env") {
-    Remove-Item .env
-    Write-Host "  ✓ Backend .env removed" -ForegroundColor Green
-}
-if (Test-Path "frontend/.env") {
-    Remove-Item frontend/.env
-    Write-Host "  ✓ Frontend .env removed" -ForegroundColor Green
+    try {
+        # Load environment variables
+        Get-Content ".env" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+                $name = $matches[1].Trim()
+                $value = $matches[2].Trim()
+                [Environment]::SetEnvironmentVariable($name, $value, "Process")
+            }
+        }
+        
+        $DB_HOST = $env:DB_HOST
+        $DB_PORT = $env:DB_PORT
+        $DB_USER = $env:DB_USER
+        $DB_PASSWORD = $env:DB_PASSWORD
+        $DB_NAME = $env:DB_NAME
+        
+        if ($DB_NAME) {
+            Write-Host "  Dropping all database tables..." -ForegroundColor Gray
+            $env:PGPASSWORD = $DB_PASSWORD
+            
+            # Connect and drop all tables
+            $dropScript = @"
+DO `$`$ DECLARE
+    r RECORD;
+BEGIN
+    -- Drop all foreign key constraints first
+    FOR r IN (SELECT conname, conrelid::regclass FROM pg_constraint WHERE contype = 'f' AND connamespace = 'public'::regnamespace)
+    LOOP
+        EXECUTE 'ALTER TABLE ' || r.conrelid || ' DROP CONSTRAINT ' || r.conname;
+    END LOOP;
+    
+    -- Drop all tables
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
+    LOOP
+        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+    
+    -- Drop all types (enums)
+    FOR r IN (SELECT typname FROM pg_type WHERE typtype = 'e' AND typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public'))
+    LOOP
+        EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
+    END LOOP;
+END `$`$;
+"@
+            
+            $dropScript | & psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -q 2>&1 | Out-Null
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  ✓ All database tables and data dropped" -ForegroundColor Green
+            } else {
+                Write-Host "  ⚠ Database reset failed. You may need to run it manually after setup." -ForegroundColor Yellow
+                Write-Host "  ⚠ Run 'npm run db:init' after setup to initialize database." -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "  ⚠ Database configuration not found in .env file." -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "  ⚠ Database reset failed: $_" -ForegroundColor Yellow
+        Write-Host "  ⚠ Run 'npm run db:init' after setup to initialize database." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  ⚠ .env file not found. Database will be reset after setup." -ForegroundColor Yellow
+    Write-Host "  ⚠ After setup, run 'npm run db:init' to initialize database." -ForegroundColor Yellow
 }
 Write-Host ""
 
-# Step 7: Clear uploads
-Write-Host "[7/7] Clearing uploaded files..." -ForegroundColor Blue
+# Step 7: Remove environment files
+Write-Host "[7/9] Removing environment files..." -ForegroundColor Cyan
+@(".env", ".env.local", ".env.production", "frontend/.env", "frontend/.env.local", "frontend/.env.production") | ForEach-Object {
+    if (Test-Path $_) {
+        Remove-Item -Force $_
+        Write-Host "  ✓ $_ removed" -ForegroundColor Green
+    }
+}
+Write-Host ""
+
+# Step 8: Clear uploads (keep .gitkeep if exists)
+Write-Host "[8/9] Clearing uploaded files..." -ForegroundColor Cyan
 if (Test-Path "uploads") {
-    Get-ChildItem uploads -Recurse -File | Where-Object { $_.Name -ne '.gitkeep' } | Remove-Item -Force
+    Get-ChildItem "uploads" -Recurse -File | Where-Object { $_.Name -ne ".gitkeep" } | Remove-Item -Force
     Write-Host "  ✓ Uploaded files cleared" -ForegroundColor Green
 }
 Write-Host ""
 
-Write-Host "Reset complete!" -ForegroundColor Green
-Write-Host ""
-Write-Host "Recreating .env files with defaults..." -ForegroundColor Blue
-Write-Host ""
-
-# Recreate .env files with comprehensive defaults
-if (-not (Test-Path .env)) {
-    # Generate secure JWT secrets
-    $jwtSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-    $jwtRefreshSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-    
-    # Build .env content line by line to avoid parsing issues with special characters
-    $envLines = @()
-    $envLines += "# ============================================"
-    $envLines += "# MERO JUGX - Environment Configuration"
-    $envLines += "# ============================================"
-    $envLines += "# All values below are defaults that allow the project to work"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# APPLICATION"
-    $envLines += "# ============================================"
-    $envLines += "NODE_ENV=development"
-    $envLines += "PORT=3000"
-    $envLines += "API_PREFIX=api"
-    $envLines += "API_VERSION=v1"
-    $envLines += "APP_URL=http://localhost:3000"
-    $envLines += "FRONTEND_URL=http://localhost:3001"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# DATABASE (PostgreSQL)"
-    $envLines += "# ============================================"
-    $envLines += "# For Docker setup (default):"
-    $envLines += "DB_TYPE=postgres"
-    $envLines += "DB_HOST=localhost"
-    $envLines += "DB_PORT=5433"
-    $envLines += "DB_USER=postgres"
-    $envLines += "DB_PASSWORD=postgres"
-    $envLines += "DB_NAME=mero_jugx"
-    $envLines += ""
-    $envLines += "# Database Pool Configuration"
-    $envLines += "DB_POOL_MAX=20"
-    $envLines += "DB_POOL_MIN=5"
-    $envLines += "DB_POOL_IDLE_TIMEOUT=30000"
-    $envLines += "DB_POOL_CONNECTION_TIMEOUT=2000"
-    $envLines += "DB_STATEMENT_TIMEOUT=30000"
-    $envLines += "DB_QUERY_TIMEOUT=30000"
-    $envLines += ""
-    $envLines += "# Database Options"
-    $envLines += "DB_SYNCHRONIZE=false"
-    $envLines += "DB_LOGGING=true"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# REDIS"
-    $envLines += "# ============================================"
-    $envLines += "# For Docker setup (default):"
-    $envLines += "REDIS_HOST=localhost"
-    $envLines += "REDIS_PORT=6380"
-    $envLines += "REDIS_PASSWORD="
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# JWT AUTHENTICATION"
-    $envLines += "# ============================================"
-    $envLines += "# IMPORTANT: These are auto-generated. Change in production!"
-    $envLines += "JWT_SECRET=$jwtSecret"
-    $envLines += "JWT_REFRESH_SECRET=$jwtRefreshSecret"
-    $envLines += "JWT_EXPIRES_IN=15m"
-    $envLines += "JWT_REFRESH_EXPIRES_IN=7d"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# EMAIL CONFIGURATION"
-    $envLines += "# ============================================"
-    $envLines += "# Option 1: Resend API (Recommended for development)"
-    $envLines += "RESEND_API_KEY="
-    $envLines += ""
-    $envLines += "# Option 2: SMTP (Alternative)"
-    $envLines += "SMTP_HOST=smtp.gmail.com"
-    $envLines += "SMTP_PORT=587"
-    $envLines += "SMTP_SECURE=false"
-    $envLines += "SMTP_USER="
-    $envLines += "SMTP_PASSWORD="
-    $envLines += "SMTP_FROM=noreply@mero-jugx.com"
-    $envLines += "SMTP_FROM_NAME=Mero Jugx"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# TWO-FACTOR AUTHENTICATION (2FA/MFA)"
-    $envLines += "# ============================================"
-    $envLines += "TOTP_ISSUER=Mero Jugx"
-    $envLines += "TOTP_ALGORITHM=SHA1"
-    $envLines += "TOTP_DIGITS=6"
-    $envLines += "TOTP_PERIOD=30"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# RATE LIMITING"
-    $envLines += "# ============================================"
-    $envLines += "THROTTLE_TTL=60"
-    $envLines += "THROTTLE_LIMIT=10"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# FILE UPLOAD"
-    $envLines += "# ============================================"
-    $envLines += "MAX_FILE_SIZE=5242880"
-    $envLines += "UPLOAD_DEST=./uploads"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# LOGGING"
-    $envLines += "# ============================================"
-    $envLines += "LOG_LEVEL=debug"
-    $envLines += "LOG_DIR=./logs"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# SENTRY ERROR TRACKING (Optional)"
-    $envLines += "# ============================================"
-    $envLines += "SENTRY_DSN="
-    $envLines += "SENTRY_TRACES_SAMPLE_RATE=1.0"
-    $envLines += "SENTRY_PROFILES_SAMPLE_RATE=1.0"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# CACHING"
-    $envLines += "# ============================================"
-    $envLines += "CACHE_TTL=3600"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# PAYMENT GATEWAYS"
-    $envLines += "# ============================================"
-    $envLines += ""
-    $envLines += "# eSewa Payment Gateway (Test credentials - works out of the box)"
-    $envLines += "ESEWA_TEST_MERCHANT_ID=EPAYTEST"
-    $envLines += "ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q"
-    $envLines += "ESEWA_TEST_API_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-    $envLines += "ESEWA_TEST_VERIFY_URL=https://rc.esewa.com.np/api/epay/transaction/status"
-    $envLines += "ESEWA_MERCHANT_ID="
-    $envLines += "ESEWA_SECRET_KEY="
-    $envLines += "ESEWA_API_URL=https://epay.esewa.com.np/api/epay/main/v2/form"
-    $envLines += "ESEWA_VERIFY_URL=https://esewa.com.np/api/epay/transaction/status"
-    $envLines += "ESEWA_USE_MOCK_MODE=false"
-    $envLines += ""
-    $envLines += "# Stripe Payment Gateway"
-    $envLines += "STRIPE_TEST_PUBLISHABLE_KEY="
-    $envLines += "STRIPE_TEST_SECRET_KEY="
-    $envLines += "STRIPE_PUBLISHABLE_KEY="
-    $envLines += "STRIPE_SECRET_KEY="
-    $envLines += "STRIPE_WEBHOOK_SECRET="
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# CURRENCY CONFIGURATION"
-    $envLines += "# ============================================"
-    $envLines += "NPR_TO_USD_RATE=0.0075"
-    $envLines += "DEFAULT_CURRENCY=USD"
-    $envLines += "NEPAL_COUNTRY_CODE=NP"
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# SMS SERVICE (Twilio - Optional)"
-    $envLines += "# ============================================"
-    $envLines += "TWILIO_ACCOUNT_SID="
-    $envLines += "TWILIO_AUTH_TOKEN="
-    $envLines += "TWILIO_FROM_NUMBER="
-    $envLines += ""
-    $envLines += "# ============================================"
-    $envLines += "# PUSH NOTIFICATIONS (Firebase - Optional)"
-    $envLines += "# ============================================"
-    $envLines += "FIREBASE_SERVER_KEY="
-    
-    $envContent = $envLines -join "`r`n"
-    Set-Content -Path .env -Value $envContent
-    Write-Host "Created .env file with all defaults" -ForegroundColor Green
+# Step 9: Remove Docker volumes (optional, ask user)
+Write-Host "[9/9] Docker volumes..." -ForegroundColor Cyan
+$remove_volumes = Read-Host "Do you want to remove Docker volumes? This will delete all database data permanently. (y/N)"
+if ($remove_volumes -eq "y" -or $remove_volumes -eq "Y") {
+    try {
+        if (Get-Command docker-compose -ErrorAction SilentlyContinue) {
+            docker-compose down -v 2>$null
+        } elseif (Get-Command docker -ErrorAction SilentlyContinue) {
+            docker compose down -v 2>$null
+        }
+        docker volume rm mero-jugx_postgres_data 2>$null
+        docker volume rm mero-jugx_redis_data 2>$null
+        Write-Host "  ✓ Docker volumes removed" -ForegroundColor Green
+    } catch {
+        Write-Host "  ⚠ Error removing Docker volumes" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  ⚠ Docker volumes kept (database data preserved)" -ForegroundColor Yellow
 }
-
-# Recreate frontend/.env
-if (-not (Test-Path frontend/.env)) {
-    $frontendEnvLines = @()
-    $frontendEnvLines += "# ============================================"
-    $frontendEnvLines += "# MERO JUGX - Frontend Environment Configuration"
-    $frontendEnvLines += "# ============================================"
-    $frontendEnvLines += "# All values below are defaults that allow the project to work"
-    $frontendEnvLines += ""
-    $frontendEnvLines += "# API Configuration"
-    $frontendEnvLines += "VITE_API_URL=http://localhost:3000/api/v1"
-    $frontendEnvLines += ""
-    $frontendEnvLines += "# Application"
-    $frontendEnvLines += "VITE_APP_NAME=Mero Jugx"
-    $frontendEnvLines += "VITE_APP_VERSION=1.0.0"
-    $frontendEnvLines += ""
-    $frontendEnvLines += "# Sentry Error Tracking (Optional)"
-    $frontendEnvLines += "VITE_SENTRY_DSN="
-    $frontendEnvLines += "VITE_SENTRY_TRACES_SAMPLE_RATE=1.0"
-    $frontendEnvLines += ""
-    $frontendEnvLines += "# Currency Configuration"
-    $frontendEnvLines += "VITE_NPR_TO_USD_RATE=0.0075"
-    $frontendEnvLines += "VITE_DEFAULT_CURRENCY=USD"
-    
-    $frontendEnvContent = $frontendEnvLines -join "`r`n"
-    Set-Content -Path frontend/.env -Value $frontendEnvContent
-    Write-Host "Created frontend/.env file with all defaults" -ForegroundColor Green
-}
-
-Write-Host ""
-Write-Host "Reset and initialization complete!" -ForegroundColor Green
-Write-Host "You can now run 'npm run dev' to start the development servers." -ForegroundColor Yellow
 Write-Host ""
 
-
+Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║  Reset Complete!                                            ║" -ForegroundColor Cyan
+Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "✅ Everything has been reset." -ForegroundColor Green
+Write-Host ""
+Write-Host "Next steps:" -ForegroundColor Yellow
+Write-Host "  1. Run 'npm run setup' to set up the project fresh" -ForegroundColor White
+Write-Host "     - Install all dependencies" -ForegroundColor Gray
+Write-Host "     - Create .env files with all defaults (preserves existing .env if present)" -ForegroundColor Gray
+Write-Host "     - Set up database (Docker or local)" -ForegroundColor Gray
+Write-Host "  2. Run 'npm run db:init' to initialize database" -ForegroundColor White
+Write-Host "     - Run all migrations (create all tables)" -ForegroundColor Gray
+Write-Host "     - Seed base data (packages, permissions, roles, etc.)" -ForegroundColor Gray
+Write-Host "  3. Run 'npm run start:dev' to start development servers" -ForegroundColor White
+Write-Host ""
+Write-Host "Note: All data has been deleted. Database is completely empty." -ForegroundColor Cyan
+Write-Host "      Run 'npm run db:init' to recreate tables and seed base data." -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Ready to start fresh! 🚀" -ForegroundColor Green
+Write-Host ""

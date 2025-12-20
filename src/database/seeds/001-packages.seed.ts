@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { Package } from '../entities/package.entity';
+import { Package } from '../entities/packages.entity';
 
 export async function seedPackages(dataSource: DataSource): Promise<void> {
   const packageRepository = dataSource.getRepository(Package);

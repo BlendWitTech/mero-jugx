@@ -4,11 +4,11 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserStatus } from '../../database/entities/user.entity';
+import { User, UserStatus } from '../../database/entities/users.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../../database/entities/organization-member.entity';
+} from '../../database/entities/organization_members.entity';
 
 export interface JwtPayload {
   sub: string; // user id (impersonated user if impersonating)

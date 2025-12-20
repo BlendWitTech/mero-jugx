@@ -1,6 +1,6 @@
 import { IsEnum, IsString, IsOptional, IsUUID, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MessageType } from '../../database/entities/message.entity';
+import { MessageType } from '../../database/entities/messages.entity';
 
 export class MessageAttachmentDto {
   @IsString()

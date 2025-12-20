@@ -4,6 +4,7 @@ import { chatService, Chat } from '../services/chatService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ChatWindow from './ChatWindow';
 import { Socket } from 'socket.io-client';
+import { logger } from '../utils/logger';
 
 interface OpenChat {
   id: string;
@@ -28,31 +29,34 @@ export default function ChatManager() {
     
     // Ensure socket is connected
     if (!socket.connected) {
-      console.log('[ChatManager] Socket not connected, waiting for connection...');
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatManager] Socket not connected, waiting for connection...');
+      }
       socket.once('connect', () => {
-        console.log('[ChatManager] Socket connected, setting up listeners');
+        if (process.env.NODE_ENV === 'development') {
+          logger.log('[ChatManager] Socket connected, setting up listeners');
+        }
       });
     }
 
     // Listen for new messages
     const handleNewMessage = (data: { message: any; chat_id: string }) => {
-      console.log('[ChatManager] Received message:new event', { 
-        chat_id: data.chat_id, 
-        message_id: data.message.id,
-        message_content: data.message.content?.substring(0, 50)
-      });
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatManager] Received message:new event', { 
+          chat_id: data.chat_id, 
+          message_id: data.message.id,
+          message_content: data.message.content?.substring(0, 50)
+        });
+      }
       
       // Find if any open chat window is viewing this chat
       const isChatOpen = openChats.some(
         (chat) => chat.chatId === data.chat_id && !chat.isMinimized
       );
       
-      console.log('[ChatManager] Is chat open?', isChatOpen, 'openChats:', openChats.map(c => ({ chatId: c.chatId, minimized: c.isMinimized })));
-      
       // Update unread counts optimistically - this updates all components using this query
       queryClient.setQueryData(['chats', organization.id], (old: any) => {
         if (!old) {
-          console.log('[ChatManager] No existing chat data, cannot update');
           return old;
         }
         
@@ -66,15 +70,12 @@ export default function ChatManager() {
             if (isChatOpen) {
               // Chat is open and visible - mark as read
               newUnread = 0;
-              console.log('[ChatManager] Chat is open, setting unread_count to 0');
             } else {
               // Chat is closed - increment unread count
               // Always increment, even if currentUnread is 0 (in case it was just reset)
               newUnread = currentUnread + 1;
-              console.log('[ChatManager] Chat is closed, incrementing unread_count:', currentUnread, '->', newUnread);
             }
             
-            console.log('[ChatManager] Updating chat', chat.id, 'unread_count:', currentUnread, '->', newUnread, 'isChatOpen:', isChatOpen);
             return {
               ...chat,
               unread_count: newUnread,
@@ -84,7 +85,6 @@ export default function ChatManager() {
           return chat;
         });
         
-        console.log('[ChatManager] Updated chats query cache, total chats:', updatedChats.length);
         return {
           ...old,
           chats: updatedChats,
@@ -95,7 +95,9 @@ export default function ChatManager() {
       queryClient.invalidateQueries({ queryKey: ['messages', data.chat_id] });
     };
 
-    console.log('[ChatManager] Attaching message:new listener');
+    if (process.env.NODE_ENV === 'development') {
+      logger.log('[ChatManager] Attaching message:new listener');
+    }
     socket.on('message:new', handleNewMessage);
 
     // Listen for new chats
@@ -106,7 +108,9 @@ export default function ChatManager() {
     return () => {
       // Only remove event listeners, don't disconnect the socket
       // The socket is shared with ChatWindow and other components
-      console.log('[ChatManager] Removing event listeners');
+      if (process.env.NODE_ENV === 'development') {
+        logger.log('[ChatManager] Removing event listeners');
+      }
       socket.off('message:new', handleNewMessage);
       socket.off('chat:new');
       // Don't disconnect - let the socket stay connected for other components
@@ -200,14 +204,19 @@ export default function ChatManager() {
 
   const closeChat = (chatId: string) => {
     setOpenChats((chats) => {
+      const chatToClose = chats.find((chat) => chat.id === chatId);
       const updated = chats.filter((chat) => chat.id !== chatId);
-      console.log('[ChatManager] Chat closed:', chatId, 'Remaining open chats:', updated.length);
+      logger.log('[ChatManager] Chat closed:', chatId, 'Remaining open chats:', updated.length);
       
-      // Don't invalidate immediately on close - let ChatManager handle unread counts
-      // Invalidating here can cause race conditions where new messages arrive
-      // and the increment gets overwritten by the refetch
-      // Instead, we'll let the natural query refetch handle it, or invalidate only
-      // when needed (e.g., when explicitly refreshing)
+      // When a chat window is closed, restore unread count from backend
+      // This ensures that if there are unread messages, the count will be restored
+      if (chatToClose?.chatId && organization?.id) {
+        // Invalidate chats query to refetch from backend and get accurate unread counts
+        // Use a small delay to ensure the chat window is fully closed first
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['chats', organization.id] });
+        }, 100);
+      }
       
       return updated;
     });

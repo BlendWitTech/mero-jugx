@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsEmail, IsEnum, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { UserStatus } from '../../database/entities/user.entity';
+import { UserStatus } from '../../database/entities/users.entity';
 
 export class UpdateUserAdminDto {
   @ApiPropertyOptional({ description: 'First name' })

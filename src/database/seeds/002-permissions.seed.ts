@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { Permission } from '../entities/permission.entity';
+import { Permission } from '../entities/permissions.entity';
 
 export async function seedPermissions(dataSource: DataSource): Promise<void> {
   const permissionRepository = dataSource.getRepository(Permission);
@@ -105,6 +105,44 @@ export async function seedPermissions(dataSource: DataSource): Promise<void> {
       description: 'Cancel purchased package features',
     },
 
+    // App permissions
+    {
+      name: 'View Apps',
+      slug: 'apps.view',
+      category: 'apps',
+      description: 'View available apps in marketplace',
+    },
+    {
+      name: 'Create Apps',
+      slug: 'apps.create',
+      category: 'apps',
+      description: 'Create new apps (Admin only)',
+    },
+    {
+      name: 'Edit Apps',
+      slug: 'apps.edit',
+      category: 'apps',
+      description: 'Edit apps (Admin only)',
+    },
+    {
+      name: 'Delete Apps',
+      slug: 'apps.delete',
+      category: 'apps',
+      description: 'Delete apps (Admin only)',
+    },
+    {
+      name: 'Subscribe to Apps',
+      slug: 'apps.subscribe',
+      category: 'apps',
+      description: 'Purchase and subscribe to apps',
+    },
+    {
+      name: 'Manage App Subscriptions',
+      slug: 'apps.manage',
+      category: 'apps',
+      description: 'Manage organization app subscriptions (renew, cancel)',
+    },
+
     // Invitation permissions
     {
       name: 'View Invitations',
@@ -183,6 +221,282 @@ export async function seedPermissions(dataSource: DataSource): Promise<void> {
       slug: 'chat.initiate_call',
       category: 'chat',
       description: 'Start audio and video calls',
+    },
+
+    // Admin Chat permissions
+    {
+      name: 'Access Admin Chat',
+      slug: 'admin_chat.access',
+      category: 'admin_chat',
+      description: 'Chat with system administrators',
+    },
+
+    // Ticket permissions
+    {
+      name: 'View Tickets',
+      slug: 'tickets.view',
+      category: 'tickets',
+      description: 'View support tickets',
+    },
+    {
+      name: 'Create Tickets',
+      slug: 'tickets.create',
+      category: 'tickets',
+      description: 'Create new support tickets',
+    },
+    {
+      name: 'Edit Tickets',
+      slug: 'tickets.edit',
+      category: 'tickets',
+      description: 'Edit ticket information',
+    },
+    {
+      name: 'Delete Tickets',
+      slug: 'tickets.delete',
+      category: 'tickets',
+      description: 'Delete tickets',
+    },
+    {
+      name: 'Assign Tickets',
+      slug: 'tickets.assign',
+      category: 'tickets',
+      description: 'Assign tickets to team members',
+    },
+    {
+      name: 'Resolve Tickets',
+      slug: 'tickets.resolve',
+      category: 'tickets',
+      description: 'Resolve and close tickets',
+    },
+    {
+      name: 'Manage Ticket Comments',
+      slug: 'tickets.comments',
+      category: 'tickets',
+      description: 'Add and manage ticket comments',
+    },
+
+    // Analytics permissions
+    {
+      name: 'View Analytics',
+      slug: 'analytics.view',
+      category: 'analytics',
+      description: 'View organization analytics and reports',
+    },
+    {
+      name: 'Export Analytics',
+      slug: 'analytics.export',
+      category: 'analytics',
+      description: 'Export analytics data',
+    },
+
+    // Billing permissions
+    {
+      name: 'View Billing',
+      slug: 'billing.view',
+      category: 'billing',
+      description: 'View billing information and invoices',
+    },
+    {
+      name: 'Manage Billing',
+      slug: 'billing.manage',
+      category: 'billing',
+      description: 'Manage billing settings and payment methods',
+    },
+    {
+      name: 'View Invoices',
+      slug: 'invoices.view',
+      category: 'billing',
+      description: 'View and download invoices',
+    },
+
+    // Payment permissions
+    {
+      name: 'Process Payments',
+      slug: 'payments.process',
+      category: 'payments',
+      description: 'Process payments and transactions',
+    },
+    {
+      name: 'View Payment History',
+      slug: 'payments.view',
+      category: 'payments',
+      description: 'View payment history',
+    },
+    {
+      name: 'Refund Payments',
+      slug: 'payments.refund',
+      category: 'payments',
+      description: 'Process payment refunds',
+    },
+
+    // Notification permissions
+    {
+      name: 'View Notifications',
+      slug: 'notifications.view',
+      category: 'notifications',
+      description: 'View notifications',
+    },
+    {
+      name: 'Manage Notification Preferences',
+      slug: 'notifications.manage',
+      category: 'notifications',
+      description: 'Manage notification preferences',
+    },
+    {
+      name: 'Send Notifications',
+      slug: 'notifications.send',
+      category: 'notifications',
+      description: 'Send notifications to users',
+    },
+
+    // Integration permissions
+    {
+      name: 'View Integrations',
+      slug: 'integrations.view',
+      category: 'integrations',
+      description: 'View organization integrations',
+    },
+    {
+      name: 'Create Integrations',
+      slug: 'integrations.create',
+      category: 'integrations',
+      description: 'Create new integrations',
+    },
+    {
+      name: 'Edit Integrations',
+      slug: 'integrations.edit',
+      category: 'integrations',
+      description: 'Edit integration settings',
+    },
+    {
+      name: 'Delete Integrations',
+      slug: 'integrations.delete',
+      category: 'integrations',
+      description: 'Delete integrations',
+    },
+    {
+      name: 'Manage API Keys',
+      slug: 'integrations.api_keys',
+      category: 'integrations',
+      description: 'Create and manage API keys',
+    },
+    {
+      name: 'Manage Webhooks',
+      slug: 'integrations.webhooks',
+      category: 'integrations',
+      description: 'Create and manage webhooks',
+    },
+
+    // Data Management permissions
+    {
+      name: 'Export Data',
+      slug: 'data.export',
+      category: 'data',
+      description: 'Export organization data',
+    },
+    {
+      name: 'Import Data',
+      slug: 'data.import',
+      category: 'data',
+      description: 'Import data into organization',
+    },
+    {
+      name: 'Delete Data',
+      slug: 'data.delete',
+      category: 'data',
+      description: 'Delete organization data',
+    },
+
+    // Search permissions
+    {
+      name: 'Use Search',
+      slug: 'search.use',
+      category: 'search',
+      description: 'Use organization search functionality',
+    },
+
+    // Communication permissions
+    {
+      name: 'Send Emails',
+      slug: 'communication.email',
+      category: 'communication',
+      description: 'Send emails through the system',
+    },
+    {
+      name: 'Send SMS',
+      slug: 'communication.sms',
+      category: 'communication',
+      description: 'Send SMS messages',
+    },
+    {
+      name: 'Send Push Notifications',
+      slug: 'communication.push',
+      category: 'communication',
+      description: 'Send push notifications',
+    },
+    {
+      name: 'Manage Email Templates',
+      slug: 'communication.templates',
+      category: 'communication',
+      description: 'Manage email templates',
+    },
+
+    // Monitoring permissions
+    {
+      name: 'View Monitoring',
+      slug: 'monitoring.view',
+      category: 'monitoring',
+      description: 'View system monitoring and metrics',
+    },
+
+    // Organization Documents permissions
+    {
+      name: 'View Documents',
+      slug: 'documents.view',
+      category: 'documents',
+      description: 'View organization documents',
+    },
+    {
+      name: 'Upload Documents',
+      slug: 'documents.upload',
+      category: 'documents',
+      description: 'Upload organization documents',
+    },
+    {
+      name: 'Delete Documents',
+      slug: 'documents.delete',
+      category: 'documents',
+      description: 'Delete organization documents',
+    },
+    {
+      name: 'Scan Documents',
+      slug: 'documents.scan',
+      category: 'documents',
+      description: 'Scan documents using OCR (Non-freemium only)',
+    },
+    {
+      name: 'Manage Document Designs',
+      slug: 'documents.designs',
+      category: 'documents',
+      description: 'Manage letterhead and invoice designs (Non-freemium only)',
+    },
+    {
+      name: 'Add Signatures to Documents',
+      slug: 'documents.signatures',
+      category: 'documents',
+      description: 'Add signatures to documents (Non-freemium only)',
+    },
+    {
+      name: 'Add Logos to Documents',
+      slug: 'documents.logos',
+      category: 'documents',
+      description: 'Add logos to documents (Non-freemium only)',
+    },
+    {
+      name: 'Create Document Templates',
+      slug: 'documents.templates',
+      category: 'documents',
+      description: 'Create document templates (Non-freemium only)',
     },
   ];
 

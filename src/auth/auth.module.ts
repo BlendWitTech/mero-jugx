@@ -7,13 +7,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
-import { User } from '../database/entities/user.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember } from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { Package } from '../database/entities/package.entity';
-import { EmailVerification } from '../database/entities/email-verification.entity';
-import { Session } from '../database/entities/session.entity';
+import { User } from '../database/entities/users.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { OrganizationMember } from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Package } from '../database/entities/packages.entity';
+import { EmailVerification } from '../database/entities/email_verifications.entity';
+import { Session } from '../database/entities/sessions.entity';
 import { CommonModule } from '../common/common.module';
 
 @Module({

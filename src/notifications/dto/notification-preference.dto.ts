@@ -27,6 +27,14 @@ export class NotificationPreferenceDto {
   @IsBoolean()
   in_app_enabled?: boolean;
 
+  @ApiPropertyOptional({ 
+    description: 'Subscribe to marketing emails (only available for non-freemium packages)', 
+    default: false 
+  })
+  @IsOptional()
+  @IsBoolean()
+  marketing_email_subscribed?: boolean;
+
   @ApiPropertyOptional({ description: 'Notification preferences by type', type: 'object' })
   @IsOptional()
   @IsObject()

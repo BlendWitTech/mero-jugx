@@ -1329,23 +1329,452 @@ DELETE /integrations/webhooks/:id</code></pre>
             <h4><code>upgradePackage(userId: string, organizationId: string, dto: UpgradePackageDto)</code></h4>
             <p><strong>Purpose:</strong> Upgrades/downgrades organization package with validation.</p>
 
-            <h2 id="database">Database</h2>
+            <h2 id="database">Database Structure</h2>
 
-            <h3>Entities</h3>
-            <p>Key entities in <code>src/database/entities/</code>:</p>
+            <h3>Database Architecture</h3>
+            <p><strong>Database Type:</strong> PostgreSQL 16+</p>
+            <p><strong>ORM:</strong> TypeORM</p>
+            <p><strong>Location:</strong> All entity files are in <code>src/database/entities/</code></p>
+            <p><strong>Migrations:</strong> <code>src/database/migrations/</code></p>
+            <p><strong>Seeds:</strong> <code>src/database/seeds/</code></p>
+
+            <h3>Entity Relationship Diagram (ERD)</h3>
+            <div class="info">
+                <p><strong>Core Relationships:</strong></p>
+                <ul>
+                    <li><strong>User</strong> ↔ <strong>OrganizationMember</strong> ↔ <strong>Organization</strong> (Many-to-Many)</li>
+                    <li><strong>OrganizationMember</strong> → <strong>Role</strong> (Many-to-One)</li>
+                    <li><strong>Role</strong> ↔ <strong>RolePermission</strong> ↔ <strong>Permission</strong> (Many-to-Many)</li>
+                    <li><strong>Organization</strong> → <strong>Package</strong> (Many-to-One)</li>
+                    <li><strong>Chat</strong> ↔ <strong>ChatMember</strong> ↔ <strong>User</strong> (Many-to-Many)</li>
+                    <li><strong>Chat</strong> → <strong>Message</strong> (One-to-Many)</li>
+                    <li><strong>User</strong> → <strong>Notification</strong> (One-to-Many)</li>
+                    <li><strong>Organization</strong> → <strong>Payment</strong> (One-to-Many)</li>
+                    <li><strong>Organization</strong> → <strong>OrganizationApp</strong> ↔ <strong>App</strong> (Many-to-Many)</li>
+                </ul>
+            </div>
+
+            <h3>Complete Database Tables</h3>
+
+            <h4>1. users</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/users.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Stores all user account information</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key, auto-generated</td></tr>
+                    <tr><td>email</td><td>VARCHAR(255)</td><td>Unique email address</td></tr>
+                    <tr><td>password_hash</td><td>VARCHAR(255)</td><td>Bcrypt hashed password</td></tr>
+                    <tr><td>first_name</td><td>VARCHAR(100)</td><td>User's first name</td></tr>
+                    <tr><td>last_name</td><td>VARCHAR(100)</td><td>User's last name</td></tr>
+                    <tr><td>phone</td><td>VARCHAR(50)</td><td>Phone number (nullable)</td></tr>
+                    <tr><td>avatar_url</td><td>VARCHAR(500)</td><td>Profile picture URL (nullable)</td></tr>
+                    <tr><td>email_verified</td><td>BOOLEAN</td><td>Email verification status</td></tr>
+                    <tr><td>email_verified_at</td><td>TIMESTAMP</td><td>When email was verified (nullable)</td></tr>
+                    <tr><td>mfa_enabled</td><td>BOOLEAN</td><td>MFA enabled flag</td></tr>
+                    <tr><td>mfa_secret</td><td>VARCHAR(255)</td><td>TOTP secret (nullable)</td></tr>
+                    <tr><td>mfa_backup_codes</td><td>JSON</td><td>Backup codes array (nullable)</td></tr>
+                    <tr><td>mfa_setup_completed_at</td><td>TIMESTAMP</td><td>MFA setup completion time (nullable)</td></tr>
+                    <tr><td>last_login_at</td><td>TIMESTAMP</td><td>Last login timestamp (nullable)</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>active, suspended, deleted</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Account creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                    <tr><td>deleted_at</td><td>TIMESTAMP</td><td>Soft delete timestamp (nullable)</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> email (unique), status, email_verified</p>
+            <p><strong>Relations:</strong> organization_memberships, invitations, sessions, email_verifications, notifications, audit_logs</p>
+
+            <h4>2. organizations</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/organizations.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Stores organization information and settings</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key, auto-generated</td></tr>
+                    <tr><td>name</td><td>VARCHAR(255)</td><td>Organization name (unique)</td></tr>
+                    <tr><td>slug</td><td>VARCHAR(255)</td><td>URL-friendly identifier (unique)</td></tr>
+                    <tr><td>email</td><td>VARCHAR(255)</td><td>Organization email (unique)</td></tr>
+                    <tr><td>phone</td><td>VARCHAR(50)</td><td>Phone number (nullable)</td></tr>
+                    <tr><td>address</td><td>TEXT</td><td>Street address (nullable)</td></tr>
+                    <tr><td>city</td><td>VARCHAR(100)</td><td>City (nullable)</td></tr>
+                    <tr><td>state</td><td>VARCHAR(100)</td><td>State/Province (nullable)</td></tr>
+                    <tr><td>country</td><td>VARCHAR(100)</td><td>Country (nullable)</td></tr>
+                    <tr><td>postal_code</td><td>VARCHAR(20)</td><td>Postal/ZIP code (nullable)</td></tr>
+                    <tr><td>website</td><td>VARCHAR(255)</td><td>Website URL (nullable)</td></tr>
+                    <tr><td>logo_url</td><td>VARCHAR(500)</td><td>Logo URL (nullable)</td></tr>
+                    <tr><td>favicon_url</td><td>VARCHAR(500)</td><td>Favicon URL (nullable)</td></tr>
+                    <tr><td>primary_color</td><td>VARCHAR(7)</td><td>Brand primary color hex (nullable)</td></tr>
+                    <tr><td>secondary_color</td><td>VARCHAR(7)</td><td>Brand secondary color hex (nullable)</td></tr>
+                    <tr><td>custom_css</td><td>TEXT</td><td>Custom CSS (nullable)</td></tr>
+                    <tr><td>custom_js</td><td>TEXT</td><td>Custom JavaScript (nullable)</td></tr>
+                    <tr><td>footer_text</td><td>TEXT</td><td>Footer text (nullable)</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>Organization description (nullable)</td></tr>
+                    <tr><td>tax_id</td><td>VARCHAR(100)</td><td>Tax ID (nullable)</td></tr>
+                    <tr><td>registration_number</td><td>VARCHAR(100)</td><td>Registration number (nullable)</td></tr>
+                    <tr><td>industry</td><td>VARCHAR(100)</td><td>Industry type (nullable)</td></tr>
+                    <tr><td>package_id</td><td>INT</td><td>Foreign key to packages table</td></tr>
+                    <tr><td>user_limit</td><td>INT</td><td>Maximum users allowed (default: 10)</td></tr>
+                    <tr><td>role_limit</td><td>INT</td><td>Maximum roles allowed (default: 2)</td></tr>
+                    <tr><td>mfa_enabled</td><td>BOOLEAN</td><td>Organization-wide MFA requirement</td></tr>
+                    <tr><td>email_verified</td><td>BOOLEAN</td><td>Organization email verified</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>active, suspended, deleted</td></tr>
+                    <tr><td>package_expires_at</td><td>TIMESTAMP</td><td>Package expiration (nullable)</td></tr>
+                    <tr><td>package_auto_renew</td><td>BOOLEAN</td><td>Auto-renewal enabled</td></tr>
+                    <tr><td>package_auto_renew_credentials</td><td>TEXT</td><td>Encrypted payment credentials (nullable)</td></tr>
+                    <tr><td>has_upgraded_from_freemium</td><td>BOOLEAN</td><td>Upgrade flag</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                    <tr><td>deleted_at</td><td>TIMESTAMP</td><td>Soft delete timestamp (nullable)</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> slug (unique), email (unique), status, package_id</p>
+            <p><strong>Relations:</strong> package, members, roles, invitations, package_features, documents</p>
+
+            <h4>3. organization_members</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/organization_members.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Junction table linking users to organizations with roles</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations</td></tr>
+                    <tr><td>user_id</td><td>UUID</td><td>Foreign key to users</td></tr>
+                    <tr><td>role_id</td><td>INT</td><td>Foreign key to roles</td></tr>
+                    <tr><td>invited_by</td><td>UUID</td><td>User who invited (nullable)</td></tr>
+                    <tr><td>joined_at</td><td>TIMESTAMP</td><td>Join date</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>active, revoked, left</td></tr>
+                    <tr><td>revoked_at</td><td>TIMESTAMP</td><td>Revocation time (nullable)</td></tr>
+                    <tr><td>revoked_by</td><td>UUID</td><td>User who revoked (nullable)</td></tr>
+                    <tr><td>data_transferred_to</td><td>UUID</td><td>User who received data (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Unique Constraint:</strong> (organization_id, user_id)</p>
+            <p><strong>Indexes:</strong> user_id, role_id, status, organization_id</p>
+            <p><strong>Relations:</strong> organization, user, role, inviter, revoker, data_recipient</p>
+
+            <h4>4. roles</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/roles.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Defines roles within organizations</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>INT (PK)</td><td>Primary key, auto-increment</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations (nullable for system roles)</td></tr>
+                    <tr><td>name</td><td>VARCHAR(100)</td><td>Role name</td></tr>
+                    <tr><td>slug</td><td>VARCHAR(100)</td><td>URL-friendly identifier</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>Role description (nullable)</td></tr>
+                    <tr><td>is_system_role</td><td>BOOLEAN</td><td>System role flag</td></tr>
+                    <tr><td>is_organization_owner</td><td>BOOLEAN</td><td>Owner role flag</td></tr>
+                    <tr><td>is_default</td><td>BOOLEAN</td><td>Default role flag</td></tr>
+                    <tr><td>is_active</td><td>BOOLEAN</td><td>Active status</td></tr>
+                    <tr><td>hierarchy_level</td><td>INT</td><td>Hierarchy level (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                    <tr><td>deleted_at</td><td>TIMESTAMP</td><td>Soft delete timestamp (nullable)</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Unique Constraint:</strong> (organization_id, slug)</p>
+            <p><strong>Indexes:</strong> organization_id, is_system_role, is_active</p>
+            <p><strong>Relations:</strong> organization, members, role_permissions</p>
+
+            <h4>5. permissions</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/permissions.entity.ts</code></p>
+            <p><strong>Purpose:</strong> System-wide permission definitions</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>INT (PK)</td><td>Primary key, auto-increment</td></tr>
+                    <tr><td>name</td><td>VARCHAR(100)</td><td>Permission name (unique)</td></tr>
+                    <tr><td>slug</td><td>VARCHAR(100)</td><td>Permission slug (unique, e.g., "users.view")</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>Permission description (nullable)</td></tr>
+                    <tr><td>category</td><td>VARCHAR(50)</td><td>Permission category (e.g., "users", "organizations")</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> slug (unique), category</p>
+            <p><strong>Relations:</strong> role_permissions</p>
+
+            <h4>6. role_permissions</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/role_permissions.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Junction table linking roles to permissions</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>INT (PK)</td><td>Primary key</td></tr>
+                    <tr><td>role_id</td><td>INT</td><td>Foreign key to roles</td></tr>
+                    <tr><td>permission_id</td><td>INT</td><td>Foreign key to permissions</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Unique Constraint:</strong> (role_id, permission_id)</p>
+            <p><strong>Indexes:</strong> role_id, permission_id</p>
+            <p><strong>Relations:</strong> role, permission</p>
+
+            <h4>7. packages</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/packages.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Subscription package definitions</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>INT (PK)</td><td>Primary key</td></tr>
+                    <tr><td>name</td><td>VARCHAR(100)</td><td>Package name (unique)</td></tr>
+                    <tr><td>slug</td><td>VARCHAR(100)</td><td>Package slug (unique)</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>Package description (nullable)</td></tr>
+                    <tr><td>base_user_limit</td><td>INT</td><td>Base user limit</td></tr>
+                    <tr><td>base_role_limit</td><td>INT</td><td>Base role limit</td></tr>
+                    <tr><td>additional_role_limit</td><td>INT</td><td>Additional roles allowed (default: 0)</td></tr>
+                    <tr><td>price</td><td>DECIMAL(10,2)</td><td>Package price (nullable)</td></tr>
+                    <tr><td>is_active</td><td>BOOLEAN</td><td>Active status</td></tr>
+                    <tr><td>sort_order</td><td>INT</td><td>Display order (default: 0)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> slug (unique), is_active</p>
+            <p><strong>Relations:</strong> organizations</p>
+
+            <h4>8. chats</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/chats.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Chat room definitions</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations</td></tr>
+                    <tr><td>type</td><td>ENUM</td><td>direct, group</td></tr>
+                    <tr><td>name</td><td>VARCHAR(255)</td><td>Chat name (nullable, for groups)</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>Chat description (nullable, for groups)</td></tr>
+                    <tr><td>avatar_url</td><td>VARCHAR(500)</td><td>Chat avatar (nullable, for groups)</td></tr>
+                    <tr><td>created_by</td><td>UUID</td><td>User who created the chat</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>active, archived, deleted</td></tr>
+                    <tr><td>last_message_at</td><td>TIMESTAMP</td><td>Last message timestamp (nullable)</td></tr>
+                    <tr><td>last_message_id</td><td>UUID</td><td>Last message ID (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> organization_id, type, status, created_by</p>
+            <p><strong>Relations:</strong> organization, creator, members, messages</p>
+
+            <h4>9. messages</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/messages.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Chat messages</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key</td></tr>
+                    <tr><td>chat_id</td><td>UUID</td><td>Foreign key to chats</td></tr>
+                    <tr><td>sender_id</td><td>UUID</td><td>Foreign key to users</td></tr>
+                    <tr><td>type</td><td>ENUM</td><td>text, image, file, audio, video, system</td></tr>
+                    <tr><td>content</td><td>TEXT</td><td>Message content (nullable)</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>sent, delivered, read, deleted</td></tr>
+                    <tr><td>reply_to_id</td><td>UUID</td><td>Reply to message ID (nullable)</td></tr>
+                    <tr><td>is_edited</td><td>BOOLEAN</td><td>Edit flag</td></tr>
+                    <tr><td>edited_at</td><td>TIMESTAMP</td><td>Edit timestamp (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                    <tr><td>deleted_at</td><td>TIMESTAMP</td><td>Soft delete timestamp (nullable)</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> chat_id, sender_id, created_at, status</p>
+            <p><strong>Relations:</strong> chat, sender, reply_to, attachments, reactions</p>
+
+            <h4>10. payments</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/payments.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Payment transaction records</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations</td></tr>
+                    <tr><td>user_id</td><td>UUID</td><td>Foreign key to users</td></tr>
+                    <tr><td>transaction_id</td><td>VARCHAR(255)</td><td>Unique transaction ID</td></tr>
+                    <tr><td>reference_id</td><td>VARCHAR(100)</td><td>Gateway reference (nullable, eSewa)</td></tr>
+                    <tr><td>gateway</td><td>ENUM</td><td>esewa, stripe</td></tr>
+                    <tr><td>payment_type</td><td>ENUM</td><td>package_upgrade, subscription, one_time</td></tr>
+                    <tr><td>amount</td><td>DECIMAL(10,2)</td><td>Payment amount</td></tr>
+                    <tr><td>currency</td><td>VARCHAR(10)</td><td>Currency code (default: NPR)</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>Payment description (nullable)</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>pending, completed, failed, cancelled, refunded</td></tr>
+                    <tr><td>gateway_response</td><td>TEXT</td><td>Gateway JSON response (nullable)</td></tr>
+                    <tr><td>failure_reason</td><td>TEXT</td><td>Failure reason (nullable)</td></tr>
+                    <tr><td>completed_at</td><td>TIMESTAMP</td><td>Completion time (nullable)</td></tr>
+                    <tr><td>metadata</td><td>JSONB</td><td>Additional metadata (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> organization_id, user_id, transaction_id (unique), status, gateway</p>
+            <p><strong>Relations:</strong> organization, user</p>
+
+            <h4>11. notifications</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/notifications.entity.ts</code></p>
+            <p><strong>Purpose:</strong> User notifications</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key</td></tr>
+                    <tr><td>user_id</td><td>UUID</td><td>Foreign key to users</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations (nullable)</td></tr>
+                    <tr><td>type</td><td>VARCHAR(50)</td><td>Notification type</td></tr>
+                    <tr><td>title</td><td>VARCHAR(255)</td><td>Notification title</td></tr>
+                    <tr><td>message</td><td>TEXT</td><td>Notification message</td></tr>
+                    <tr><td>data</td><td>JSON</td><td>Additional data (nullable)</td></tr>
+                    <tr><td>read_at</td><td>TIMESTAMP</td><td>Read timestamp (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> user_id, organization_id, read_at, created_at</p>
+            <p><strong>Relations:</strong> user, organization</p>
+
+            <h4>12. invitations</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/invitations.entity.ts</code></p>
+            <p><strong>Purpose:</strong> User invitation records</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>UUID (PK)</td><td>Primary key</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations</td></tr>
+                    <tr><td>email</td><td>VARCHAR(255)</td><td>Invitee email</td></tr>
+                    <tr><td>role_id</td><td>INT</td><td>Foreign key to roles</td></tr>
+                    <tr><td>invited_by</td><td>UUID</td><td>User who sent invitation</td></tr>
+                    <tr><td>token</td><td>VARCHAR(255)</td><td>Unique invitation token</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>pending, accepted, expired, cancelled</td></tr>
+                    <tr><td>expires_at</td><td>TIMESTAMP</td><td>Expiration time</td></tr>
+                    <tr><td>accepted_at</td><td>TIMESTAMP</td><td>Acceptance time (nullable)</td></tr>
+                    <tr><td>user_id</td><td>UUID</td><td>User who accepted (nullable)</td></tr>
+                    <tr><td>cancelled_by</td><td>UUID</td><td>User who cancelled (nullable)</td></tr>
+                    <tr><td>message</td><td>TEXT</td><td>Invitation message (nullable)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> token (unique), (organization_id, email), status, expires_at, user_id</p>
+            <p><strong>Relations:</strong> organization, role, inviter, user, canceller</p>
+
+            <h4>13. apps</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/apps.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Marketplace app definitions</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>INT (PK)</td><td>Primary key</td></tr>
+                    <tr><td>name</td><td>VARCHAR(255)</td><td>App name (unique)</td></tr>
+                    <tr><td>slug</td><td>VARCHAR(255)</td><td>App slug (unique)</td></tr>
+                    <tr><td>description</td><td>TEXT</td><td>App description</td></tr>
+                    <tr><td>short_description</td><td>VARCHAR(500)</td><td>Short description (nullable)</td></tr>
+                    <tr><td>icon_url</td><td>VARCHAR(500)</td><td>Icon URL (nullable)</td></tr>
+                    <tr><td>banner_url</td><td>VARCHAR(500)</td><td>Banner URL (nullable)</td></tr>
+                    <tr><td>screenshots</td><td>JSON</td><td>Screenshot URLs array (nullable)</td></tr>
+                    <tr><td>category</td><td>VARCHAR(100)</td><td>App category</td></tr>
+                    <tr><td>tags</td><td>JSON</td><td>Tags array (nullable)</td></tr>
+                    <tr><td>price</td><td>DECIMAL(10,2)</td><td>App price</td></tr>
+                    <tr><td>billing_period</td><td>ENUM</td><td>monthly, yearly</td></tr>
+                    <tr><td>trial_days</td><td>INT</td><td>Trial period in days (default: 0)</td></tr>
+                    <tr><td>features</td><td>JSON</td><td>Features array (nullable)</td></tr>
+                    <tr><td>permissions</td><td>JSON</td><td>Required permissions array (nullable)</td></tr>
+                    <tr><td>developer_name</td><td>VARCHAR(255)</td><td>Developer name</td></tr>
+                    <tr><td>developer_email</td><td>VARCHAR(255)</td><td>Developer email (nullable)</td></tr>
+                    <tr><td>developer_website</td><td>VARCHAR(500)</td><td>Developer website (nullable)</td></tr>
+                    <tr><td>version</td><td>VARCHAR(50)</td><td>App version (default: 1.0.0)</td></tr>
+                    <tr><td>support_url</td><td>VARCHAR(500)</td><td>Support URL (nullable)</td></tr>
+                    <tr><td>documentation_url</td><td>VARCHAR(500)</td><td>Documentation URL (nullable)</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>draft, active, archived</td></tr>
+                    <tr><td>is_featured</td><td>BOOLEAN</td><td>Featured flag</td></tr>
+                    <tr><td>target_audience</td><td>ENUM</td><td>organization, creator, both</td></tr>
+                    <tr><td>sort_order</td><td>INT</td><td>Display order (default: 0)</td></tr>
+                    <tr><td>subscription_count</td><td>INT</td><td>Active subscriptions count (default: 0)</td></tr>
+                    <tr><td>rating</td><td>DECIMAL(5,2)</td><td>Average rating 0-5 (nullable)</td></tr>
+                    <tr><td>review_count</td><td>INT</td><td>Review count (default: 0)</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Indexes:</strong> slug (unique), status, category, is_featured, target_audience</p>
+            <p><strong>Relations:</strong> organization_apps</p>
+
+            <h4>14. organization_apps</h4>
+            <p><strong>File Location:</strong> <code>src/database/entities/organization_apps.entity.ts</code></p>
+            <p><strong>Purpose:</strong> Organization app subscriptions</p>
+            <table>
+                <thead>
+                    <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td>INT (PK)</td><td>Primary key</td></tr>
+                    <tr><td>organization_id</td><td>UUID</td><td>Foreign key to organizations</td></tr>
+                    <tr><td>app_id</td><td>INT</td><td>Foreign key to apps</td></tr>
+                    <tr><td>status</td><td>ENUM</td><td>trial, active, cancelled, expired</td></tr>
+                    <tr><td>subscription_start</td><td>TIMESTAMP</td><td>Subscription start date</td></tr>
+                    <tr><td>subscription_end</td><td>TIMESTAMP</td><td>Subscription end date</td></tr>
+                    <tr><td>next_billing_date</td><td>TIMESTAMP</td><td>Next billing date (nullable)</td></tr>
+                    <tr><td>trial_ends_at</td><td>TIMESTAMP</td><td>Trial end date (nullable)</td></tr>
+                    <tr><td>trial_used</td><td>BOOLEAN</td><td>Trial used flag</td></tr>
+                    <tr><td>cancelled_at</td><td>TIMESTAMP</td><td>Cancellation time (nullable)</td></tr>
+                    <tr><td>cancellation_reason</td><td>TEXT</td><td>Cancellation reason (nullable)</td></tr>
+                    <tr><td>auto_renew</td><td>BOOLEAN</td><td>Auto-renewal enabled</td></tr>
+                    <tr><td>payment_id</td><td>UUID</td><td>Foreign key to payments (nullable)</td></tr>
+                    <tr><td>subscription_price</td><td>DECIMAL(10,2)</td><td>Price at subscription time</td></tr>
+                    <tr><td>billing_period</td><td>ENUM</td><td>monthly, yearly</td></tr>
+                    <tr><td>created_at</td><td>TIMESTAMP</td><td>Creation time</td></tr>
+                    <tr><td>updated_at</td><td>TIMESTAMP</td><td>Last update time</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Unique Constraint:</strong> (organization_id, app_id)</p>
+            <p><strong>Indexes:</strong> organization_id, app_id, status, subscription_end, next_billing_date</p>
+            <p><strong>Relations:</strong> organization, app, payment</p>
+
+            <h3>Additional Tables</h3>
+            <p>Other important tables include:</p>
             <ul>
-                <li><strong>User</strong> - User accounts</li>
-                <li><strong>Organization</strong> - Organizations</li>
-                <li><strong>OrganizationMember</strong> - User-organization relationships</li>
-                <li><strong>Role</strong> - Roles</li>
-                <li><strong>Permission</strong> - Permissions</li>
-                <li><strong>Package</strong> - Subscription packages</li>
-                <li><strong>Payment</strong> - Payment records</li>
-                <li><strong>Chat</strong> - Chat rooms</li>
-                <li><strong>Message</strong> - Chat messages</li>
-                <li><strong>Notification</strong> - User notifications</li>
-                <li><strong>Document</strong> - Organization documents</li>
-                <li><strong>AuditLog</strong> - Activity logs</li>
+                <li><strong>chat_members</strong> - Chat membership (<code>src/database/entities/chat_members.entity.ts</code>)</li>
+                <li><strong>message_attachments</strong> - Message file attachments (<code>src/database/entities/message_attachments.entity.ts</code>)</li>
+                <li><strong>message_reactions</strong> - Message reactions (<code>src/database/entities/message_reactions.entity.ts</code>)</li>
+                <li><strong>message_read_status</strong> - Message read status (<code>src/database/entities/message_read_status.entity.ts</code>)</li>
+                <li><strong>call_sessions</strong> - Voice/video call sessions (<code>src/database/entities/call_sessions.entity.ts</code>)</li>
+                <li><strong>call_participants</strong> - Call participants (<code>src/database/entities/call_participants.entity.ts</code>)</li>
+                <li><strong>sessions</strong> - User sessions (<code>src/database/entities/sessions.entity.ts</code>)</li>
+                <li><strong>email_verifications</strong> - Email verification tokens (<code>src/database/entities/email_verifications.entity.ts</code>)</li>
+                <li><strong>audit_logs</strong> - Activity audit logs (<code>src/database/entities/audit_logs.entity.ts</code>)</li>
+                <li><strong>organization_documents</strong> - Organization documents (<code>src/database/entities/organization_documents.entity.ts</code>)</li>
+                <li><strong>notification_preferences</strong> - User notification preferences (<code>src/database/entities/notification_preferences.entity.ts</code>)</li>
+                <li><strong>api_keys</strong> - API keys for integrations (<code>src/database/entities/api_keys.entity.ts</code>)</li>
+                <li><strong>webhooks</strong> - Webhook configurations (<code>src/database/entities/webhooks.entity.ts</code>)</li>
+                <li><strong>invoices</strong> - Invoice records (<code>src/database/entities/invoices.entity.ts</code>)</li>
+                <li><strong>tickets</strong> - Support tickets (<code>src/database/entities/tickets.entity.ts</code>)</li>
+                <li><strong>boards</strong> - Project boards (<code>src/database/entities/boards.entity.ts</code>)</li>
+                <li><strong>projects</strong> - Projects (<code>src/database/entities/projects.entity.ts</code>)</li>
+                <li><strong>tasks</strong> - Tasks (<code>src/database/entities/tasks.entity.ts</code>)</li>
+                <li><strong>epics</strong> - Epics (<code>src/database/entities/epics.entity.ts</code>)</li>
             </ul>
 
             <h3>Migrations</h3>

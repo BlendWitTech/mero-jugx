@@ -6,10 +6,12 @@ import { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
 import { chatService } from '../services/chatService';
 import toast from 'react-hot-toast';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function MembersList() {
   const { user: currentUser, organization } = useAuthStore();
   const { hasPermission, isOrganizationOwner } = usePermissions();
+  const { theme } = useTheme();
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   // Organization owners should always be able to view users
@@ -35,9 +37,9 @@ export default function MembersList() {
 
   const allChats = chatsData?.chats || [];
   
-  // Debug: Log unread counts
+  // Debug: Log unread counts (only in development)
   useEffect(() => {
-    if (allChats.length > 0) {
+    if (process.env.NODE_ENV === 'development' && allChats.length > 0) {
       const unreadChats = allChats.filter((c: any) => (c.unread_count || 0) > 0);
       if (unreadChats.length > 0) {
         console.log('[MembersList] Chats with unread messages:', unreadChats.map((c: any) => ({ id: c.id, type: c.type, unread: c.unread_count })));
@@ -53,8 +55,8 @@ export default function MembersList() {
         chat.members?.some((m: any) => m.user_id === userId)
     );
     const count = directChat?.unread_count || 0;
-    // Debug logging
-    if (count > 0) {
+    // Debug logging (only in development)
+    if (process.env.NODE_ENV === 'development' && count > 0) {
       console.log('[MembersList] Unread count for user', userId, ':', count, 'chat:', directChat?.id);
     }
     return count;
@@ -134,9 +136,11 @@ export default function MembersList() {
       })
     : sortedMembers;
   
-  // For now, we'll just show all members in one list since online status isn't tracked yet
-  const onlineMembers = filteredMembers; // All active members shown as "online" for now
-  const offlineMembers: any[] = []; // Empty for now until we implement proper online status tracking
+  // Show only offline members (all members except those shown in Online Now section)
+  // Since online status isn't fully tracked yet, we'll show all members as offline here
+  // This allows users to chat with members who aren't in the "Online Now" section
+  const offlineMembers = filteredMembers; // All members shown as "offline" for now
+  const onlineMembers: any[] = []; // Empty - online members are shown in RightSidebar
 
   // Handle opening chat with a member
   const handleOpenChat = async (memberId: string) => {
@@ -170,11 +174,8 @@ export default function MembersList() {
         (window as any).openChatWindow(null, memberId, undefined, undefined, memberName);
       }
     } catch (error: any) {
-      if (error.response?.status === 403) {
-        toast.error('Chat feature is not available. Please upgrade to Platinum or Diamond package, or purchase the Chat System feature.');
-      } else {
-        toast.error(error.response?.data?.message || 'Failed to open chat');
-      }
+      // Error toast is already handled by API interceptor
+      // No need to show duplicate toast here
     }
   };
 
@@ -184,54 +185,44 @@ export default function MembersList() {
         {/* Search Bar */}
         <div className="px-2 py-2">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8e9297]" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: theme.colors.textSecondary }} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search members..."
-              className="w-full bg-[#202225] text-white placeholder-[#72767d] rounded px-8 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5865f2]"
+              className="w-full rounded px-8 py-1.5 text-sm focus:outline-none transition-colors"
+              style={{
+                backgroundColor: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.text,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.colors.primary}33`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
+            <style>{`
+              input::placeholder {
+                color: ${theme.colors.textSecondary};
+                opacity: 0.6;
+              }
+            `}</style>
           </div>
         </div>
 
-        {/* Online Members */}
-        {onlineMembers.length > 0 && (
+        {/* Offline Members Only */}
+        {offlineMembers.length > 0 && (
           <>
             <div className="px-2 py-1.5">
               <div className="text-xs font-semibold text-[#8e9297] uppercase tracking-wide">
-                Online — {onlineMembers.length}
+                Members — {offlineMembers.length}
               </div>
             </div>
-            {onlineMembers.map((member: any) => {
-              const unreadCount = getUnreadCountForUser(member.id);
-              return (
-                <MemberItem
-                  key={member.id}
-                  member={member}
-                  isOnline={true}
-                  isSelected={selectedMember === member.id}
-                  unreadCount={unreadCount}
-                  onClick={async () => {
-                    setSelectedMember(member.id === selectedMember ? null : member.id);
-                    await handleOpenChat(member.id);
-                  }}
-                />
-              );
-            })}
-          </>
-        )}
-
-        {/* Offline Members */}
-        {offlineMembers.length > 0 && (
-          <>
-            {onlineMembers.length > 0 && (
-              <div className="px-2 py-1.5">
-                <div className="text-xs font-semibold text-[#8e9297] uppercase tracking-wide">
-                  Offline — {offlineMembers.length}
-                </div>
-              </div>
-            )}
             {offlineMembers.map((member: any) => {
               const unreadCount = getUnreadCountForUser(member.id);
               return (
@@ -252,7 +243,7 @@ export default function MembersList() {
         )}
         
         {/* Show message if no members */}
-        {onlineMembers.length === 0 && offlineMembers.length === 0 && (
+        {offlineMembers.length === 0 && (
           <div className="px-2 py-4 text-center">
             <p className="text-xs text-[#8e9297]">No other members</p>
           </div>

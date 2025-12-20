@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CustomPermission } from '../database/entities/custom-permission.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { CustomPermission } from '../database/entities/custom_permissions.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()

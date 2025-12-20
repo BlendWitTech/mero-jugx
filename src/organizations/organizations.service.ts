@@ -3,30 +3,33 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { Organization } from '../database/entities/organization.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { User } from '../database/entities/user.entity';
-import { Package } from '../database/entities/package.entity';
-import { Role } from '../database/entities/role.entity';
-import { Invitation } from '../database/entities/invitation.entity';
+} from '../database/entities/organization_members.entity';
+import { User } from '../database/entities/users.entity';
+import { Package } from '../database/entities/packages.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Invitation } from '../database/entities/invitations.entity';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpdateOrganizationSettingsDto } from './dto/update-organization-settings.dto';
 import { EmailService } from '../common/services/email.service';
 import { RedisService } from '../common/services/redis.service';
-import { Notification } from '../database/entities/notification.entity';
+import { Notification } from '../database/entities/notifications.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
 export class OrganizationsService {
+  private readonly logger = new Logger(OrganizationsService.name);
+
   constructor(
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
@@ -70,7 +73,7 @@ export class OrganizationsService {
       }
 
       if (!membership.organization) {
-        console.error('Membership found but organization is null:', { userId, organizationId, membershipId: membership.id });
+        // This should not happen, but handle gracefully
         throw new NotFoundException('Organization not found');
       }
 
@@ -80,13 +83,12 @@ export class OrganizationsService {
         current_user_role: membership.role,
       };
     } catch (error: any) {
-      console.error('Error in getCurrentOrganization:', {
-        userId,
-        organizationId,
-        error: error?.message,
-        stack: error?.stack,
-      });
-      throw error;
+      // Re-throw HttpExceptions as-is
+      if (error instanceof ForbiddenException || error instanceof NotFoundException) {
+        throw error;
+      }
+      // Log unexpected errors but don't expose details
+      throw new NotFoundException('Failed to retrieve organization');
     }
   }
 

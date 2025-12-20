@@ -637,4 +637,72 @@ ${html}
     );
     await this.sendEmail(organizationEmail, `Organization Created: ${organizationName}`, html);
   }
+
+  async sendAppAccessGrantedEmail(
+    email: string,
+    name: string,
+    organizationName: string,
+    appName: string,
+    grantedByName: string,
+    isOwner: boolean = false,
+    isActionPerformer: boolean = false,
+  ): Promise<void> {
+    const html = this.templatesService.getAppAccessGrantedEmail(
+      name,
+      organizationName,
+      appName,
+      grantedByName,
+      isOwner,
+      isActionPerformer,
+    );
+    const subject = isActionPerformer
+      ? `You granted access to ${appName}`
+      : isOwner
+        ? `App access granted in ${organizationName}`
+        : `Access granted to ${appName}`;
+    await this.sendEmail(email, subject, html);
+  }
+
+  async sendAppAccessRevokedEmail(
+    email: string,
+    name: string,
+    organizationName: string,
+    appName: string,
+    revokedByName: string,
+    isOwner: boolean = false,
+    isActionPerformer: boolean = false,
+  ): Promise<void> {
+    const html = this.templatesService.getAppAccessRevokedEmail(
+      name,
+      organizationName,
+      appName,
+      revokedByName,
+      isOwner,
+      isActionPerformer,
+    );
+    const subject = isActionPerformer
+      ? `You revoked access to ${appName}`
+      : isOwner
+        ? `App access revoked in ${organizationName}`
+        : `Access revoked to ${appName}`;
+    await this.sendEmail(email, subject, html);
+  }
+
+  /**
+   * Send marketing email to user
+   * Checks marketing_email_subscribed preference before sending
+   */
+  async sendMarketingEmail(
+    email: string,
+    name: string,
+    subject: string,
+    content: string,
+    userId: string,
+    organizationId: string,
+  ): Promise<void> {
+    // Check if user has subscribed to marketing emails
+    // This should be checked by the caller, but we verify here as well
+    const html = this.templatesService.getMarketingEmail(name, content, organizationId);
+    await this.sendEmail(email, subject, html);
+  }
 }

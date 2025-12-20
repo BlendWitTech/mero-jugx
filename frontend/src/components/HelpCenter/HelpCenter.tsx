@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Book, MessageCircle, Video, FileText, ChevronRight, X } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface HelpArticle {
   id: string;
@@ -76,6 +77,7 @@ const helpCategories: HelpCategory[] = [
 ];
 
 export const HelpCenter: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
+  const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<HelpArticle | null>(null);
@@ -108,14 +110,23 @@ export const HelpCenter: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="relative w-full max-w-4xl mx-4 bg-[#2f3136] rounded-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="relative w-full max-w-4xl mx-4 rounded-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#202225]">
-          <h2 className="text-2xl font-bold text-white">Help Center</h2>
+        <div className="flex items-center justify-between p-6" style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
+          <h2 className="text-2xl font-bold" style={{ color: theme.colors.text }}>Help Center</h2>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 text-[#b9bbbe] hover:text-white hover:bg-[#393c43] rounded-lg transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: theme.colors.textSecondary }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = theme.colors.text;
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.colors.textSecondary;
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               aria-label="Close help center"
             >
               <X className="h-5 w-5" />
@@ -124,15 +135,21 @@ export const HelpCenter: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         </div>
 
         {/* Search */}
-        <div className="p-6 border-b border-[#202225]">
+        <div className="p-6" style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#8e9297]" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: theme.colors.textSecondary }} />
             <input
               type="text"
               placeholder="Search help articles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-[#202225] border border-[#393c43] rounded-lg text-white placeholder-[#8e9297] focus:outline-none focus:border-[#5865f2]"
+              className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 transition-colors"
+              style={{ 
+                backgroundColor: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.text,
+                '--tw-ring-color': theme.colors.primary
+              }}
             />
           </div>
         </div>
@@ -143,20 +160,26 @@ export const HelpCenter: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
             <div>
               <button
                 onClick={() => setSelectedArticle(null)}
-                className="mb-4 text-[#5865f2] hover:text-[#4752c4] flex items-center gap-2"
+                className="mb-4 flex items-center gap-2"
+                style={{ color: theme.colors.primary }}
+                onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.secondary}
+                onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.primary}
               >
                 ← Back to articles
               </button>
-              <h3 className="text-2xl font-bold text-white mb-4">{selectedArticle.title}</h3>
+              <h3 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text }}>{selectedArticle.title}</h3>
               <div className="prose prose-invert max-w-none">
-                <p className="text-[#b9bbbe]">{selectedArticle.content}</p>
+                <p style={{ color: theme.colors.textSecondary }}>{selectedArticle.content}</p>
               </div>
             </div>
           ) : selectedCategory ? (
             <div>
               <button
                 onClick={() => setSelectedCategory(null)}
-                className="mb-4 text-[#5865f2] hover:text-[#4752c4] flex items-center gap-2"
+                className="mb-4 flex items-center gap-2"
+                style={{ color: theme.colors.primary }}
+                onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.secondary}
+                onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.primary}
               >
                 ← Back to categories
               </button>
@@ -165,15 +188,19 @@ export const HelpCenter: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
                   <button
                     key={article.id}
                     onClick={() => setSelectedArticle(article)}
-                    className="w-full p-4 bg-[#202225] hover:bg-[#393c43] rounded-lg text-left transition-colors"
+                    className="w-full p-4 rounded-lg text-left transition-colors"
+                    style={{ backgroundColor: theme.colors.background, border: `1px solid ${theme.colors.border}` }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.surface}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.background}
                   >
-                    <h4 className="text-white font-medium mb-1">{article.title}</h4>
-                    <p className="text-sm text-[#b9bbbe]">{article.content}</p>
+                    <h4 className="font-medium mb-1" style={{ color: theme.colors.text }}>{article.title}</h4>
+                    <p className="text-sm" style={{ color: theme.colors.textSecondary }}>{article.content}</p>
                     <div className="flex gap-2 mt-2">
                       {article.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-1 text-xs bg-[#393c43] text-[#b9bbbe] rounded"
+                          className="px-2 py-1 text-xs rounded"
+                          style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}
                         >
                           {tag}
                         </span>
@@ -189,18 +216,27 @@ export const HelpCenter: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className="p-6 bg-[#202225] hover:bg-[#393c43] rounded-lg text-left transition-colors group"
+                  className="p-6 rounded-lg text-left transition-colors group"
+                  style={{ backgroundColor: theme.colors.background, border: `1px solid ${theme.colors.border}` }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.surface;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                  }}
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-[#5865f2] rounded-lg text-white">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary, color: '#ffffff' }}>
                       {category.icon}
                     </div>
-                    <h3 className="text-lg font-semibold text-white group-hover:text-[#5865f2] transition-colors">
+                    <h3 className="text-lg font-semibold transition-colors" style={{ color: theme.colors.text }}>
                       {category.name}
                     </h3>
-                    <ChevronRight className="h-5 w-5 text-[#8e9297] ml-auto" />
+                    <ChevronRight className="h-5 w-5 ml-auto" style={{ color: theme.colors.textSecondary }} />
                   </div>
-                  <p className="text-sm text-[#b9bbbe]">
+                  <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
                     {category.articles.length} article{category.articles.length !== 1 ? 's' : ''}
                   </p>
                 </button>

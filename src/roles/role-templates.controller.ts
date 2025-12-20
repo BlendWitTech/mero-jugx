@@ -7,8 +7,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../common/decorators/current-organization.decorator';
 import { RoleTemplatesService } from './role-templates.service';
 import { CreateRoleFromTemplateDto } from './dto/create-role-from-template.dto';
-import { RoleTemplate } from '../database/entities/role-template.entity';
-import { Role } from '../database/entities/role.entity';
+import { RoleTemplate } from '../database/entities/role_templates.entity';
+import { Role } from '../database/entities/roles.entity';
 
 @ApiTags('role-templates')
 @Controller('role-templates')

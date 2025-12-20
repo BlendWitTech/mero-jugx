@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { Search, Plus, Edit, Trash2, Eye, MoreVertical, X, Save, Shield, CheckCircle2, AlertCircle, UserCog, Users } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const editUserSchema = z.object({
   first_name: z.string().min(2, 'First name must be at least 2 characters'),
@@ -43,6 +44,7 @@ export default function UsersPage() {
   const { slug } = useParams<{ slug: string }>();
   const { user: currentUser, isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const { isOrganizationOwner, hasPermission, userData } = usePermissions();
+  const { theme } = useTheme();
   
   // Check if user can view users list
   const canViewUsers = isOrganizationOwner || hasPermission('users.view');
@@ -62,7 +64,27 @@ export default function UsersPage() {
     if (role.slug === 'admin' || (role.is_default && role.slug === 'admin') || (role.is_system_role && role.slug === 'admin')) {
       return 2; // Second level
     }
-    return 3; // Default level for custom roles
+    // Use actual hierarchy_level if available, otherwise default to 3
+    return role.hierarchy_level || 3;
+  };
+
+  // Check if current user can edit a specific user (not just role assignment)
+  const canEditSpecificUser = (targetUser: any): boolean => {
+    if (!targetUser || !targetUser.role) return false;
+    if (isCurrentUser(targetUser.id)) return false; // Can't edit self
+    if (targetUser.role.is_organization_owner) return false; // Can't edit owner
+    if (!canEditUsers) return false; // Must have users.edit permission
+    
+    // Organization owners can edit anyone (except other owners)
+    if (isOrganizationOwner) return true;
+    
+    // For non-owners, check role hierarchy
+    if (!currentUserRole) return false;
+    const currentUserRoleLevel = getRoleHierarchyLevel(currentUserRole);
+    const targetRoleLevel = getRoleHierarchyLevel(targetUser.role);
+    
+    // Can only edit users with lower role levels (higher hierarchy_level number = lower authority)
+    return currentUserRoleLevel < targetRoleLevel;
   };
 
   // Check if current user can edit/assign role to target user
@@ -106,12 +128,23 @@ export default function UsersPage() {
     retry: 1,
   });
 
-  // Fetch roles for role assignment
+  // Fetch assignable roles for role assignment (roles the user can assign)
   const { data: roles, refetch: refetchRoles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: ['assignable-roles'],
     queryFn: async () => {
-      const response = await api.get('/roles');
-      return Array.isArray(response.data) ? response.data : [];
+      try {
+        if (canAssignRoles) {
+          const response = await api.get('/roles/assignable');
+          return Array.isArray(response.data) ? response.data : [];
+        }
+        return [];
+      } catch (error: any) {
+        // If user doesn't have roles.assign permission, return empty array
+        if (error.response?.status === 403) {
+          return [];
+        }
+        throw error;
+      }
     },
     enabled: _hasHydrated && isAuthenticated && !!accessToken,
   });
@@ -121,7 +154,7 @@ export default function UsersPage() {
     const handlePackageUpdate = () => {
       console.log('[Users] Package update event received, refetching roles...');
       // Invalidate and refetch roles to show newly available roles after package upgrade
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: ['assignable-roles'] });
       refetchRoles();
     };
     
@@ -310,125 +343,120 @@ export default function UsersPage() {
     return currentUser?.id === userId;
   };
 
-  // Show permission error if user doesn't have access
-  if (!canViewUsers) {
-    return (
-      <div className="w-full p-6">
-        <div className="card bg-[#ed4245]/10 border border-[#ed4245]/20">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-6 w-6 text-[#ed4245]" />
-            <div>
-              <h3 className="text-lg font-semibold text-[#ed4245]">Access Denied</h3>
-              <p className="text-sm text-[#b9bbbe] mt-1">
-                You don't have permission to view users. Please contact your organization owner to request access.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Permission check is handled by ProtectedRoute in App.tsx
 
   return (
-    <div className="w-full p-6">
+    <div className="w-full p-6" style={{ backgroundColor: theme.colors.background, color: theme.colors.text }}>
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#5865f2] rounded-lg">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary }}>
               <Users className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">Users</h1>
-              <p className="mt-2 text-sm sm:text-base text-[#b9bbbe]">Manage organization users and their access</p>
+              <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: theme.colors.text }}>Users</h1>
+              <p className="mt-2 text-sm sm:text-base" style={{ color: theme.colors.textSecondary }}>Manage organization users and their access</p>
             </div>
           </div>
-          <Link to={slug ? `/org/${slug}/invitations` : '/invitations'} className="btn btn-primary">
-            <Plus className="mr-2 h-4 w-4" />
-            Invite User
+          <Link to={slug ? `/org/${slug}/invitations` : '/invitations'} className="btn btn-primary flex items-center whitespace-nowrap">
+            <Plus className="mr-2 h-4 w-4 flex-shrink-0" />
+            <span>Invite User</span>
           </Link>
         </div>
       </div>
 
-      <div className="card mb-4">
+      <div className="card mb-4" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#8e9297]" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: theme.colors.textSecondary }} />
           <input
             type="text"
             placeholder="Search users..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="input pl-10"
+            style={{ 
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              color: theme.colors.text
+            }}
           />
         </div>
       </div>
 
       {error && (
-        <div className="card bg-[#ed4245]/10 border border-[#ed4245]/20">
-          <p className="text-[#ed4245]">
+        <div className="card rounded-lg p-4" style={{ backgroundColor: '#ed4245' + '1A', border: `1px solid #ed4245` + '33' }}>
+          <p style={{ color: '#ed4245' }}>
             Error loading users: {error instanceof Error ? error.message : 'Unknown error'}
           </p>
         </div>
       )}
 
       {isLoading ? (
-        <div className="card">
+        <div className="card" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-[#36393f] rounded"></div>
+              <div key={i} className="h-16 rounded" style={{ backgroundColor: theme.colors.background }}></div>
             ))}
           </div>
         </div>
       ) : (
-        <div className="card overflow-visible mt-4">
+        <div className="card overflow-visible mt-4" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
           <div className="overflow-x-auto overflow-visible">
-            <table className="min-w-full divide-y divide-[#202225]">
-              <thead className="bg-[#2f3136]">
+            <table className="min-w-full" style={{ borderColor: theme.colors.border }}>
+              <thead style={{ backgroundColor: theme.colors.background }}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#8e9297] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.colors.textSecondary }}>
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-[#2f3136] divide-y divide-[#202225]">
+              <tbody style={{ backgroundColor: theme.colors.background }}>
                 {data?.users && data.users.length > 0 ? (
                   data.users.map((user: any) => {
                     const isSelf = isCurrentUser(user.id);
                     return (
                     <tr 
                       key={user.id} 
-                      className={`hover:bg-[#393c43] ${isSelf ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={isSelf ? 'opacity-60 cursor-not-allowed' : ''}
+                      style={{ borderTop: `1px solid ${theme.colors.border}` }}
+                      onMouseEnter={(e) => {
+                        if (!isSelf) e.currentTarget.style.backgroundColor = theme.colors.surface;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelf) e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                            <span className="text-primary-600 font-medium">
+                          <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.colors.primary + '1A' }}>
+                            <span className="font-medium" style={{ color: theme.colors.primary }}>
                               {user.first_name?.[0]?.toUpperCase() || ''}{user.last_name?.[0]?.toUpperCase() || ''}
                             </span>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-white">
+                            <div className="text-sm font-medium" style={{ color: theme.colors.text }}>
                               {user.first_name} {user.last_name}
-                              {isSelf && <span className="ml-2 text-xs text-[#8e9297]">(You)</span>}
+                              {isSelf && <span className="ml-2 text-xs" style={{ color: theme.colors.textSecondary }}>(You)</span>}
                             </div>
                             {user.phone && (
-                              <div className="text-sm text-[#8e9297]">{user.phone}</div>
+                              <div className="text-sm" style={{ color: theme.colors.textSecondary }}>{user.phone}</div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#8e9297]">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: theme.colors.textSecondary }}>
                         {user.email}
                         {user.email_verified ? (
                           <span className="ml-2 text-xs text-green-600">✓ Verified</span>
@@ -438,11 +466,11 @@ export default function UsersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {user.role ? (
-                          <span className="px-2 py-1 text-xs font-medium text-[#b9bbbe] bg-[#393c43] rounded-full">
+                          <span className="px-2 py-1 text-xs font-medium rounded-full" style={{ color: theme.colors.textSecondary, backgroundColor: theme.colors.surface }}>
                             {user.role.name}
                           </span>
                         ) : (
-                          <span className="text-sm text-[#8e9297]">No role</span>
+                          <span className="text-sm" style={{ color: theme.colors.textSecondary }}>No role</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -479,7 +507,20 @@ export default function UsersPage() {
                               setActionMenuOpen(actionMenuOpen === user.id ? null : user.id);
                             }}
                             disabled={isSelf}
-                            className="p-2 text-[#8e9297] hover:text-white hover:bg-[#393c43] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ color: theme.colors.textSecondary }}
+                            onMouseEnter={(e) => {
+                              if (!isSelf) {
+                                e.currentTarget.style.color = theme.colors.text;
+                                e.currentTarget.style.backgroundColor = theme.colors.surface;
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelf) {
+                                e.currentTarget.style.color = theme.colors.textSecondary;
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }
+                            }}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </button>
@@ -493,10 +534,12 @@ export default function UsersPage() {
                                 }}
                               ></div>
                               <div 
-                                className="fixed bg-[#2f3136] rounded-lg shadow-xl border border-[#202225] z-[101] py-1 min-w-[200px]"
+                                className="fixed rounded-lg shadow-xl z-[101] py-1 min-w-[200px]"
                                 style={{
                                   top: `${menuPosition.top}px`,
                                   right: `${menuPosition.right}px`,
+                                  backgroundColor: theme.colors.surface,
+                                  border: `1px solid ${theme.colors.border}`
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -507,20 +550,37 @@ export default function UsersPage() {
                                       setActionMenuOpen(null);
                                       setMenuPosition(null);
                                     }}
-                                    className="w-full text-left px-4 py-2 text-sm text-[#b9bbbe] hover:bg-[#393c43] flex items-center transition-colors"
+                                    className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
+                                    style={{ color: theme.colors.textSecondary }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = theme.colors.border;
+                                      e.currentTarget.style.color = theme.colors.text;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'transparent';
+                                      e.currentTarget.style.color = theme.colors.textSecondary;
+                                    }}
                                   >
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Details
                                   </button>
-                                  {canEditUsers && (
+                                  {canEditUsers && canEditSpecificUser(user) && (
                                     <button
                                       onClick={() => {
                                         handleEdit(user);
                                         setActionMenuOpen(null);
                                         setMenuPosition(null);
                                       }}
-                                      disabled={isCurrentUser(user.id)}
-                                      className="w-full text-left px-4 py-2 text-sm text-[#b9bbbe] hover:bg-[#36393f] flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      className="w-full text-left px-4 py-2 text-sm flex items-center transition-colors"
+                                      style={{ color: theme.colors.textSecondary }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = theme.colors.background;
+                                        e.currentTarget.style.color = theme.colors.text;
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = theme.colors.textSecondary;
+                                      }}
                                     >
                                       <Edit className="h-4 w-4 mr-2" />
                                       Edit User
@@ -534,7 +594,20 @@ export default function UsersPage() {
                                         setMenuPosition(null);
                                       }}
                                       disabled={!canEditUserRole(user)}
-                                      className="w-full text-left px-4 py-2 text-sm text-[#b9bbbe] hover:bg-[#36393f] flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      className="w-full text-left px-4 py-2 text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      style={{ color: theme.colors.textSecondary }}
+                                      onMouseEnter={(e) => {
+                                        if (canEditUserRole(user)) {
+                                          e.currentTarget.style.backgroundColor = theme.colors.background;
+                                          e.currentTarget.style.color = theme.colors.text;
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (canEditUserRole(user)) {
+                                          e.currentTarget.style.backgroundColor = 'transparent';
+                                          e.currentTarget.style.color = theme.colors.textSecondary;
+                                        }
+                                      }}
                                     >
                                       <Shield className="h-4 w-4 mr-2" />
                                       Change Role
@@ -546,7 +619,20 @@ export default function UsersPage() {
                                         handleImpersonate(user);
                                       }}
                                       disabled={isCurrentUser(user.id) || user.role?.is_organization_owner || impersonateMutation.isPending}
-                                      className="w-full text-left px-4 py-2 text-sm text-[#b9bbbe] hover:bg-[#36393f] flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      className="w-full text-left px-4 py-2 text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      style={{ color: theme.colors.textSecondary }}
+                                      onMouseEnter={(e) => {
+                                        if (!isCurrentUser(user.id) && !user.role?.is_organization_owner && !impersonateMutation.isPending) {
+                                          e.currentTarget.style.backgroundColor = theme.colors.background;
+                                          e.currentTarget.style.color = theme.colors.text;
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!isCurrentUser(user.id) && !user.role?.is_organization_owner && !impersonateMutation.isPending) {
+                                          e.currentTarget.style.backgroundColor = 'transparent';
+                                          e.currentTarget.style.color = theme.colors.textSecondary;
+                                        }
+                                      }}
                                     >
                                       <UserCog className="h-4 w-4 mr-2" />
                                       Impersonate
@@ -554,7 +640,7 @@ export default function UsersPage() {
                                   )}
                                   {canRevokeUsers && (
                                     <>
-                                      <div className="border-t border-[#202225] my-1"></div>
+                                      <div className="my-1" style={{ borderTop: `1px solid ${theme.colors.border}` }}></div>
                                       <button
                                         onClick={() => {
                                           handleRevoke(user);
@@ -580,7 +666,7 @@ export default function UsersPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-[#8e9297]">
+                    <td colSpan={5} className="px-6 py-8 text-center" style={{ color: theme.colors.textSecondary }}>
                       No users found. {search && 'Try adjusting your search.'}
                     </td>
                   </tr>
@@ -889,14 +975,19 @@ export default function UsersPage() {
                           {roles
                             ?.filter((role: any) => role.is_default || role.is_system_role)
                             .map((role: any) => {
+                              // Roles from assignable endpoint are already filtered, but we still need to check
+                              // if we can assign this specific role to this specific user (considering target user's current role)
                               const roleLevel = getRoleHierarchyLevel(role);
+                              const targetUserCurrentRoleLevel = getRoleHierarchyLevel(selectedUser.role);
+                              
                               // Organization owners can assign any role except owner
                               let canAssignThisRole = false;
                               if (isOrganizationOwner) {
                                 canAssignThisRole = !role.is_organization_owner;
                               } else if (currentUserRole) {
                                 const currentUserRoleLevel = getRoleHierarchyLevel(currentUserRole);
-                                canAssignThisRole = currentUserRoleLevel < roleLevel && !role.is_organization_owner;
+                                // Can assign if: role level > current user level AND role level >= target user's current level
+                                canAssignThisRole = roleLevel > currentUserRoleLevel && roleLevel >= targetUserCurrentRoleLevel && !role.is_organization_owner;
                               }
                               const isCurrentRole = role.id === selectedUser.role?.id;
                               
@@ -953,14 +1044,19 @@ export default function UsersPage() {
                           {roles
                             ?.filter((role: any) => !role.is_default && !role.is_system_role)
                             .map((role: any) => {
+                              // Roles from assignable endpoint are already filtered, but we still need to check
+                              // if we can assign this specific role to this specific user (considering target user's current role)
                               const roleLevel = getRoleHierarchyLevel(role);
+                              const targetUserCurrentRoleLevel = getRoleHierarchyLevel(selectedUser.role);
+                              
                               // Organization owners can assign any role except owner
                               let canAssignThisRole = false;
                               if (isOrganizationOwner) {
                                 canAssignThisRole = !role.is_organization_owner;
                               } else if (currentUserRole) {
                                 const currentUserRoleLevel = getRoleHierarchyLevel(currentUserRole);
-                                canAssignThisRole = currentUserRoleLevel < roleLevel && !role.is_organization_owner;
+                                // Can assign if: role level > current user level AND role level >= target user's current level
+                                canAssignThisRole = roleLevel > currentUserRoleLevel && roleLevel >= targetUserCurrentRoleLevel && !role.is_organization_owner;
                               }
                               const isCurrentRole = role.id === selectedUser.role?.id;
                               

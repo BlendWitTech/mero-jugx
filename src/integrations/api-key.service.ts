@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ApiKey, ApiKeyStatus } from '../database/entities/api-key.entity';
-import { Organization } from '../database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization-member.entity';
+import { ApiKey, ApiKeyStatus } from '../database/entities/api_keys.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '../database/entities/organization_members.entity';
 import * as crypto from 'crypto';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 

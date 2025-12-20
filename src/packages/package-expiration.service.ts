@@ -2,19 +2,19 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, Between } from 'typeorm';
-import { Organization } from '../database/entities/organization.entity';
-import { Package } from '../database/entities/package.entity';
+import { Organization } from '../database/entities/organizations.entity';
+import { Package } from '../database/entities/packages.entity';
 import {
   NotificationHelperService,
   NotificationType,
 } from '../notifications/notification-helper.service';
 import { EmailService } from '../common/services/email.service';
 import { EmailTemplatesService } from '../common/services/email-templates.service';
-import { User } from '../database/entities/user.entity';
+import { User } from '../database/entities/users.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
+} from '../database/entities/organization_members.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()

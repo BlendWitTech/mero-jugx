@@ -3,7 +3,7 @@ import { useOnboarding } from '../../hooks/useOnboarding';
 import { OnboardingModal } from './OnboardingModal';
 
 export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { showOnboarding, steps, completeOnboarding, skipOnboarding } = useOnboarding();
+  const { showOnboarding, steps, announcementId, completeOnboarding, skipOnboarding } = useOnboarding();
 
   return (
     <>
@@ -11,8 +11,8 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       {showOnboarding && (
         <OnboardingModal
           steps={steps}
-          onComplete={completeOnboarding}
-          onSkip={skipOnboarding}
+          onComplete={() => completeOnboarding(announcementId)}
+          onSkip={() => skipOnboarding(announcementId)}
         />
       )}
     </>

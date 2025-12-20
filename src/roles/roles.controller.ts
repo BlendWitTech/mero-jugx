@@ -53,6 +53,15 @@ export class RolesController {
     return this.rolesService.getRoleUsageCounts(user.userId, user.organizationId);
   }
 
+  @Get('assignable')
+  @Permissions('roles.assign')
+  @ApiOperation({ summary: 'Get roles that the current user can assign' })
+  @ApiResponse({ status: 200, description: 'Assignable roles retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async getAssignableRoles(@CurrentUser() user: any) {
+    return this.rolesService.getAssignableRoles(user.userId, user.organizationId);
+  }
+
   @Get(':id')
   @Permissions('roles.view')
   @ApiOperation({ summary: 'Get role by ID' })

@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# Mero Jugx - Docker Setup Script (Bash)
+# Sets up Docker containers for PostgreSQL and Redis, and installs dependencies
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+
+cd "$PROJECT_ROOT"
+
+echo "Mero Jugx - Docker Setup"
+echo "========================"
+echo ""
+
+# Check if Docker is installed
+echo "Checking Docker installation..."
+if command -v docker &> /dev/null; then
+    DOCKER_VERSION=$(docker --version)
+    echo "✓ Docker found: $DOCKER_VERSION"
+else
+    echo "✗ Docker is not installed or not in PATH."
+    echo "Please install Docker:"
+    echo "  Linux: https://docs.docker.com/engine/install/"
+    echo "  macOS: https://www.docker.com/products/docker-desktop"
+    exit 1
+fi
+
+echo ""
+echo "Step 1: Installing dependencies..."
+if [ -d "node_modules" ] && [ -d "frontend/node_modules" ]; then
+    echo "  Dependencies already installed, skipping..."
+else
+    echo "  Installing backend dependencies..."
+    npm install
+    if [ $? -ne 0 ]; then
+        echo "✗ Failed to install backend dependencies."
+        exit 1
+    fi
+    echo "✓ Backend dependencies installed"
+    
+    echo "  Installing frontend dependencies..."
+    cd frontend
+    npm install
+    if [ $? -ne 0 ]; then
+        echo "✗ Failed to install frontend dependencies."
+        cd ..
+        exit 1
+    fi
+    cd ..
+    echo "✓ Frontend dependencies installed"
+fi
+
+echo ""
+echo "Step 2: Setting up environment files..."
+bash scripts/create-env.sh
+
+echo ""
+echo "Step 3: Starting Docker containers (PostgreSQL and Redis)..."
+docker-compose up -d postgres redis
+if [ $? -eq 0 ]; then
+    echo "✓ Docker containers started"
+    echo ""
+    echo "Waiting for containers to be ready..."
+    sleep 5
+    echo ""
+    echo "✓ Docker setup complete!"
+    echo ""
+    echo "Docker containers are running:"
+    echo "  - PostgreSQL: localhost:5433"
+    echo "  - Redis: localhost:6380"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Initialize database: npm run db:init"
+    echo "     This will run migrations and seed base data"
+    echo "  2. Start development servers: npm run start:dev"
+else
+    echo "✗ Docker setup failed. Make sure Docker is running."
+    exit 1
+fi
+

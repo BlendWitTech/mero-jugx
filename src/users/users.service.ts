@@ -12,17 +12,17 @@ import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { User, UserStatus } from '../database/entities/user.entity';
-import { Organization } from '../database/entities/organization.entity';
+import { User, UserStatus } from '../database/entities/users.entity';
+import { Organization } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { Permission } from '../database/entities/permission.entity';
-import { Session } from '../database/entities/session.entity';
-import { AuditLog } from '../database/entities/audit-log.entity';
-import { Notification } from '../database/entities/notification.entity';
+} from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Permission } from '../database/entities/permissions.entity';
+import { Session } from '../database/entities/sessions.entity';
+import { AuditLog } from '../database/entities/audit_logs.entity';
+import { Notification } from '../database/entities/notifications.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -33,7 +33,7 @@ import {
   NotificationType,
 } from '../notifications/notification-helper.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationPreferenceScope } from '../database/entities/notification-preference.entity';
+import { NotificationPreferenceScope } from '../database/entities/notification_preferences.entity';
 
 @Injectable()
 export class UsersService {
@@ -485,7 +485,7 @@ export class UsersService {
     // Notify organization owners about user updates
     if (changes.length > 0) {
       const organization = await this.dataSource
-        .getRepository(require('../database/entities/organization.entity').Organization)
+        .getRepository(Organization)
         .findOne({ where: { id: organizationId } });
 
       if (organization) {
@@ -738,7 +738,7 @@ export class UsersService {
 
       // Get organization details
       const organization = await this.dataSource
-        .getRepository(require('../database/entities/organization.entity').Organization)
+        .getRepository(Organization)
         .findOne({ where: { id: organizationId } });
 
       // Create notification for revoked user

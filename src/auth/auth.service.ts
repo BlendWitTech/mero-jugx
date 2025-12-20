@@ -12,19 +12,19 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
-import { User, UserStatus } from '../database/entities/user.entity';
-import { Organization, OrganizationStatus } from '../database/entities/organization.entity';
+import { User, UserStatus } from '../database/entities/users.entity';
+import { Organization, OrganizationStatus } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
-} from '../database/entities/organization-member.entity';
-import { Role } from '../database/entities/role.entity';
-import { Package } from '../database/entities/package.entity';
+} from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+import { Package } from '../database/entities/packages.entity';
 import {
   EmailVerification,
   EmailVerificationType,
-} from '../database/entities/email-verification.entity';
-import { Session } from '../database/entities/session.entity';
+} from '../database/entities/email_verifications.entity';
+import { Session } from '../database/entities/sessions.entity';
 import { EmailService } from '../common/services/email.service';
 import { RedisService } from '../common/services/redis.service';
 import { RegisterOrganizationDto } from './dto/register-organization.dto';
@@ -72,6 +72,14 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /**
+   * Lightweight password check used for app re-auth flows.
+   */
+  async verifyPassword(email: string, password: string): Promise<boolean> {
+    const user = await this.validateUser(email, password);
+    return !!user;
   }
 
   async registerOrganization(
@@ -975,18 +983,43 @@ export class AuthService {
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const emailVerification = this.emailVerificationRepository.create({
+    console.log(`[Forgot Password] Generated token for ${user.email}: ${resetToken.substring(0, 10)}... (length: ${resetToken.length})`);
+    
+    // Try to use PASSWORD_RESET type, but fallback to REGISTRATION if save fails
+    let emailVerification = this.emailVerificationRepository.create({
       user_id: user.id,
       email: user.email,
       token: resetToken,
-      type: EmailVerificationType.REGISTRATION, // Using REGISTRATION type for password reset
+      type: EmailVerificationType.PASSWORD_RESET,
       expires_at: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
     });
 
-    await this.emailVerificationRepository.save(emailVerification);
+    try {
+      await this.emailVerificationRepository.save(emailVerification);
+      console.log(`[Forgot Password] Token saved with PASSWORD_RESET type`);
+    } catch (error: any) {
+      // If PASSWORD_RESET type doesn't exist in DB (migration not run), use REGISTRATION type
+      if (error?.message?.includes('password_reset') || error?.code === '23502') {
+        console.warn(`[Forgot Password] PASSWORD_RESET type not available, using REGISTRATION type`);
+        emailVerification = this.emailVerificationRepository.create({
+          user_id: user.id,
+          email: user.email,
+          token: resetToken,
+          type: EmailVerificationType.REGISTRATION,
+          expires_at: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        });
+        await this.emailVerificationRepository.save(emailVerification);
+        console.log(`[Forgot Password] Token saved with REGISTRATION type`);
+      } else {
+        console.error(`[Forgot Password] Error saving token:`, error);
+        throw error; // Re-throw if it's a different error
+      }
+    }
 
-    // Send reset email
-    const resetUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${resetToken}`;
+    // Send reset email - URL encode the token to handle any special characters
+    const encodedToken = encodeURIComponent(resetToken);
+    const resetUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001')}/reset-password?token=${encodedToken}`;
+    console.log(`[Forgot Password] Reset URL created: ${resetUrl.substring(0, 80)}...`);
     await this.emailService.sendEmail(
       user.email,
       'Reset Your Password',
@@ -1003,21 +1036,98 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    const verification = await this.emailVerificationRepository.findOne({
-      where: { token, type: EmailVerificationType.REGISTRATION },
-      relations: ['user'],
-    });
+    if (!token || token.trim() === '') {
+      throw new BadRequestException('Reset token is required');
+    }
+    
+    // Normalize token - trim whitespace and handle potential double-encoding
+    let normalizedToken = token.trim();
+    // Try to decode in case it was double-encoded
+    try {
+      const decoded = decodeURIComponent(normalizedToken);
+      if (decoded !== normalizedToken) {
+        normalizedToken = decoded;
+      }
+    } catch (e) {
+      // Not URL encoded, use as-is
+    }
+    
+    // Log token details for debugging
+    console.log(`[Password Reset] Original token: ${token.substring(0, 10)}... (length: ${token.length})`);
+    console.log(`[Password Reset] Normalized token: ${normalizedToken.substring(0, 10)}... (length: ${normalizedToken.length})`);
+    
+    // Use normalized token for lookup
+    token = normalizedToken;
+
+    // Try to find the token, first with PASSWORD_RESET type, then fallback to REGISTRATION for backward compatibility
+    // Also try without type filter in case the enum migration hasn't been run yet
+    let verification = null;
+    
+    try {
+      verification = await this.emailVerificationRepository.findOne({
+        where: { token, type: EmailVerificationType.PASSWORD_RESET },
+        relations: ['user'],
+      });
+    } catch (error) {
+      // If PASSWORD_RESET type doesn't exist in DB yet (migration not run), continue to fallback
+      console.warn('[Password Reset] PASSWORD_RESET type not available, using fallback');
+    }
+
+    // Fallback to REGISTRATION type for tokens created before the PASSWORD_RESET type was added
+    if (!verification) {
+      verification = await this.emailVerificationRepository.findOne({
+        where: { token, type: EmailVerificationType.REGISTRATION },
+        relations: ['user'],
+      });
+    }
+
+    // Last resort: try to find by token only (in case type filtering fails)
+    // This handles cases where the enum migration hasn't been run yet
+    if (!verification) {
+      const allVerifications = await this.emailVerificationRepository.find({
+        where: { token },
+        relations: ['user'],
+      });
+      
+      // Find the most recent one that's not EMAIL_CHANGE, INVITATION, or ORGANIZATION_EMAIL
+      verification = allVerifications.find(v => 
+        v.type !== EmailVerificationType.EMAIL_CHANGE && 
+        v.type !== EmailVerificationType.INVITATION &&
+        v.type !== EmailVerificationType.ORGANIZATION_EMAIL
+      ) || null;
+    }
 
     if (!verification) {
-      throw new BadRequestException('Invalid reset token');
+      // Log for debugging - check if token exists at all
+      const anyToken = await this.emailVerificationRepository.findOne({
+        where: { token },
+        relations: ['user'],
+      });
+      
+      if (anyToken) {
+        console.error(`[Password Reset] Token found but with wrong type: ${anyToken.type}, expected: PASSWORD_RESET or REGISTRATION`);
+        console.error(`[Password Reset] Token email: ${anyToken.email}, expires_at: ${anyToken.expires_at}, verified_at: ${anyToken.verified_at}`);
+      } else {
+        console.error(`[Password Reset] Token not found. Token length: ${token.length}, First 10 chars: ${token.substring(0, 10)}`);
+        // Try to find similar tokens (in case of encoding issues)
+        const allRecentTokens = await this.emailVerificationRepository.find({
+          take: 10,
+          order: { created_at: 'DESC' },
+        });
+        if (allRecentTokens.length > 0) {
+          console.error(`[Password Reset] Recent tokens (first 10 chars): ${allRecentTokens.slice(0, 5).map(t => t.token.substring(0, 10)).join(', ')}`);
+        }
+      }
+      
+      throw new BadRequestException('Invalid or expired reset token. Please request a new password reset link.');
     }
 
     if (verification.expires_at < new Date()) {
-      throw new BadRequestException('Reset token has expired');
+      throw new BadRequestException('Reset token has expired. Please request a new password reset link.');
     }
 
     if (verification.verified_at) {
-      throw new BadRequestException('Reset token has already been used');
+      throw new BadRequestException('Reset token has already been used. Please request a new password reset link.');
     }
 
     // Mark as used

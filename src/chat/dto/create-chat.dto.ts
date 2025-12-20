@@ -1,5 +1,6 @@
 import { IsEnum, IsString, IsOptional, IsArray, IsUUID, MinLength, MaxLength } from 'class-validator';
-import { ChatType } from '../../database/entities/chat.entity';
+import { Transform } from 'class-transformer';
+import { ChatType } from '../../database/entities/chats.entity';
 
 export class CreateChatDto {
   @IsEnum(ChatType)
@@ -18,6 +19,15 @@ export class CreateChatDto {
 
   @IsArray()
   @IsUUID('4', { each: true })
-  member_ids: string[]; // User IDs to add to the chat
+  @IsOptional()
+  @Transform(({ value }) => {
+    // Transform empty array, null, or undefined to undefined
+    if (!value || (Array.isArray(value) && value.length === 0)) {
+      return undefined;
+    }
+    // Ensure it's an array
+    return Array.isArray(value) ? value : undefined;
+  })
+  member_ids?: string[]; // User IDs to add to the chat (optional for group chats)
 }
 
