@@ -1,61 +1,53 @@
-# Mero Jugx - Database Init Script (PowerShell)
-# Initializes the database after Docker is running or DB is manually setup
-
 $ErrorActionPreference = "Stop"
 
 Write-Host "Mero Jugx - Database Initialization" -ForegroundColor Cyan
-Write-Host "====================================" -ForegroundColor Cyan
-Write-Host ""
 
-# Check if .env file exists
-if (-not (Test-Path ".env")) {
-    Write-Host "ERROR: .env file not found!" -ForegroundColor Red
-    Write-Host "Please run 'npm run setup' first to create the .env file." -ForegroundColor Yellow
-    exit 1
-}
+# 1. Root Dependencies
+Write-Host "1. Installing Root Dependencies..."
+npm install
 
-Write-Host "This will:" -ForegroundColor Yellow
-Write-Host "  1. Run all pending migrations" -ForegroundColor White
-Write-Host "  2. Seed base data (packages, permissions, roles, etc.)" -ForegroundColor White
-Write-Host ""
-
-$response = Read-Host "Continue? (y/n)"
-if ($response -ne "y" -and $response -ne "Y") {
-    Write-Host "Initialization cancelled." -ForegroundColor Yellow
-    exit 0
-}
-
-Write-Host ""
-Write-Host "Initializing database..." -ForegroundColor Blue
-Write-Host ""
-
-# Check if dependencies are installed
-if (-not (Test-Path "node_modules\ts-node")) {
-    Write-Host "Dependencies not found. Installing..." -ForegroundColor Yellow
+# 2. Frontend Dependencies
+if (Test-Path "frontend") {
+    Write-Host "2. Installing Frontend Dependencies..."
+    Push-Location "frontend"
     npm install
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install dependencies!" -ForegroundColor Red
-        exit 1
+    Pop-Location
+}
+
+# 3. System Admin Dependencies
+if (Test-Path "apps/system-admin/backend") {
+    Write-Host "3. Installing System Admin Dependencies..."
+    Push-Location "apps/system-admin/backend"
+    npm install
+    Pop-Location
+}
+
+# 4. Marketplace App Dependencies
+Write-Host "4. Checking for Marketplace App Dependencies..."
+$marketplaceApps = Get-ChildItem -Path "apps" -Recurse -Filter "package.json" | 
+    Where-Object { $_.DirectoryName -notlike "*node_modules*" -and $_.DirectoryName -notlike "*system-admin*" }
+
+if ($marketplaceApps) {
+    Write-Host "Found $($marketplaceApps.Count) marketplace apps." -ForegroundColor Cyan
+    foreach ($app in $marketplaceApps) {
+        $appDir = $app.DirectoryName
+        $appName = Split-Path $appDir -Leaf
+        Write-Host "  Installing dependencies for $appName..."
+        Push-Location $appDir
+        npm install
+        Pop-Location
     }
 }
 
-# Run database initialization using local ts-node
-# Try to use local binary first, fallback to npx
-$tsNodePath = "node_modules\.bin\ts-node.cmd"
-if (Test-Path $tsNodePath) {
-    & $tsNodePath --project tsconfig.ts-node.json src/database/init-database-cli.ts
+# 5. Database Initialization
+Write-Host "5. Running Database Initialization..."
+$tsNode = ".\node_modules\.bin\ts-node.cmd"
+
+if (Test-Path $tsNode) {
+    & $tsNode --project tsconfig.ts-node.json src/database/init-database-cli.ts
 } else {
-    # Use npx but ensure it uses local version
-    $env:NODE_PATH = "$PWD\node_modules"
-    npx --prefer-offline ts-node --project tsconfig.ts-node.json src/database/init-database-cli.ts
+    Write-Host "Local ts-node not found, using npx..."
+    npx ts-node --project tsconfig.ts-node.json src/database/init-database-cli.ts
 }
 
-if ($LASTEXITCODE -eq 0) {
-    Write-Host ""
-    Write-Host "Database initialization complete!" -ForegroundColor Green
-} else {
-    Write-Host ""
-    Write-Host "Database initialization failed!" -ForegroundColor Red
-    exit 1
-}
-
+Write-Host "Database Initialization Complete!" -ForegroundColor Green

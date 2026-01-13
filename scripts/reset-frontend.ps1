@@ -17,11 +17,27 @@ if (Test-Path "frontend/node_modules") {
     Write-Host ""
 }
 
+# Remove mero-crm frontend node_modules
+if (Test-Path "apps/mero-crm/frontend/node_modules") {
+    Write-Host "[1a/4] Removing mero-crm frontend node_modules..." -ForegroundColor Blue
+    Remove-Item -Recurse -Force apps/mero-crm/frontend/node_modules
+    Write-Host "  ✓ Mero CRM frontend node_modules removed" -ForegroundColor Green
+    Write-Host ""
+}
+
 # Remove frontend build artifacts
 if (Test-Path "frontend/dist") {
     Write-Host "[2/4] Removing frontend build artifacts..." -ForegroundColor Blue
     Remove-Item -Recurse -Force frontend/dist
     Write-Host "  ✓ Frontend dist removed" -ForegroundColor Green
+    Write-Host ""
+}
+
+# Remove mero-crm frontend build artifacts
+if (Test-Path "apps/mero-crm/frontend/dist") {
+    Write-Host "[2a/4] Removing mero-crm frontend build artifacts..." -ForegroundColor Blue
+    Remove-Item -Recurse -Force apps/mero-crm/frontend/dist
+    Write-Host "  ✓ Mero CRM frontend dist removed" -ForegroundColor Green
     Write-Host ""
 }
 
@@ -37,6 +53,16 @@ Set-Location frontend
 npm cache clean --force 2>&1 | Out-Null
 Set-Location ..
 Write-Host "  ✓ Frontend cache cleared" -ForegroundColor Green
+Write-Host ""
+
+# Clear mero-crm frontend cache
+Write-Host "[3a/4] Clearing mero-crm frontend npm cache..." -ForegroundColor Blue
+if (Test-Path "apps/mero-crm/frontend") {
+    Push-Location "apps/mero-crm/frontend"
+    npm cache clean --force 2>&1 | Out-Null
+    Pop-Location
+    Write-Host "  ✓ Mero CRM frontend cache cleared" -ForegroundColor Green
+}
 Write-Host ""
 
 # Reset frontend .env

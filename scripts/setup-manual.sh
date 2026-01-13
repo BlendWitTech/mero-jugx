@@ -166,6 +166,30 @@ if prompt_yesno "Install frontend dependencies?" "y"; then
     echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
 fi
 
+if prompt_yesno "Install system-admin backend dependencies?" "y"; then
+    echo "Installing system-admin backend dependencies..."
+    if [ -d "apps/system-admin/backend" ]; then
+        cd apps/system-admin/backend
+        npm install
+        cd ../../..
+        echo -e "${GREEN}✅ System-admin backend dependencies installed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  System-admin backend directory not found${NC}"
+    fi
+fi
+
+if prompt_yesno "Install system-admin frontend dependencies?" "y"; then
+    echo "Installing system-admin frontend dependencies..."
+    if [ -d "apps/system-admin/frontend" ]; then
+        cd apps/system-admin/frontend
+        npm install
+        cd ../../..
+        echo -e "${GREEN}✅ System-admin frontend dependencies installed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  System-admin frontend directory not found${NC}"
+    fi
+fi
+
 echo ""
 echo -e "${BLUE}=== Environment Configuration ===${NC}"
 echo ""

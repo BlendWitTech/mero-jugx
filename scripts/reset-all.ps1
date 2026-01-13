@@ -45,11 +45,13 @@ Write-Host "[1/9] Stopping Docker containers..." -ForegroundColor Cyan
 try {
     if (Get-Command docker-compose -ErrorAction SilentlyContinue) {
         docker-compose down 2>$null
-    } elseif (Get-Command docker -ErrorAction SilentlyContinue) {
+    }
+    elseif (Get-Command docker -ErrorAction SilentlyContinue) {
         docker compose down 2>$null
     }
     Write-Host "  ✓ Docker containers stopped" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "  ⚠ Docker not found or error stopping containers" -ForegroundColor Yellow
 }
 Write-Host ""
@@ -61,7 +63,8 @@ if (Test-Path "node_modules") {
     try {
         Remove-Item -Recurse -Force "node_modules" -ErrorAction Stop
         Write-Host "  ✓ Backend node_modules removed" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
         # Use robocopy to delete by mirroring empty directory
         $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
@@ -75,7 +78,8 @@ if (Test-Path "frontend/node_modules") {
     try {
         Remove-Item -Recurse -Force "frontend/node_modules" -ErrorAction Stop
         Write-Host "  ✓ Frontend node_modules removed" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
         $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
         robocopy $emptyDir "frontend/node_modules" /MIR /R:0 /W:0 | Out-Null
@@ -84,11 +88,90 @@ if (Test-Path "frontend/node_modules") {
         Write-Host "  ✓ Frontend node_modules removed" -ForegroundColor Green
     }
 }
+if (Test-Path "apps/system-admin/backend/node_modules") {
+    try {
+        Remove-Item -Recurse -Force "apps/system-admin/backend/node_modules" -ErrorAction Stop
+        Write-Host "  ✓ System-admin backend node_modules removed" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
+        $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+        robocopy $emptyDir "apps/system-admin/backend/node_modules" /MIR /R:0 /W:0 | Out-Null
+        Remove-Item "apps/system-admin/backend/node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✓ System-admin backend node_modules removed" -ForegroundColor Green
+    }
+}
+if (Test-Path "apps/system-admin/frontend/node_modules") {
+    try {
+        Remove-Item -Recurse -Force "apps/system-admin/frontend/node_modules" -ErrorAction Stop
+        Write-Host "  ✓ System-admin frontend node_modules removed" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
+        $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+        robocopy $emptyDir "apps/system-admin/frontend/node_modules" /MIR /R:0 /W:0 | Out-Null
+        Remove-Item "apps/system-admin/frontend/node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✓ System-admin frontend node_modules removed" -ForegroundColor Green
+    }
+}
+if (Test-Path "apps/mero-crm/backend/node_modules") {
+    try {
+        Remove-Item -Recurse -Force "apps/mero-crm/backend/node_modules" -ErrorAction Stop
+        Write-Host "  ✓ Mero CRM backend node_modules removed" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
+        $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+        robocopy $emptyDir "apps/mero-crm/backend/node_modules" /MIR /R:0 /W:0 | Out-Null
+        Remove-Item "apps/mero-crm/backend/node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✓ Mero CRM backend node_modules removed" -ForegroundColor Green
+    }
+}
+if (Test-Path "apps/mero-crm/frontend/node_modules") {
+    try {
+        Remove-Item -Recurse -Force "apps/mero-crm/frontend/node_modules" -ErrorAction Stop
+        Write-Host "  ✓ Mero CRM frontend node_modules removed" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "  ⚠ Some files are locked, using alternative method..." -ForegroundColor Yellow
+        $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+        robocopy $emptyDir "apps/mero-crm/frontend/node_modules" /MIR /R:0 /W:0 | Out-Null
+        Remove-Item "apps/mero-crm/frontend/node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✓ Mero CRM frontend node_modules removed" -ForegroundColor Green
+    }
+}
+
+# Generic Marketplace App Cleaner
+$marketplaceModules = Get-ChildItem -Path "apps" -Recurse -Filter "node_modules" -Directory | 
+Where-Object { $_.FullName -notlike "*system-admin*" -and $_.Parent.Name -ne "apps" }
+
+if ($marketplaceModules) {
+    Write-Host "Found $($marketplaceModules.Count) additional node_modules folders." -ForegroundColor Cyan
+    foreach ($mod in $marketplaceModules) {
+        $parentName = $mod.Parent.Name
+        Write-Host "  Removing node_modules for $parentName..."
+        try {
+            Remove-Item -Recurse -Force $mod.FullName -ErrorAction Stop
+            Write-Host "  ✓ $parentName node_modules removed" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "  ⚠ Locked files in $parentName, forcing..." -ForegroundColor Yellow
+            $emptyDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+            robocopy $emptyDir $mod.FullName /MIR /R:0 /W:0 | Out-Null
+            Remove-Item $mod.FullName -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
 Write-Host ""
 
 # Step 3: Remove build artifacts
 Write-Host "[3/9] Removing build artifacts..." -ForegroundColor Cyan
-@("dist", "frontend/dist", "frontend/build", "coverage", "frontend/coverage", ".next", "frontend/.next") | ForEach-Object {
+@("dist", "frontend/dist", "frontend/build", "apps/system-admin/backend/dist", "apps/system-admin/frontend/dist", "apps/mero-crm/backend/dist", "apps/mero-crm/frontend/dist", "coverage", "frontend/coverage", ".next", "frontend/.next") | ForEach-Object {
     if (Test-Path $_) {
         Remove-Item -Recurse -Force $_
         Write-Host "  ✓ $_ removed" -ForegroundColor Green
@@ -117,6 +200,16 @@ npm cache clean --force *>$null
 Set-Location frontend
 npm cache clean --force *>$null
 Set-Location ..
+if (Test-Path "apps/system-admin/backend") {
+    Set-Location apps/system-admin/backend
+    npm cache clean --force *>$null
+    Set-Location ../../..
+}
+if (Test-Path "apps/system-admin/frontend") {
+    Set-Location apps/system-admin/frontend
+    npm cache clean --force *>$null
+    Set-Location ../../..
+}
 $ErrorActionPreference = "Stop"
 Write-Host "  ✓ Cache cleared" -ForegroundColor Green
 Write-Host ""
@@ -177,18 +270,22 @@ END `$`$;
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "  ✓ All database tables and data dropped" -ForegroundColor Green
-            } else {
+            }
+            else {
                 Write-Host "  ⚠ Database reset failed. You may need to run it manually after setup." -ForegroundColor Yellow
                 Write-Host "  ⚠ Run 'npm run db:init' after setup to initialize database." -ForegroundColor Yellow
             }
-        } else {
+        }
+        else {
             Write-Host "  ⚠ Database configuration not found in .env file." -ForegroundColor Yellow
         }
-    } catch {
+    }
+    catch {
         Write-Host "  ⚠ Database reset failed: $_" -ForegroundColor Yellow
         Write-Host "  ⚠ Run 'npm run db:init' after setup to initialize database." -ForegroundColor Yellow
     }
-} else {
+}
+else {
     Write-Host "  ⚠ .env file not found. Database will be reset after setup." -ForegroundColor Yellow
     Write-Host "  ⚠ After setup, run 'npm run db:init' to initialize database." -ForegroundColor Yellow
 }
@@ -219,16 +316,19 @@ if ($remove_volumes -eq "y" -or $remove_volumes -eq "Y") {
     try {
         if (Get-Command docker-compose -ErrorAction SilentlyContinue) {
             docker-compose down -v 2>$null
-        } elseif (Get-Command docker -ErrorAction SilentlyContinue) {
+        }
+        elseif (Get-Command docker -ErrorAction SilentlyContinue) {
             docker compose down -v 2>$null
         }
         docker volume rm mero-jugx_postgres_data 2>$null
         docker volume rm mero-jugx_redis_data 2>$null
         Write-Host "  ✓ Docker volumes removed" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "  ⚠ Error removing Docker volumes" -ForegroundColor Yellow
     }
-} else {
+}
+else {
     Write-Host "  ⚠ Docker volumes kept (database data preserved)" -ForegroundColor Yellow
 }
 Write-Host ""

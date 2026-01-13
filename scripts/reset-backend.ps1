@@ -17,11 +17,27 @@ if (Test-Path "node_modules") {
     Write-Host ""
 }
 
+# Remove mero-crm backend node_modules
+if (Test-Path "apps/mero-crm/backend/node_modules") {
+    Write-Host "[1a/5] Removing mero-crm backend node_modules..." -ForegroundColor Blue
+    Remove-Item -Recurse -Force apps/mero-crm/backend/node_modules
+    Write-Host "  ✓ Mero CRM backend node_modules removed" -ForegroundColor Green
+    Write-Host ""
+}
+
 # Remove backend build artifacts
 if (Test-Path "dist") {
     Write-Host "[2/5] Removing backend build artifacts..." -ForegroundColor Blue
     Remove-Item -Recurse -Force dist
     Write-Host "  ✓ Backend dist removed" -ForegroundColor Green
+    Write-Host ""
+}
+
+# Remove mero-crm backend build artifacts
+if (Test-Path "apps/mero-crm/backend/dist") {
+    Write-Host "[2a/5] Removing mero-crm backend build artifacts..." -ForegroundColor Blue
+    Remove-Item -Recurse -Force apps/mero-crm/backend/dist
+    Write-Host "  ✓ Mero CRM backend dist removed" -ForegroundColor Green
     Write-Host ""
 }
 
@@ -51,6 +67,16 @@ Write-Host ""
 Write-Host "[4/5] Clearing backend npm cache..." -ForegroundColor Blue
 npm cache clean --force 2>&1 | Out-Null
 Write-Host "  ✓ Backend cache cleared" -ForegroundColor Green
+Write-Host ""
+
+# Clear mero-crm backend cache
+Write-Host "[4a/5] Clearing mero-crm backend npm cache..." -ForegroundColor Blue
+if (Test-Path "apps/mero-crm/backend") {
+    Push-Location "apps/mero-crm/backend"
+    npm cache clean --force 2>&1 | Out-Null
+    Pop-Location
+    Write-Host "  ✓ Mero CRM backend cache cleared" -ForegroundColor Green
+}
 Write-Host ""
 
 # Reset backend .env

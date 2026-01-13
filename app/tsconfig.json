@@ -1,0 +1,121 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    /* Linting */
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    /* Path aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@frontend/*": [
+        "./src/*"
+      ],
+      "@shared/*": [
+        "../shared/frontend/*"
+      ],
+      "@shared/frontend/*": [
+        "../shared/frontend/*"
+      ],
+      "@apps/*": [
+        "./marketplace/shared/*"
+      ],
+      "@crm/*": [
+        "./marketplace/organization/mero-crm/src/*"
+      ],
+      "@crm": [
+        "./marketplace/organization/mero-crm/src/MeroCrmRouter"
+      ],
+      "@social/*": [
+        "./marketplace/shared/mero-social/*"
+      ],
+      "@inventory/*": [
+        "./marketplace/organization/mero-inventory/*"
+      ],
+      "@accounting/*": [
+        "./marketplace/organization/mero-accounting/*"
+      ],
+      "@creator/*": [
+        "./marketplace/creator/portal/*"
+      ],
+      "@ui/*": [
+        "../packages/ui/src/*"
+      ],
+      "react-calendar": [
+        "./node_modules/react-calendar"
+      ],
+      "react": [
+        "./node_modules/react"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/react/jsx-runtime"
+      ],
+      "react-dom": [
+        "./node_modules/react-dom"
+      ],
+      "clsx": [
+        "./node_modules/clsx"
+      ],
+      "tailwind-merge": [
+        "./node_modules/tailwind-merge"
+      ],
+      "lucide-react": [
+        "./node_modules/lucide-react",
+        "../node_modules/lucide-react"
+      ],
+      "lucide-react/*": [
+        "./node_modules/lucide-react/*",
+        "../node_modules/lucide-react/*"
+      ],
+      "react-router-dom": [
+        "./node_modules/react-router-dom"
+      ],
+      "@tanstack/react-query": [
+        "./node_modules/@tanstack/react-query"
+      ],
+      "date-fns": [
+        "./node_modules/date-fns"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "../shared/frontend",
+    "./marketplace/**/*",
+    "../packages/ui/src/**/*"
+  ],
+  "exclude": [
+    "**/backend",
+    "../apps/**/backend",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
+}

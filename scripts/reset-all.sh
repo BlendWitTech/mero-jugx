@@ -74,6 +74,26 @@ if [ -d "frontend/node_modules" ]; then
     fi
     echo "  ✓ Frontend node_modules removed"
 fi
+if [ -d "apps/system-admin/backend/node_modules" ]; then
+    for i in 1 2 3; do
+        rm -rf apps/system-admin/backend/node_modules 2>/dev/null && break || sleep 1
+    done
+    if [ -d "apps/system-admin/backend/node_modules" ]; then
+        chmod -R u+w apps/system-admin/backend/node_modules 2>/dev/null
+        rm -rf apps/system-admin/backend/node_modules
+    fi
+    echo "  ✓ System-admin backend node_modules removed"
+fi
+if [ -d "apps/system-admin/frontend/node_modules" ]; then
+    for i in 1 2 3; do
+        rm -rf apps/system-admin/frontend/node_modules 2>/dev/null && break || sleep 1
+    done
+    if [ -d "apps/system-admin/frontend/node_modules" ]; then
+        chmod -R u+w apps/system-admin/frontend/node_modules 2>/dev/null
+        rm -rf apps/system-admin/frontend/node_modules
+    fi
+    echo "  ✓ System-admin frontend node_modules removed"
+fi
 echo ""
 
 # Step 3: Remove build artifacts
@@ -81,6 +101,8 @@ echo "[3/9] Removing build artifacts..."
 [ -d "dist" ] && rm -rf dist && echo "  ✓ Backend dist removed"
 [ -d "frontend/dist" ] && rm -rf frontend/dist && echo "  ✓ Frontend dist removed"
 [ -d "frontend/build" ] && rm -rf frontend/build && echo "  ✓ Frontend build removed"
+[ -d "apps/system-admin/backend/dist" ] && rm -rf apps/system-admin/backend/dist && echo "  ✓ System-admin backend dist removed"
+[ -d "apps/system-admin/frontend/dist" ] && rm -rf apps/system-admin/frontend/dist && echo "  ✓ System-admin frontend dist removed"
 [ -d "coverage" ] && rm -rf coverage && echo "  ✓ Coverage reports removed"
 [ -d "frontend/coverage" ] && rm -rf frontend/coverage && echo "  ✓ Frontend coverage removed"
 [ -d ".next" ] && rm -rf .next && echo "  ✓ Next.js build removed"
@@ -101,6 +123,16 @@ npm cache clean --force 2>/dev/null || true
 cd frontend
 npm cache clean --force 2>/dev/null || true
 cd ..
+if [ -d "apps/system-admin/backend" ]; then
+    cd apps/system-admin/backend
+    npm cache clean --force 2>/dev/null || true
+    cd ../../..
+fi
+if [ -d "apps/system-admin/frontend" ]; then
+    cd apps/system-admin/frontend
+    npm cache clean --force 2>/dev/null || true
+    cd ../../..
+fi
 echo "  ✓ Cache cleared"
 echo ""
 

@@ -20,8 +20,9 @@ if [ ! -f ".env" ]; then
 fi
 
 echo "This will:"
-echo "  1. Run all pending migrations"
-echo "  2. Seed base data (packages, permissions, roles, etc.)"
+echo "  1. Install dependencies (if not already installed)"
+echo "  2. Run all pending migrations (create/update database tables)"
+echo "  3. Seed base data (packages, permissions, roles, role templates, etc.)"
 echo ""
 
 read -p "Continue? (y/n): " response
@@ -36,12 +37,56 @@ echo ""
 
 # Check if dependencies are installed
 if [ ! -d "node_modules/ts-node" ]; then
-    echo "Dependencies not found. Installing..."
+    echo "[1/3] Installing dependencies..."
+    echo "  Installing backend dependencies..."
     npm install
     if [ $? -ne 0 ]; then
-        echo "Failed to install dependencies!"
+        echo "  ✗ Failed to install backend dependencies!"
         exit 1
     fi
+    echo "  ✓ Backend dependencies installed"
+    
+    # Also check and install frontend dependencies if needed
+    if [ ! -d "frontend/node_modules" ]; then
+        echo "  Installing frontend dependencies..."
+        cd frontend
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "  ✗ Failed to install frontend dependencies!"
+            cd ..
+            exit 1
+        fi
+        cd ..
+        echo "  ✓ Frontend dependencies installed"
+    fi
+    
+    # Also check and install system-admin dependencies if needed
+    if [ -d "apps/system-admin/backend" ] && [ ! -d "apps/system-admin/backend/node_modules" ]; then
+        echo "  Installing system-admin backend dependencies..."
+        cd apps/system-admin/backend
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "  ✗ Failed to install system-admin backend dependencies!"
+            cd ../../..
+            exit 1
+        fi
+        cd ../../..
+        echo "  ✓ System-admin backend dependencies installed"
+    fi
+    
+    if [ -d "apps/system-admin/frontend" ] && [ ! -d "apps/system-admin/frontend/node_modules" ]; then
+        echo "  Installing system-admin frontend dependencies..."
+        cd apps/system-admin/frontend
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "  ✗ Failed to install system-admin frontend dependencies!"
+            cd ../../..
+            exit 1
+        fi
+        cd ../../..
+        echo "  ✓ System-admin frontend dependencies installed"
+    fi
+    echo ""
 fi
 
 # Run database initialization using local ts-node
@@ -62,4 +107,5 @@ else
     echo "Database initialization failed!"
     exit 1
 fi
+
 

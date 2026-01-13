@@ -47,6 +47,32 @@ if ((Test-Path "node_modules") -and (Test-Path "frontend/node_modules")) {
     }
     Set-Location ..
     Write-Host "  Frontend dependencies installed" -ForegroundColor Green
+    
+    Write-Host "  Installing system-admin backend dependencies..." -ForegroundColor White
+    if (Test-Path "apps/system-admin/backend") {
+        Set-Location apps/system-admin/backend
+        npm install
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to install system-admin backend dependencies." -ForegroundColor Red
+            Set-Location ../../..
+            exit 1
+        }
+        Set-Location ../../..
+        Write-Host "  System-admin backend dependencies installed" -ForegroundColor Green
+    }
+    
+    Write-Host "  Installing system-admin frontend dependencies..." -ForegroundColor White
+    if (Test-Path "apps/system-admin/frontend") {
+        Set-Location apps/system-admin/frontend
+        npm install
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to install system-admin frontend dependencies." -ForegroundColor Red
+            Set-Location ../../..
+            exit 1
+        }
+        Set-Location ../../..
+        Write-Host "  System-admin frontend dependencies installed" -ForegroundColor Green
+    }
 }
 
 Write-Host ""

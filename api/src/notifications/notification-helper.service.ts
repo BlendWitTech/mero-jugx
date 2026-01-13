@@ -1,0 +1,1160 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Notification } from '../database/entities/notifications.entity';
+import {
+  NotificationPreference,
+  NotificationPreferenceScope,
+} from '../database/entities/notification_preferences.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberStatus,
+} from '../database/entities/organization_members.entity';
+import { Role } from '../database/entities/roles.entity';
+
+export enum NotificationType {
+  USER_INVITED = 'user.invited',
+  USER_JOINED = 'user.joined',
+  USER_REMOVED = 'user.removed',
+  ROLE_ASSIGNED = 'role.assigned',
+  ROLE_REMOVED = 'role.removed',
+  ROLE_CREATED = 'role.created',
+  ROLE_UPDATED = 'role.updated',
+  INVITATION_ACCEPTED = 'invitation.accepted',
+  INVITATION_EXPIRED = 'invitation.expired',
+  ORGANIZATION_UPDATED = 'organization.updated',
+  PACKAGE_UPGRADED = 'package.upgraded',
+  PACKAGE_EXPIRING_SOON = 'package.expiring_soon',
+  PACKAGE_EXPIRED = 'package.expired',
+  MFA_ENABLED = 'mfa.enabled',
+  MFA_DISABLED = 'mfa.disabled',
+  SECURITY_ALERT = 'security.alert',
+  // Chat notifications
+  CHAT_MESSAGE = 'chat.message',
+  CHAT_UNREAD = 'chat.unread',
+  CHAT_MENTION = 'chat.mention',
+  CHAT_GROUP_ADDED = 'chat.group_added',
+  CHAT_INITIATED = 'chat.initiated',
+  // App subscription notifications
+  APP_SUBSCRIPTION_EXPIRING_SOON = 'app.subscription.expiring_soon',
+  APP_SUBSCRIPTION_EXPIRED = 'app.subscription.expired',
+  APP_SUBSCRIPTION_RENEWAL_DUE = 'app.subscription.renewal_due',
+  // SSO and access notifications
+  SSO_CHANGED = 'sso.changed',
+  APP_ACCESS_GRANTED = 'app.access.granted',
+  APP_ACCESS_REVOKED = 'app.access.revoked',
+  APP_INVITATION = 'app.invitation',
+  ROLE_CHANGED = 'role.changed',
+  // Mero Board Task notifications
+  TASK_CREATED = 'task.created',
+  TASK_UPDATED = 'task.updated',
+  TASK_ASSIGNED = 'task.assigned',
+  TASK_UNASSIGNED = 'task.unassigned',
+  TASK_STATUS_CHANGED = 'task.status_changed',
+  TASK_PRIORITY_CHANGED = 'task.priority_changed',
+  TASK_DUE_DATE_CHANGED = 'task.due_date_changed',
+  TASK_COMMENT_ADDED = 'task.comment_added',
+  TASK_MENTIONED = 'task.mentioned',
+}
+
+export interface NotificationLink {
+  route: string; // e.g., '/users', '/roles/123', '/invitations'
+  params?: Record<string, any>; // Additional route parameters
+}
+
+@Injectable()
+export class NotificationHelperService {
+  constructor(
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
+    @InjectRepository(NotificationPreference)
+    private preferenceRepository: Repository<NotificationPreference>,
+    @InjectRepository(OrganizationMember)
+    private memberRepository: Repository<OrganizationMember>,
+    @InjectRepository(Role)
+    private roleRepository: Repository<Role>,
+  ) {}
+
+  /**
+   * Important notifications that should always be sent regardless of preferences
+   */
+  private readonly IMPORTANT_NOTIFICATIONS: NotificationType[] = [
+    NotificationType.SECURITY_ALERT,
+    NotificationType.MFA_ENABLED,
+    NotificationType.MFA_DISABLED,
+    NotificationType.USER_REMOVED,
+    NotificationType.PACKAGE_UPGRADED,
+    NotificationType.PACKAGE_EXPIRING_SOON,
+    NotificationType.PACKAGE_EXPIRED,
+    NotificationType.APP_SUBSCRIPTION_EXPIRING_SOON,
+    NotificationType.APP_SUBSCRIPTION_EXPIRED,
+    NotificationType.APP_SUBSCRIPTION_RENEWAL_DUE,
+  ];
+
+  /**
+   * Check if a notification type is important (should always be sent)
+   */
+  private isImportantNotification(type: NotificationType): boolean {
+    return this.IMPORTANT_NOTIFICATIONS.includes(type);
+  }
+
+  /**
+   * Get users by role in an organization
+   */
+  private async getUsersByRole(
+    organizationId: string,
+    roleFilter: (role: Role) => boolean,
+  ): Promise<OrganizationMember[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role', 'user'],
+    });
+
+    return members.filter((member) => roleFilter(member.role));
+  }
+
+  /**
+   * Check if user has notification preferences enabled for a specific type
+   * Important notifications always return true for in-app, but emails still respect preferences
+   *
+   * Notification Preferences Structure:
+   * - Personal scope with organization_id = null: Global preferences (applies to all organizations)
+   * - Personal scope with organization_id = set: Per-organization preferences (current implementation)
+   * - Organization scope with organization_id = set: Organization-level settings (only for Organization Owners)
+   *
+   * Current behavior: Preferences are checked per-organization (organization_id is always set)
+   * This allows users to have different notification settings for each organization they belong to.
+   */
+  private async shouldSendNotification(
+    userId: string,
+    organizationId: string | null,
+    type: NotificationType,
+    channel: 'email' | 'in_app',
+  ): Promise<boolean> {
+    // Important notifications should always be sent for in-app
+    // But emails still respect preferences
+    const isImportant = this.isImportantNotification(type);
+    if (isImportant && channel === 'in_app') {
+      return true;
+    }
+
+    try {
+      // Get user's personal preferences for this organization
+      // First check personal preferences, then organization-level if user is owner
+      let preference = await this.preferenceRepository.findOne({
+        where: {
+          user_id: userId,
+          organization_id: organizationId,
+          scope: NotificationPreferenceScope.PERSONAL,
+        },
+      });
+
+      // If no personal preference found, check organization-level preferences (if user is owner)
+      if (!preference && organizationId) {
+        // Check if user is organization owner
+        const membership = await this.memberRepository.findOne({
+          where: {
+            user_id: userId,
+            organization_id: organizationId,
+            status: OrganizationMemberStatus.ACTIVE,
+          },
+          relations: ['role'],
+        });
+
+        if (membership?.role?.is_organization_owner) {
+          preference = await this.preferenceRepository.findOne({
+            where: {
+              user_id: userId,
+              organization_id: organizationId,
+              scope: NotificationPreferenceScope.ORGANIZATION,
+            },
+          });
+        }
+      }
+
+      // If no preference found, default to enabled
+      if (!preference) {
+        return true;
+      }
+
+      // Check global email/in_app enabled
+      if (channel === 'email' && !preference.email_enabled) {
+        return false;
+      }
+      if (channel === 'in_app' && !preference.in_app_enabled) {
+        return false;
+      }
+
+      // Check type-specific preferences
+      if (preference.preferences) {
+        const typeKey = this.getPreferenceKeyForType(type);
+        const typePreference = preference.preferences[typeKey];
+
+        if (typePreference) {
+          if (channel === 'email' && typePreference.email === false) {
+            return false;
+          }
+          if (channel === 'in_app' && typePreference.in_app === false) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      // If there's an error checking preferences, default to enabled
+      console.warn('Error checking notification preferences, defaulting to enabled:', error);
+      return true;
+    }
+  }
+
+  /**
+   * Map notification type to preference key
+   */
+  private getPreferenceKeyForType(type: NotificationType): string {
+    const typeMap: Record<NotificationType, string> = {
+      [NotificationType.USER_INVITED]: 'user_invitations',
+      [NotificationType.USER_JOINED]: 'user_invitations',
+      [NotificationType.USER_REMOVED]: 'user_invitations',
+      [NotificationType.ROLE_ASSIGNED]: 'role_changes',
+      [NotificationType.ROLE_REMOVED]: 'role_changes',
+      [NotificationType.ROLE_CREATED]: 'role_changes',
+      [NotificationType.ROLE_UPDATED]: 'role_changes',
+      [NotificationType.INVITATION_ACCEPTED]: 'user_invitations',
+      [NotificationType.INVITATION_EXPIRED]: 'user_invitations',
+      [NotificationType.ORGANIZATION_UPDATED]: 'organization_updates',
+      [NotificationType.PACKAGE_UPGRADED]: 'organization_updates',
+      [NotificationType.PACKAGE_EXPIRING_SOON]: 'organization_updates',
+      [NotificationType.PACKAGE_EXPIRED]: 'organization_updates',
+      [NotificationType.MFA_ENABLED]: 'security_alerts',
+      [NotificationType.MFA_DISABLED]: 'security_alerts',
+      [NotificationType.SECURITY_ALERT]: 'security_alerts',
+      // Chat notifications
+      [NotificationType.CHAT_MESSAGE]: 'chat_messages',
+      [NotificationType.CHAT_UNREAD]: 'chat_messages',
+      [NotificationType.CHAT_MENTION]: 'chat_mentions',
+      [NotificationType.CHAT_GROUP_ADDED]: 'chat_group_updates',
+      [NotificationType.CHAT_INITIATED]: 'chat_messages',
+      // App subscription notifications
+      [NotificationType.APP_SUBSCRIPTION_EXPIRING_SOON]: 'organization_updates',
+      [NotificationType.APP_SUBSCRIPTION_EXPIRED]: 'organization_updates',
+      [NotificationType.APP_SUBSCRIPTION_RENEWAL_DUE]: 'organization_updates',
+      // SSO and access notifications
+      [NotificationType.SSO_CHANGED]: 'security_alerts',
+      [NotificationType.APP_ACCESS_GRANTED]: 'app_access',
+      [NotificationType.APP_ACCESS_REVOKED]: 'app_access',
+      [NotificationType.APP_INVITATION]: 'app_access',
+      [NotificationType.ROLE_CHANGED]: 'role_changes',
+      // Mero Board Task notifications
+      [NotificationType.TASK_CREATED]: 'task_updates',
+      [NotificationType.TASK_UPDATED]: 'task_updates',
+      [NotificationType.TASK_ASSIGNED]: 'task_updates',
+      [NotificationType.TASK_UNASSIGNED]: 'task_updates',
+      [NotificationType.TASK_STATUS_CHANGED]: 'task_updates',
+      [NotificationType.TASK_PRIORITY_CHANGED]: 'task_updates',
+      [NotificationType.TASK_DUE_DATE_CHANGED]: 'task_updates',
+      [NotificationType.TASK_COMMENT_ADDED]: 'task_updates',
+      [NotificationType.TASK_MENTIONED]: 'task_updates',
+    };
+    return typeMap[type] || 'other';
+  }
+
+  /**
+   * Create a notification with a link to navigate to
+   * Only creates in-app notification if user has in_app_enabled for this type
+   */
+  async createNotification(
+    userId: string,
+    organizationId: string | null,
+    type: NotificationType,
+    title: string,
+    message: string,
+    link?: NotificationLink,
+    metadata?: Record<string, any>,
+  ): Promise<Notification | null> {
+    // Check if in-app notifications are enabled
+    const shouldSendInApp = await this.shouldSendNotification(
+      userId,
+      organizationId,
+      type,
+      'in_app',
+    );
+
+    if (!shouldSendInApp) {
+      // Don't create notification if in-app is disabled
+      return null;
+    }
+
+    const notification = this.notificationRepository.create({
+      user_id: userId,
+      organization_id: organizationId,
+      type,
+      title,
+      message,
+      data: {
+        link,
+        ...metadata,
+      },
+    });
+
+    return await this.notificationRepository.save(notification);
+  }
+
+  /**
+   * Create or update a grouped chat notification
+   * Groups messages by sender in the same chat
+   */
+  async createOrUpdateGroupedChatNotification(
+    userId: string,
+    organizationId: string,
+    type: NotificationType,
+    chatId: string,
+    senderId: string,
+    senderName: string,
+    chatName: string,
+    chatType: 'direct' | 'group',
+    messageContent: string | null,
+    messageId: string,
+  ): Promise<Notification | null> {
+    // Check if in-app notifications are enabled
+    const shouldSendInApp = await this.shouldSendNotification(
+      userId,
+      organizationId,
+      type,
+      'in_app',
+    );
+
+    if (!shouldSendInApp) {
+      console.log(`[NotificationHelper] In-app notifications disabled for user ${userId}, type ${type}`);
+      return null;
+    }
+
+    // Find existing unread notification from the same sender in the same chat
+    // We need to check the data field for sender_id and chat_id
+    const allUnreadNotifications = await this.notificationRepository.find({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        type,
+        read_at: null, // Only group unread notifications
+      },
+      order: {
+        created_at: 'DESC',
+      },
+    });
+
+    // Find notification from the same sender in the same chat
+    const existingNotification = allUnreadNotifications.find(
+      (notif) =>
+        notif.data?.sender_id === senderId && notif.data?.chat_id === chatId,
+    );
+
+    if (existingNotification) {
+      // Update existing notification with incremented count
+      const currentCount = existingNotification.data?.message_count || 1;
+      const newCount = currentCount + 1;
+
+      // Update notification
+      existingNotification.title = chatType === 'group'
+        ? `New messages in ${chatName}`
+        : `${senderName} sent ${newCount} message${newCount > 1 ? 's' : ''}`;
+      
+      existingNotification.message = chatType === 'group'
+        ? `${senderName} sent ${newCount} message${newCount > 1 ? 's' : ''}`
+        : messageContent?.substring(0, 100) || 'Sent an attachment';
+
+      existingNotification.data = {
+        ...existingNotification.data,
+        message_count: newCount,
+        last_message_id: messageId,
+        last_message_content: messageContent,
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log(`[NotificationHelper] Updating existing notification ${existingNotification.id} - count: ${newCount}`);
+      return await this.notificationRepository.save(existingNotification);
+    } else {
+      // Create new notification
+      console.log(`[NotificationHelper] Creating new notification for user ${userId}, sender ${senderName}, chat ${chatId}`);
+      const notification = this.notificationRepository.create({
+        user_id: userId,
+        organization_id: organizationId,
+        type,
+        title: chatType === 'group'
+          ? `New message in ${chatName}`
+          : `New message from ${senderName}`,
+        message: chatType === 'group'
+          ? `${senderName}: ${messageContent?.substring(0, 100) || 'Sent an attachment'}`
+          : messageContent?.substring(0, 100) || 'Sent an attachment',
+        data: {
+          link: {
+            route: '/chat',
+            params: { chatId },
+          },
+          chat_id: chatId,
+          chat_name: chatName,
+          sender_id: senderId,
+          sender_name: senderName,
+          message_id: messageId,
+          message_count: 1,
+          last_message_content: messageContent,
+        },
+      });
+
+      const savedNotification = await this.notificationRepository.save(notification);
+      console.log(`[NotificationHelper] Notification created with ID: ${savedNotification.id}`);
+      return savedNotification;
+    }
+  }
+
+  /**
+   * Check if email should be sent for a notification type
+   */
+  async shouldSendEmail(
+    userId: string,
+    organizationId: string | null,
+    type: NotificationType,
+  ): Promise<boolean> {
+    return this.shouldSendNotification(userId, organizationId, type, 'email');
+  }
+
+  /**
+   * Create notification for user invitation
+   */
+  async notifyUserInvited(
+    userId: string,
+    organizationId: string,
+    invitedUserEmail: string,
+    invitationId: string,
+  ): Promise<Notification> {
+    return this.createNotification(
+      userId,
+      organizationId,
+      NotificationType.USER_INVITED,
+      'User Invited',
+      `You have been invited to join the organization.`,
+      {
+        route: '/invitations',
+        params: { invitationId },
+      },
+      {
+        invitation_id: invitationId,
+        invited_email: invitedUserEmail,
+      },
+    );
+  }
+
+  /**
+   * Create notification for user joining
+   */
+  async notifyUserJoined(
+    adminUserId: string,
+    organizationId: string,
+    newUserEmail: string,
+    newUserId: string,
+  ): Promise<Notification> {
+    return this.createNotification(
+      adminUserId,
+      organizationId,
+      NotificationType.USER_JOINED,
+      'New User Joined',
+      `${newUserEmail} has joined your organization.`,
+      {
+        route: '/users',
+        params: { userId: newUserId },
+      },
+      {
+        new_user_id: newUserId,
+        new_user_email: newUserEmail,
+      },
+    );
+  }
+
+  /**
+   * Create notification for role assignment
+   */
+  async notifyRoleAssigned(
+    userId: string,
+    organizationId: string,
+    roleName: string,
+    roleId: number,
+  ): Promise<Notification> {
+    return this.createNotification(
+      userId,
+      organizationId,
+      NotificationType.ROLE_ASSIGNED,
+      'Role Assigned',
+      `You have been assigned the role: ${roleName}`,
+      {
+        route: '/roles',
+        params: { roleId },
+      },
+      {
+        role_id: roleId,
+        role_name: roleName,
+      },
+    );
+  }
+
+  /**
+   * Create notification for role removal
+   */
+  async notifyRoleRemoved(
+    userId: string,
+    organizationId: string,
+    roleName: string,
+  ): Promise<Notification> {
+    return this.createNotification(
+      userId,
+      organizationId,
+      NotificationType.ROLE_REMOVED,
+      'Role Removed',
+      `Your role "${roleName}" has been removed.`,
+      {
+        route: '/roles',
+      },
+      {
+        role_name: roleName,
+      },
+    );
+  }
+
+  /**
+   * Create notification for invitation acceptance
+   */
+  async notifyInvitationAccepted(
+    adminUserId: string,
+    organizationId: string,
+    acceptedUserEmail: string,
+  ): Promise<Notification> {
+    return this.createNotification(
+      adminUserId,
+      organizationId,
+      NotificationType.INVITATION_ACCEPTED,
+      'Invitation Accepted',
+      `${acceptedUserEmail} has accepted your invitation.`,
+      {
+        route: '/users',
+      },
+      {
+        accepted_user_email: acceptedUserEmail,
+      },
+    );
+  }
+
+  /**
+   * Create notification for organization update
+   * Sent to organization owners and admins
+   */
+  async notifyOrganizationUpdated(
+    organizationId: string,
+    updateType: string,
+  ): Promise<Notification[]> {
+    return this.notifyAdminsAndOwners(
+      organizationId,
+      NotificationType.ORGANIZATION_UPDATED,
+      'Organization Updated',
+      `Your organization settings have been updated: ${updateType}`,
+      {
+        route: '/organizations',
+      },
+      {
+        update_type: updateType,
+      },
+    );
+  }
+
+  /**
+   * Create notification for package upgrade
+   * Sent to all organization users (important notification)
+   */
+  async notifyPackageUpgraded(
+    organizationId: string,
+    packageName: string,
+    purchasedByUserId?: string,
+  ): Promise<Notification[]> {
+    // Get all active members of the organization
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      // Create notification for each user (respects their preferences)
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.PACKAGE_UPGRADED,
+        'Package Upgraded',
+        purchasedByUserId && purchasedByUserId === member.user_id
+          ? `You have successfully upgraded your organization to ${packageName} package.`
+          : `Your organization has been upgraded to ${packageName} package.`,
+        {
+          route: '/packages',
+        },
+        {
+          package_name: packageName,
+          purchased_by: purchasedByUserId || null,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about package expiring soon (1 week before)
+   */
+  async notifyPackageExpiringSoon(
+    organizationId: string,
+    packageName: string,
+    daysRemaining: number,
+  ): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.PACKAGE_EXPIRING_SOON,
+        'Package Expiring Soon',
+        `Your ${packageName} package will expire in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Please renew to continue using premium features.`,
+        {
+          route: '/packages',
+        },
+        {
+          package_name: packageName,
+          days_remaining: daysRemaining,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about package expired
+   */
+  async notifyPackageExpired(organizationId: string, packageName: string): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.PACKAGE_EXPIRED,
+        'Package Expired',
+        `Your ${packageName} package has expired. Your organization has been reverted to the Freemium package.`,
+        {
+          route: '/packages',
+        },
+        {
+          package_name: packageName,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Create notification for MFA enabled/disabled
+   */
+  async notifyMFAStatusChanged(
+    userId: string,
+    organizationId: string,
+    enabled: boolean,
+  ): Promise<Notification> {
+    return this.createNotification(
+      userId,
+      organizationId,
+      enabled ? NotificationType.MFA_ENABLED : NotificationType.MFA_DISABLED,
+      enabled ? 'MFA Enabled' : 'MFA Disabled',
+      enabled
+        ? 'Multi-factor authentication has been enabled for your organization.'
+        : 'Multi-factor authentication has been disabled for your organization.',
+      {
+        route: '/settings',
+        params: { tab: 'security' },
+      },
+      {
+        mfa_enabled: enabled,
+      },
+    );
+  }
+
+  /**
+   * Create notification for security alert
+   * Security alerts are important and sent to all active users in the organization
+   */
+  async notifySecurityAlert(
+    userId: string,
+    organizationId: string,
+    message: string,
+    link?: NotificationLink,
+  ): Promise<Notification[]> {
+    // Security alerts should be sent to all active users
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.SECURITY_ALERT,
+        'Security Alert',
+        message,
+        link,
+        {
+          alert_type: 'security',
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Send notification to organization owners
+   */
+  async notifyOrganizationOwners(
+    organizationId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    link?: NotificationLink,
+    metadata?: Record<string, any>,
+  ): Promise<Notification[]> {
+    const owners = await this.getUsersByRole(
+      organizationId,
+      (role) => role.is_organization_owner === true,
+    );
+
+    const notifications: Notification[] = [];
+    for (const owner of owners) {
+      const notification = await this.createNotification(
+        owner.user_id,
+        organizationId,
+        type,
+        title,
+        message,
+        link,
+        metadata,
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Send notification to admins and owners
+   */
+  async notifyAdminsAndOwners(
+    organizationId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    link?: NotificationLink,
+    metadata?: Record<string, any>,
+  ): Promise<Notification[]> {
+    const adminsAndOwners = await this.getUsersByRole(
+      organizationId,
+      (role) => role.is_organization_owner === true || role.slug === 'admin',
+    );
+
+    const notifications: Notification[] = [];
+    for (const member of adminsAndOwners) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        type,
+        title,
+        message,
+        link,
+        metadata,
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Send notification to users with specific permission
+   */
+  async notifyUsersWithPermission(
+    organizationId: string,
+    permissionSlug: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    link?: NotificationLink,
+    metadata?: Record<string, any>,
+  ): Promise<Notification[]> {
+    // Get all active members with their roles and permissions
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role', 'role.role_permissions', 'role.role_permissions.permission'],
+    });
+
+    // Filter members who have the required permission or are organization owners
+    const eligibleMembers = members.filter((member) => {
+      if (member.role.is_organization_owner) {
+        return true; // Owners have all permissions
+      }
+      return member.role.role_permissions?.some((rp) => rp.permission.slug === permissionSlug);
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of eligibleMembers) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        type,
+        title,
+        message,
+        link,
+        metadata,
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about app subscription expiring soon
+   */
+  async notifyAppSubscriptionExpiringSoon(
+    organizationId: string,
+    appName: string,
+    daysRemaining: number,
+  ): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.APP_SUBSCRIPTION_EXPIRING_SOON,
+        'App Subscription Expiring Soon',
+        `Your ${appName} subscription expires in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}. Please renew to continue using this app.`,
+        {
+          route: '/apps',
+        },
+        {
+          app_name: appName,
+          days_remaining: daysRemaining,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about app subscription expired
+   */
+  async notifyAppSubscriptionExpired(
+    organizationId: string,
+    appName: string,
+  ): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.APP_SUBSCRIPTION_EXPIRED,
+        'App Subscription Expired',
+        `Your ${appName} subscription has expired. Please renew to continue using this app.`,
+        {
+          route: '/apps',
+        },
+        {
+          app_name: appName,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify about app subscription renewal due
+   */
+  async notifyAppSubscriptionRenewalDue(
+    organizationId: string,
+    appName: string,
+  ): Promise<Notification[]> {
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        NotificationType.APP_SUBSCRIPTION_RENEWAL_DUE,
+        'App Subscription Renewal Due',
+        `Your ${appName} subscription is due for renewal. Please complete payment to continue using this app.`,
+        {
+          route: '/apps',
+        },
+        {
+          app_name: appName,
+        },
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify user about SSO change (only to affected user)
+   */
+  async notifySSOChanged(
+    userId: string,
+    organizationId: string,
+    ssoProvider: string,
+    action: 'enabled' | 'disabled' | 'changed',
+    changedByUserId: string,
+  ): Promise<Notification | null> {
+    const changedBy = await this.memberRepository.findOne({
+      where: { user_id: changedByUserId, organization_id: organizationId },
+      relations: ['user'],
+    });
+    const changedByName = changedBy?.user
+      ? `${changedBy.user.first_name} ${changedBy.user.last_name}`.trim()
+      : 'Someone';
+
+    let title: string;
+    let message: string;
+
+    switch (action) {
+      case 'enabled':
+        title = 'SSO Enabled';
+        message = `${changedByName} enabled SSO authentication (${ssoProvider}) for your account.`;
+        break;
+      case 'disabled':
+        title = 'SSO Disabled';
+        message = `${changedByName} disabled SSO authentication (${ssoProvider}) for your account.`;
+        break;
+      case 'changed':
+        title = 'SSO Changed';
+        message = `${changedByName} changed your SSO authentication provider to ${ssoProvider}.`;
+        break;
+      default:
+        title = 'SSO Updated';
+        message = `${changedByName} updated your SSO authentication settings.`;
+    }
+
+    return this.createNotification(
+      userId,
+      organizationId,
+      NotificationType.SSO_CHANGED,
+      title,
+      message,
+      {
+        route: '/settings',
+        params: { tab: 'security' },
+      },
+      {
+        sso_provider: ssoProvider,
+        action,
+        changed_by_id: changedByUserId,
+        changed_by_name: changedByName,
+      },
+    );
+  }
+
+  /**
+   * Notify users with a specific role about role changes
+   */
+  async notifyUsersWithRole(
+    organizationId: string,
+    roleId: number,
+    type: NotificationType,
+    title: string,
+    message: string,
+    link?: NotificationLink,
+    metadata?: Record<string, any>,
+  ): Promise<Notification[]> {
+    // Get all users with this role
+    const members = await this.memberRepository.find({
+      where: {
+        organization_id: organizationId,
+        role_id: roleId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
+
+    const notifications: Notification[] = [];
+    for (const member of members) {
+      const notification = await this.createNotification(
+        member.user_id,
+        organizationId,
+        type,
+        title,
+        message,
+        link,
+        metadata,
+      );
+      if (notification) {
+        notifications.push(notification);
+      }
+    }
+
+    return notifications;
+  }
+
+  /**
+   * Notify user about app access granted
+   */
+  async notifyAppAccessGranted(
+    userId: string,
+    organizationId: string,
+    appName: string,
+    appId: number,
+    grantedByUserId: string,
+  ): Promise<Notification | null> {
+    const granter = await this.memberRepository.findOne({
+      where: { user_id: grantedByUserId, organization_id: organizationId },
+      relations: ['user'],
+    });
+    const granterName = granter?.user
+      ? `${granter.user.first_name} ${granter.user.last_name}`.trim()
+      : 'Someone';
+
+    return this.createNotification(
+      userId,
+      organizationId,
+      NotificationType.APP_ACCESS_GRANTED,
+      'App Access Granted',
+      `${granterName} granted you access to ${appName}.`,
+      {
+        route: '/apps',
+        params: { appId },
+      },
+      {
+        app_id: appId,
+        app_name: appName,
+        granted_by_id: grantedByUserId,
+        granted_by_name: granterName,
+      },
+    );
+  }
+
+  /**
+   * Notify user about app access revoked
+   */
+  async notifyAppAccessRevoked(
+    userId: string,
+    organizationId: string,
+    appName: string,
+    appId: number,
+    revokedByUserId: string,
+  ): Promise<Notification | null> {
+    const revoker = await this.memberRepository.findOne({
+      where: { user_id: revokedByUserId, organization_id: organizationId },
+      relations: ['user'],
+    });
+    const revokerName = revoker?.user
+      ? `${revoker.user.first_name} ${revoker.user.last_name}`.trim()
+      : 'Someone';
+
+    return this.createNotification(
+      userId,
+      organizationId,
+      NotificationType.APP_ACCESS_REVOKED,
+      'App Access Revoked',
+      `${revokerName} revoked your access to ${appName}.`,
+      {
+        route: '/apps',
+      },
+      {
+        app_id: appId,
+        app_name: appName,
+        revoked_by_id: revokedByUserId,
+        revoked_by_name: revokerName,
+      },
+    );
+  }
+}

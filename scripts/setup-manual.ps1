@@ -171,6 +171,80 @@ if (Prompt-YesNo "Install frontend dependencies?" $true) {
     Write-Host "Frontend dependencies installed" -ForegroundColor Green
 }
 
+if (Prompt-YesNo "Install system-admin backend dependencies?" $true) {
+    Write-Host "Installing system-admin backend dependencies..."
+    if (Test-Path "apps/system-admin/backend") {
+        Set-Location apps/system-admin/backend
+        npm install
+        Set-Location ../../..
+        Write-Host "System-admin backend dependencies installed" -ForegroundColor Green
+    } else {
+        Write-Host "System-admin backend directory not found" -ForegroundColor Yellow
+    }
+}
+
+if (Prompt-YesNo "Install system-admin frontend dependencies?" $true) {
+    Write-Host "Installing system-admin frontend dependencies..."
+    if (Test-Path "apps/system-admin/frontend") {
+        Set-Location apps/system-admin/frontend
+        npm install
+        Set-Location ../../..
+        Write-Host "System-admin frontend dependencies installed" -ForegroundColor Green
+    } else {
+        Write-Host "System-admin frontend directory not found" -ForegroundColor Yellow
+    }
+}
+
+if (Prompt-YesNo "Install mero-crm backend dependencies?" $true) {
+    Write-Host "Installing mero-crm backend dependencies..."
+    if (Test-Path "apps/mero-crm/backend") {
+        Set-Location apps/mero-crm/backend
+        npm install
+        Set-Location ../../..
+        Write-Host "Mero CRM backend dependencies installed" -ForegroundColor Green
+    } else {
+        Write-Host "Mero CRM backend directory not found" -ForegroundColor Yellow
+    }
+}
+
+if (Prompt-YesNo "Install mero-crm frontend dependencies?" $true) {
+    Write-Host "Installing mero-crm frontend dependencies..."
+    if (Test-Path "apps/mero-crm/frontend") {
+        Set-Location apps/mero-crm/frontend
+        npm install
+        Set-Location ../../..
+        Write-Host "Mero CRM frontend dependencies installed" -ForegroundColor Green
+    } else {
+        Write-Host "Mero CRM frontend directory not found" -ForegroundColor Yellow
+    }
+}
+
+# Generic Marketplace App Installer
+Write-Host ""
+Write-Host "Checking for generic Marketplace Apps..."
+$marketplaceApps = Get-ChildItem -Path "apps" -Recurse -Filter "package.json" | 
+    Where-Object { $_.DirectoryName -notlike "*node_modules*" -and $_.DirectoryName -notlike "*system-admin*" }
+
+if ($marketplaceApps) {
+    Write-Host "Found $($marketplaceApps.Count) additional apps." -ForegroundColor Cyan
+    if (Prompt-YesNo "Install dependencies for marketplace apps?" $true) {
+        foreach ($app in $marketplaceApps) {
+            $appDir = $app.DirectoryName
+            $appName = Split-Path $appDir -Leaf
+            Write-Host "  Installing dependencies for $appName..."
+            Push-Location $appDir
+            try {
+                npm install
+                Write-Host "  ✓ $appName installed" -ForegroundColor Green
+            } catch {
+                Write-Host "  ✗ Failed to install $appName" -ForegroundColor Red
+            } finally {
+                Pop-Location
+            }
+        }
+    }
+}
+
 Write-Host ""
 Write-Host "=== Environment Configuration ===" -ForegroundColor Blue
 Write-Host ""

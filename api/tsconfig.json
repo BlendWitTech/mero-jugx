@@ -1,0 +1,78 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "lib": [
+      "ES2021"
+    ],
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@src/*": [
+        "src/*"
+      ],
+      "@common/*": [
+        "src/common/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@auth/*": [
+        "src/auth/*"
+      ],
+      "@organizations/*": [
+        "src/organizations/*"
+      ],
+      "@users/*": [
+        "src/users/*"
+      ],
+      "@invitations/*": [
+        "src/invitations/*"
+      ],
+      "@roles/*": [
+        "src/roles/*"
+      ],
+      "@permissions/*": [
+        "src/permissions/*"
+      ],
+      "@packages/*": [
+        "src/packages/*"
+      ],
+      "@mfa/*": [
+        "src/mfa/*"
+      ],
+      "@notifications/*": [
+        "src/notifications/*"
+      ],
+      "@audit-logs/*": [
+        "src/audit-logs/*"
+      ],
+      "@shared/*": [
+        "../shared/*"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "../app",
+    "../packages"
+  ]
+}

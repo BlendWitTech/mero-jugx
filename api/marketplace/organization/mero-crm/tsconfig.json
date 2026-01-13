@@ -1,0 +1,48 @@
+{
+    "extends": "../../../tsconfig.json",
+    "compilerOptions": {
+        "module": "commonjs",
+        "declaration": true,
+        "removeComments": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "target": "ES2021",
+        "sourceMap": true,
+        "outDir": "./dist",
+        "baseUrl": "./",
+        "incremental": true,
+        "skipLibCheck": true,
+        "paths": {
+            "@/*": [
+                "./*"
+            ],
+            "@src/*": [
+                "../../../src/*"
+            ],
+            "@shared/*": [
+                "../../../shared/*"
+            ],
+            "@nestjs/*": [
+                "./node_modules/@nestjs/*"
+            ],
+            "typeorm": [
+                "./node_modules/typeorm"
+            ],
+            "rxjs": [
+                "./node_modules/rxjs"
+            ],
+            "rxjs/*": [
+                "./node_modules/rxjs/*"
+            ]
+        }
+    },
+    "include": [
+        "src/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "test"
+    ]
+}

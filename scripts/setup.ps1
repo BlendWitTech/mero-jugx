@@ -61,6 +61,54 @@ switch ($choice) {
             }
             Set-Location ..
             Write-Host "Frontend dependencies installed" -ForegroundColor Green
+            
+            if (Test-Path "apps/system-admin/backend") {
+                Set-Location apps/system-admin/backend
+                npm install
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Failed to install system-admin backend dependencies." -ForegroundColor Red
+                    Set-Location ../../..
+                    exit 1
+                }
+                Set-Location ../../..
+                Write-Host "System-admin backend dependencies installed" -ForegroundColor Green
+            }
+            
+            if (Test-Path "apps/system-admin/frontend") {
+                Set-Location apps/system-admin/frontend
+                npm install
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Failed to install system-admin frontend dependencies." -ForegroundColor Red
+                    Set-Location ../../..
+                    exit 1
+                }
+                Set-Location ../../..
+                Write-Host "System-admin frontend dependencies installed" -ForegroundColor Green
+            }
+
+            if (Test-Path "apps/mero-crm/backend") {
+                Set-Location apps/mero-crm/backend
+                npm install
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Failed to install mero-crm backend dependencies." -ForegroundColor Red
+                    Set-Location ../../..
+                    exit 1
+                }
+                Set-Location ../../..
+                Write-Host "Mero CRM backend dependencies installed" -ForegroundColor Green
+            }
+
+            if (Test-Path "apps/mero-crm/frontend") {
+                Set-Location apps/mero-crm/frontend
+                npm install
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Failed to install mero-crm frontend dependencies." -ForegroundColor Red
+                    Set-Location ../../..
+                    exit 1
+                }
+                Set-Location ../../..
+                Write-Host "Mero CRM frontend dependencies installed" -ForegroundColor Green
+            }
         }
         Write-Host ""
         

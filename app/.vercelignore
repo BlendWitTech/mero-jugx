@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs (Vercel will build)
+dist/
+build/
+
+# Environment files (use Vercel dashboard instead)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
