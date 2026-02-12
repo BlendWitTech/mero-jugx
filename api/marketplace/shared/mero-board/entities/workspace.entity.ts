@@ -9,8 +9,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Organization } from '../../../../../../src/database/entities/organizations.entity';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { Organization } from '../../../../src/database/entities/organizations.entity';
+import { User } from '../../../../src/database/entities/users.entity';
 import { WorkspaceMember } from './workspace-member.entity';
 
 @Entity('mero_board_workspaces')
@@ -69,4 +69,5 @@ export class Workspace {
   @OneToMany(() => WorkspaceMember, (member) => member.workspace)
   members: WorkspaceMember[];
 }
+
 

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { NotificationsModule } from '../../../../../src/notifications/notifications.module';
+import { NotificationsModule } from '../../../src/notifications/notifications.module';
 import { Workspace } from './entities/workspace.entity';
 import { WorkspaceMember } from './entities/workspace-member.entity';
 import { TaskComment } from './entities/task-comment.entity';
@@ -12,10 +12,10 @@ import { WorkspaceTemplate } from './entities/workspace-template.entity';
 import { WorkspaceTemplateProject } from './entities/workspace-template-project.entity';
 import { TaskDependency } from './entities/task-dependency.entity';
 import { TaskTimeLog } from './entities/task-time-log.entity';
-import { User } from '../../../../../src/database/entities/users.entity';
-import { Project } from '../../../../../src/database/entities/projects.entity';
-import { Task } from '../../../../../src/database/entities/tasks.entity';
-import { Epic } from '../../../../../src/database/entities/epics.entity';
+import { User } from '../../../src/database/entities/users.entity';
+import { Project } from '../../../src/database/entities/projects.entity';
+import { Task } from '../../../src/database/entities/tasks.entity';
+import { Epic } from '../../../src/database/entities/epics.entity';
 import { WorkspaceService } from './services/workspace.service';
 import { ProjectService } from './services/project.service';
 import { TaskService } from './services/task.service';
@@ -81,5 +81,5 @@ import { EpicController } from './controllers/epic.controller';
     EpicService,
   ],
 })
-export class MeroBoardModule {}
+export class MeroBoardModule { }
 

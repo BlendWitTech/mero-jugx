@@ -3,7 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { CrmAppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { JwtAuthGuard } from '@src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
 import helmet from 'helmet';
 
 async function bootstrap() {

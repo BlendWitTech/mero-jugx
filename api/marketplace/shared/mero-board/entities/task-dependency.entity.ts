@@ -8,7 +8,7 @@ import {
   Index,
   Unique,
 } from 'typeorm';
-import { Task } from '../../../../../../src/database/entities/tasks.entity';
+import { Task } from '../../../../src/database/entities/tasks.entity';
 
 export enum TaskDependencyType {
   BLOCKS = 'blocks', // This task blocks the dependent task
@@ -48,4 +48,5 @@ export class TaskDependency {
   @CreateDateColumn()
   created_at: Date;
 }
+
 

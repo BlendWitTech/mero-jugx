@@ -1,5 +1,5 @@
 # Mero Jugx - Build Script (PowerShell)
-# Builds backend, frontend, system-admin, and marketplace apps
+# Builds backend, app, system-admin, and marketplace apps
 
 $ErrorActionPreference = "Stop"
 
@@ -10,7 +10,7 @@ Write-Host ""
 
 Write-Host "What would you like to build?" -ForegroundColor Yellow
 Write-Host "  1. Main Backend only" -ForegroundColor White
-Write-Host "  2. Main Frontend only" -ForegroundColor White
+Write-Host "  2. Main App only" -ForegroundColor White
 Write-Host "  3. System Admin (Backend + Frontend)" -ForegroundColor White
 Write-Host "  4. Mero CRM (Backend + Frontend)" -ForegroundColor White
 Write-Host "  5. Full Platform (Everything)" -ForegroundColor White
@@ -26,12 +26,12 @@ function Build-Backend {
 }
 
 function Build-Frontend {
-    Write-Host "Building Main Frontend..." -ForegroundColor Blue
-    Push-Location frontend
+    Write-Host "Building Main App..." -ForegroundColor Blue
+    Push-Location app
     try {
         npm run build
         if ($LASTEXITCODE -ne 0) { throw "Main Frontend build failed!" }
-        Write-Host "[OK] Main Frontend build complete" -ForegroundColor Green
+        Write-Host "[OK] Main App build complete" -ForegroundColor Green
     }
     finally {
         Pop-Location

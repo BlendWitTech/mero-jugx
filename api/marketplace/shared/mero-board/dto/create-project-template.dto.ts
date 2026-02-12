@@ -1,7 +1,7 @@
 import { IsString, IsOptional, IsBoolean, IsArray, ValidateNested, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { TaskStatus, TaskPriority } from '../../../../../../src/database/entities/tasks.entity';
+import { TaskStatus, TaskPriority } from '../../../../src/database/entities/tasks.entity';
 
 export class CreateProjectTemplateTaskDto {
   @ApiProperty({ description: 'Task title' })
@@ -61,4 +61,5 @@ export class CreateProjectTemplateDto {
   @Type(() => CreateProjectTemplateTaskDto)
   tasks?: CreateProjectTemplateTaskDto[];
 }
+
 

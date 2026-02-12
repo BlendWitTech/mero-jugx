@@ -19,9 +19,9 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { WorkspaceService } from '../services/workspace.service';
-import { JwtAuthGuard } from '../../../../../../src/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../../../../../src/common/decorators/current-user.decorator';
-import { CurrentOrganization } from '../../../../../../src/common/decorators/current-organization.decorator';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
+import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateWorkspaceDto } from '../dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from '../dto/update-workspace.dto';
 import { InviteMemberDto } from '../dto/invite-member.dto';
@@ -220,4 +220,5 @@ export class WorkspaceController {
     );
   }
 }
+
 

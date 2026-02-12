@@ -8,8 +8,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Task } from '../../../../../../src/database/entities/tasks.entity';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { Task } from '../../../../src/database/entities/tasks.entity';
+import { User } from '../../../../src/database/entities/users.entity';
 
 @Entity('mero_board_task_time_logs')
 @Index(['task_id'])
@@ -51,4 +51,5 @@ export class TaskTimeLog {
   @UpdateDateColumn()
   updated_at: Date;
 }
+
 

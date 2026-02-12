@@ -8,7 +8,7 @@ import { seedRoles } from './seeds/003-roles.seed';
 import { seedPackageFeatures } from './seeds/004-package-features.seed';
 import { seedRoleTemplates } from './seeds/005-role-templates.seed';
 import { seedSystemAdminUser } from './seeds/006-system-admin-user.seed';
-import { seedWorkspaceProjectTemplates } from '../../apps/marketplace/shared/mero-board/backend/seeds/workspace-project-templates.seed';
+import { seedWorkspaceProjectTemplates } from '../../marketplace/shared/mero-board/seeds/workspace-project-templates.seed';
 
 // Load environment variables
 config();

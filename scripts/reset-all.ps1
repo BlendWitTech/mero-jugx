@@ -171,7 +171,7 @@ Write-Host ""
 
 # Step 3: Remove build artifacts
 Write-Host "[3/9] Removing build artifacts..." -ForegroundColor Cyan
-@("dist", "frontend/dist", "frontend/build", "apps/system-admin/backend/dist", "apps/system-admin/frontend/dist", "apps/mero-crm/backend/dist", "apps/mero-crm/frontend/dist", "coverage", "frontend/coverage", ".next", "frontend/.next") | ForEach-Object {
+@("api/dist", "app/dist", "app/build", "apps/system-admin/backend/dist", "apps/system-admin/frontend/dist", "apps/mero-crm/backend/dist", "apps/mero-crm/frontend/dist", "coverage", "app/coverage", ".next", "app/.next") | ForEach-Object {
     if (Test-Path $_) {
         Remove-Item -Recurse -Force $_
         Write-Host "  ✓ $_ removed" -ForegroundColor Green

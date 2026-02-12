@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CrmQuote, CrmQuoteItem } from '@src/database/entities/crm_quotes.entity';
+import { CrmQuote, CrmQuoteItem } from '../../../../src/database/entities/crm_quotes.entity';
 import { CreateQuoteDto, UpdateQuoteDto } from '../dto/quote.dto';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from '../dto/invoice.dto';

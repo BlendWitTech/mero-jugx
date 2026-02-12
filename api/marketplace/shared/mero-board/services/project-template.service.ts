@@ -8,8 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ProjectTemplate } from '../entities/project-template.entity';
 import { ProjectTemplateTask } from '../entities/project-template-task.entity';
-import { Project } from '../../../../../../src/database/entities/projects.entity';
-import { Task } from '../../../../../../src/database/entities/tasks.entity';
+import { Project } from '../../../../src/database/entities/projects.entity';
+import { Task } from '../../../../src/database/entities/tasks.entity';
 import { CreateProjectTemplateDto } from '../dto/create-project-template.dto';
 import { UseProjectTemplateDto } from '../dto/use-project-template.dto';
 
@@ -174,4 +174,5 @@ export class ProjectTemplateService {
     await this.templateRepository.remove(template);
   }
 }
+
 

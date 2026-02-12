@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CrmSetting } from '@src/database/entities/crm_settings.entity';
+import { CrmSetting } from '../../../../src/database/entities/crm_settings.entity';
 import { BatchUpdateCrmSettingsDto } from '../dto/setting.dto';
 
 @Injectable()

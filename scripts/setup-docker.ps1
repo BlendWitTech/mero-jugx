@@ -26,7 +26,7 @@ try {
 
 Write-Host ""
 Write-Host "Step 1: Installing dependencies..." -ForegroundColor Blue
-if ((Test-Path "node_modules") -and (Test-Path "frontend/node_modules")) {
+if ((Test-Path "node_modules") -and (Test-Path "app/node_modules")) {
     Write-Host "  Dependencies already installed, skipping..." -ForegroundColor Gray
 } else {
     Write-Host "  Installing backend dependencies..." -ForegroundColor White
@@ -38,15 +38,15 @@ if ((Test-Path "node_modules") -and (Test-Path "frontend/node_modules")) {
     Write-Host "  Backend dependencies installed" -ForegroundColor Green
     
     Write-Host "  Installing frontend dependencies..." -ForegroundColor White
-    Set-Location frontend
+    Set-Location app
     npm install
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install frontend dependencies." -ForegroundColor Red
+        Write-Host "Failed to install app dependencies." -ForegroundColor Red
         Set-Location ..
         exit 1
     }
     Set-Location ..
-    Write-Host "  Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "  App dependencies installed" -ForegroundColor Green
     
     Write-Host "  Installing system-admin backend dependencies..." -ForegroundColor White
     if (Test-Path "apps/system-admin/backend") {

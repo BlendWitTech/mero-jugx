@@ -9,12 +9,22 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const scriptName = process.argv[2];
+let scriptName = process.argv[2];
 const args = process.argv.slice(3);
 
 if (!scriptName) {
   console.error('Usage: node run-script.js <script-name> [args...]');
   process.exit(1);
+}
+
+// Script name aliases for convenience
+const scriptAliases = {
+  'dev': 'start-dev',
+};
+
+// Apply alias if it exists
+if (scriptAliases[scriptName]) {
+  scriptName = scriptAliases[scriptName];
 }
 
 const isWindows = process.platform === 'win32';

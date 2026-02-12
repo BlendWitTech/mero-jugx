@@ -27,7 +27,7 @@ fi
 
 echo ""
 echo "Step 1: Installing dependencies..."
-if [ -d "node_modules" ] && [ -d "frontend/node_modules" ]; then
+if [ -d "node_modules" ] && [ -d "app/node_modules" ]; then
     echo "  Dependencies already installed, skipping..."
 else
     echo "  Installing backend dependencies..."
@@ -38,16 +38,16 @@ else
     fi
     echo "✓ Backend dependencies installed"
     
-    echo "  Installing frontend dependencies..."
-    cd frontend
+    echo "  Installing app dependencies..."
+    cd app
     npm install
     if [ $? -ne 0 ]; then
-        echo "✗ Failed to install frontend dependencies."
+        echo "✗ Failed to install app dependencies."
         cd ..
         exit 1
     fi
     cd ..
-    echo "✓ Frontend dependencies installed"
+    echo "✓ App dependencies installed"
     
     echo "  Installing system-admin backend dependencies..."
     if [ -d "apps/system-admin/backend" ]; then

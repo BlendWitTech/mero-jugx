@@ -46,7 +46,7 @@ export class StripeService {
     } else {
       try {
         this.stripe = new Stripe(secretKey.trim(), {
-          apiVersion: '2025-11-17.clover',
+          apiVersion: '2026-01-28.clover',
         });
         this.logger.log(
           `💳 Stripe initialized (${this.isDevelopment ? 'Test' : 'Production'} mode)`,

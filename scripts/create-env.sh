@@ -177,8 +177,8 @@ else
 fi
 
 # Create frontend .env if it doesn't exist
-if [ ! -f frontend/.env ]; then
-    cat > frontend/.env << 'EOF'
+if [ ! -f app/.env ]; then
+    cat > app/.env << 'EOF'
 # ============================================
 # MERO JUGX - Frontend Environment Configuration
 # ============================================

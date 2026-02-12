@@ -17,9 +17,9 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { ProjectTemplateService } from '../services/project-template.service';
-import { JwtAuthGuard } from '../../../../../../src/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../../../../../src/common/decorators/current-user.decorator';
-import { CurrentOrganization } from '../../../../../../src/common/decorators/current-organization.decorator';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
+import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateProjectTemplateDto } from '../dto/create-project-template.dto';
 import { UseProjectTemplateDto } from '../dto/use-project-template.dto';
 
@@ -100,4 +100,5 @@ export class ProjectTemplateController {
     await this.templateService.deleteTemplate(user.userId, organization.id, templateId);
   }
 }
+
 

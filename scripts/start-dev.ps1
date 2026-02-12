@@ -57,9 +57,9 @@ $backendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "
 
 Start-Sleep -Seconds 3
 
-Write-Host "[2/4] Starting frontend server (port 3001)..." -ForegroundColor Blue
-# Start frontend in a new PowerShell window with a unique title
-$frontendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\frontend'; `$Host.UI.RawUI.WindowTitle = 'Mero Jugx - Frontend (Port 3001)'; Write-Host 'Mero Jugx - Frontend Server' -ForegroundColor Cyan; Write-Host 'Port: 3001' -ForegroundColor White; Write-Host ''; npm run dev" -PassThru
+Write-Host "[2/4] Starting app server (port 3001)..." -ForegroundColor Blue
+# Start app in a new PowerShell window with a unique title
+$frontendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\app'; `$Host.UI.RawUI.WindowTitle = 'Mero Jugx - App (Port 3001)'; Write-Host 'Mero Jugx - App Server' -ForegroundColor Cyan; Write-Host 'Port: 3001' -ForegroundColor White; Write-Host ''; npm run dev" -PassThru
 
 Start-Sleep -Seconds 2
 

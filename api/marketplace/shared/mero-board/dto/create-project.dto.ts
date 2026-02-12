@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsUUID, IsEnum, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectStatus } from '../../../../../../src/database/entities/projects.entity';
+import { ProjectStatus } from '../../../../src/database/entities/projects.entity';
 
 export class CreateProjectDto {
   @ApiProperty({ description: 'Project name' })
@@ -28,4 +28,5 @@ export class CreateProjectDto {
   @IsUUID()
   owner_id?: string;
 }
+
 

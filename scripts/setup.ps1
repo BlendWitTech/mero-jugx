@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 # Check if project dependencies are already installed
 # Verify that key packages are actually installed, not just that directories exist
 $dependenciesInstalled = $false
-if ((Test-Path "node_modules") -and (Test-Path "frontend/node_modules")) {
+if ((Test-Path "node_modules") -and (Test-Path "app/node_modules")) {
     # Check for key packages to ensure dependencies are actually installed
     $hasTsNode = Test-Path "node_modules\ts-node"
     $hasTypesNode = Test-Path "node_modules\@types\node"
@@ -43,7 +43,8 @@ switch ($choice) {
         Write-Host "Step 1: Installing dependencies..." -ForegroundColor Blue
         if ($dependenciesInstalled) {
             Write-Host "  Dependencies already installed, skipping..." -ForegroundColor Gray
-        } else {
+        }
+        else {
             npm install
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Failed to install backend dependencies." -ForegroundColor Red
@@ -52,63 +53,17 @@ switch ($choice) {
             Write-Host "Backend dependencies installed" -ForegroundColor Green
             Write-Host ""
             
-            Set-Location frontend
+            Set-Location app
             npm install
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "Failed to install frontend dependencies." -ForegroundColor Red
+                Write-Host "Failed to install frontend (app) dependencies." -ForegroundColor Red
                 Set-Location ..
                 exit 1
             }
             Set-Location ..
-            Write-Host "Frontend dependencies installed" -ForegroundColor Green
+            Write-Host "Frontend (app) dependencies installed" -ForegroundColor Green
             
-            if (Test-Path "apps/system-admin/backend") {
-                Set-Location apps/system-admin/backend
-                npm install
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "Failed to install system-admin backend dependencies." -ForegroundColor Red
-                    Set-Location ../../..
-                    exit 1
-                }
-                Set-Location ../../..
-                Write-Host "System-admin backend dependencies installed" -ForegroundColor Green
-            }
-            
-            if (Test-Path "apps/system-admin/frontend") {
-                Set-Location apps/system-admin/frontend
-                npm install
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "Failed to install system-admin frontend dependencies." -ForegroundColor Red
-                    Set-Location ../../..
-                    exit 1
-                }
-                Set-Location ../../..
-                Write-Host "System-admin frontend dependencies installed" -ForegroundColor Green
-            }
 
-            if (Test-Path "apps/mero-crm/backend") {
-                Set-Location apps/mero-crm/backend
-                npm install
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "Failed to install mero-crm backend dependencies." -ForegroundColor Red
-                    Set-Location ../../..
-                    exit 1
-                }
-                Set-Location ../../..
-                Write-Host "Mero CRM backend dependencies installed" -ForegroundColor Green
-            }
-
-            if (Test-Path "apps/mero-crm/frontend") {
-                Set-Location apps/mero-crm/frontend
-                npm install
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "Failed to install mero-crm frontend dependencies." -ForegroundColor Red
-                    Set-Location ../../..
-                    exit 1
-                }
-                Set-Location ../../..
-                Write-Host "Mero CRM frontend dependencies installed" -ForegroundColor Green
-            }
         }
         Write-Host ""
         
@@ -132,7 +87,8 @@ switch ($choice) {
             Write-Host "  - PostgreSQL: localhost:5433" -ForegroundColor White
             Write-Host "  - Redis: localhost:6380" -ForegroundColor White
             Write-Host ""
-        } else {
+        }
+        else {
             Write-Host "Docker setup failed. Make sure Docker is running." -ForegroundColor Red
             exit 1
         }

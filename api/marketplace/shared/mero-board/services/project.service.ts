@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project, ProjectStatus } from '../../../../../../src/database/entities/projects.entity';
+import { Project, ProjectStatus } from '../../../../src/database/entities/projects.entity';
 import { WorkspaceMember, WorkspaceRole } from '../entities/workspace-member.entity';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
@@ -216,4 +216,5 @@ export class ProjectService {
     await this.projectRepository.remove(project);
   }
 }
+
 

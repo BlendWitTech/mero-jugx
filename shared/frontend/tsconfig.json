@@ -1,5 +1,5 @@
 {
-  "extends": "../../frontend/tsconfig.json",
+  "extends": "../../app/tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
     "lib": [
@@ -20,28 +20,27 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "typeRoots": [
-      "../../apps/system-admin/frontend/node_modules/@types",
       "../../node_modules/@types",
-      "../../frontend/node_modules/@types"
+      "../../app/node_modules/@types"
     ],
     "paths": {
       "@shared/*": [
         "./*"
       ],
       "react": [
-        "../../apps/system-admin/frontend/node_modules/react"
+        "../../app/node_modules/react"
       ],
       "react-dom": [
-        "../../apps/system-admin/frontend/node_modules/react-dom"
+        "../../app/node_modules/react-dom"
       ],
       "react-router-dom": [
-        "../../apps/system-admin/frontend/node_modules/react-router-dom"
+        "../../app/node_modules/react-router-dom"
       ],
       "@tanstack/react-query": [
-        "../../apps/system-admin/frontend/node_modules/@tanstack/react-query"
+        "../../app/node_modules/@tanstack/react-query"
       ],
       "lucide-react": [
-        "../../apps/system-admin/frontend/node_modules/lucide-react"
+        "../../app/node_modules/lucide-react"
       ]
     }
   },

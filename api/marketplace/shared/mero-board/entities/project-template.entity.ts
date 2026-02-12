@@ -9,8 +9,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Organization } from '../../../../../../src/database/entities/organizations.entity';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { Organization } from '../../../../src/database/entities/organizations.entity';
+import { User } from '../../../../src/database/entities/users.entity';
 import { ProjectTemplateTask } from './project-template-task.entity';
 
 @Entity('mero_board_project_templates')
@@ -59,4 +59,5 @@ export class ProjectTemplate {
   @OneToMany(() => ProjectTemplateTask, (task) => task.template, { cascade: true })
   tasks: ProjectTemplateTask[];
 }
+
 

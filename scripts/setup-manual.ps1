@@ -24,7 +24,8 @@ function Prompt-Input {
             return $Default
         }
         return $result
-    } else {
+    }
+    else {
         return Read-Host $Prompt
     }
 }
@@ -42,7 +43,8 @@ function Prompt-YesNo {
             if ([string]::IsNullOrWhiteSpace($response)) {
                 return $true
             }
-        } else {
+        }
+        else {
             $response = Read-Host "$Prompt [y/N]"
             if ([string]::IsNullOrWhiteSpace($response)) {
                 return $false
@@ -70,7 +72,8 @@ try {
         Write-Host "Node.js version 18+ is required. Current version: $nodeVersion" -ForegroundColor Red
         exit 1
     }
-} catch {
+}
+catch {
     Write-Host "Node.js is not installed. Please install Node.js 18+ first." -ForegroundColor Red
     exit 1
 }
@@ -79,7 +82,8 @@ try {
 try {
     $npmVersion = npm -v
     Write-Host "npm: $npmVersion" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "npm is not installed." -ForegroundColor Red
     exit 1
 }
@@ -95,7 +99,8 @@ try {
         Write-Host "PostgreSQL client found: $psqlVersion" -ForegroundColor Green
         $psqlAvailable = $true
     }
-} catch {
+}
+catch {
     Write-Host "PostgreSQL client not found." -ForegroundColor Yellow
 }
 
@@ -117,10 +122,12 @@ try {
     $pgService = Get-Service -Name postgresql* -ErrorAction SilentlyContinue
     if ($pgService -and ($pgService.Status -eq "Running")) {
         Write-Host "PostgreSQL service is running" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "PostgreSQL service may not be running. Please start it." -ForegroundColor Yellow
     }
-} catch {
+}
+catch {
     Write-Host "Could not check PostgreSQL service status." -ForegroundColor Yellow
 }
 
@@ -134,10 +141,12 @@ try {
     if ($redisPing -eq "PONG") {
         Write-Host "Redis is running" -ForegroundColor Green
         $redisAvailable = $true
-    } elseif ($redisPing) {
+    }
+    elseif ($redisPing) {
         Write-Host "Redis client found but Redis may not be running" -ForegroundColor Yellow
     }
-} catch {
+}
+catch {
     Write-Host "Redis client not found or Redis is not running." -ForegroundColor Yellow
 }
 
@@ -163,87 +172,17 @@ if (Prompt-YesNo "Install backend dependencies?" $true) {
     Write-Host "Backend dependencies installed" -ForegroundColor Green
 }
 
-if (Prompt-YesNo "Install frontend dependencies?" $true) {
-    Write-Host "Installing frontend dependencies..."
-    Set-Location frontend
+if (Prompt-YesNo "Install app dependencies?" $true) {
+    Write-Host "Installing app dependencies..."
+    Set-Location app
     npm install
     Set-Location ..
-    Write-Host "Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "App dependencies installed" -ForegroundColor Green
 }
 
-if (Prompt-YesNo "Install system-admin backend dependencies?" $true) {
-    Write-Host "Installing system-admin backend dependencies..."
-    if (Test-Path "apps/system-admin/backend") {
-        Set-Location apps/system-admin/backend
-        npm install
-        Set-Location ../../..
-        Write-Host "System-admin backend dependencies installed" -ForegroundColor Green
-    } else {
-        Write-Host "System-admin backend directory not found" -ForegroundColor Yellow
-    }
-}
 
-if (Prompt-YesNo "Install system-admin frontend dependencies?" $true) {
-    Write-Host "Installing system-admin frontend dependencies..."
-    if (Test-Path "apps/system-admin/frontend") {
-        Set-Location apps/system-admin/frontend
-        npm install
-        Set-Location ../../..
-        Write-Host "System-admin frontend dependencies installed" -ForegroundColor Green
-    } else {
-        Write-Host "System-admin frontend directory not found" -ForegroundColor Yellow
-    }
-}
 
-if (Prompt-YesNo "Install mero-crm backend dependencies?" $true) {
-    Write-Host "Installing mero-crm backend dependencies..."
-    if (Test-Path "apps/mero-crm/backend") {
-        Set-Location apps/mero-crm/backend
-        npm install
-        Set-Location ../../..
-        Write-Host "Mero CRM backend dependencies installed" -ForegroundColor Green
-    } else {
-        Write-Host "Mero CRM backend directory not found" -ForegroundColor Yellow
-    }
-}
 
-if (Prompt-YesNo "Install mero-crm frontend dependencies?" $true) {
-    Write-Host "Installing mero-crm frontend dependencies..."
-    if (Test-Path "apps/mero-crm/frontend") {
-        Set-Location apps/mero-crm/frontend
-        npm install
-        Set-Location ../../..
-        Write-Host "Mero CRM frontend dependencies installed" -ForegroundColor Green
-    } else {
-        Write-Host "Mero CRM frontend directory not found" -ForegroundColor Yellow
-    }
-}
-
-# Generic Marketplace App Installer
-Write-Host ""
-Write-Host "Checking for generic Marketplace Apps..."
-$marketplaceApps = Get-ChildItem -Path "apps" -Recurse -Filter "package.json" | 
-    Where-Object { $_.DirectoryName -notlike "*node_modules*" -and $_.DirectoryName -notlike "*system-admin*" }
-
-if ($marketplaceApps) {
-    Write-Host "Found $($marketplaceApps.Count) additional apps." -ForegroundColor Cyan
-    if (Prompt-YesNo "Install dependencies for marketplace apps?" $true) {
-        foreach ($app in $marketplaceApps) {
-            $appDir = $app.DirectoryName
-            $appName = Split-Path $appDir -Leaf
-            Write-Host "  Installing dependencies for $appName..."
-            Push-Location $appDir
-            try {
-                npm install
-                Write-Host "  ✓ $appName installed" -ForegroundColor Green
-            } catch {
-                Write-Host "  ✗ Failed to install $appName" -ForegroundColor Red
-            } finally {
-                Pop-Location
-            }
-        }
-    }
-}
 
 Write-Host ""
 Write-Host "=== Environment Configuration ===" -ForegroundColor Blue
@@ -290,8 +229,8 @@ if (-not $skipEnv) {
     # JWT settings
     Write-Host ""
     Write-Host "JWT Configuration:"
-    $jwtSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-    $jwtRefreshSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+    $jwtSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+    $jwtRefreshSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
     
     # Email settings
     Write-Host ""
@@ -487,8 +426,8 @@ FIREBASE_SERVER_KEY=
     Write-Host ".env file created with all defaults" -ForegroundColor Green
 }
 
-# Create frontend/.env
-if (-not (Test-Path frontend/.env)) {
+# Create app/.env
+if (-not (Test-Path app/.env)) {
     $apiUrl = "http://localhost:3000/api/v1"
     if (Test-Path .env) {
         $appUrlLine = Get-Content .env | Select-String "APP_URL"
@@ -519,8 +458,8 @@ VITE_SENTRY_TRACES_SAMPLE_RATE=1.0
 VITE_NPR_TO_USD_RATE=0.0075
 VITE_DEFAULT_CURRENCY=USD
 "@
-    Set-Content -Path frontend/.env -Value $frontendEnvContent
-    Write-Host "frontend/.env file created with all defaults" -ForegroundColor Green
+    Set-Content -Path app/.env -Value $frontendEnvContent
+    Write-Host "app/.env file created with all defaults" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -532,18 +471,20 @@ if (Prompt-YesNo "Build backend?" $true) {
     try {
         npm run build
         Write-Host "Backend built successfully" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "Build failed" -ForegroundColor Yellow
     }
 }
 
-if (Prompt-YesNo "Build frontend?" $true) {
-    Write-Host "Building frontend..."
-    Set-Location frontend
+if (Prompt-YesNo "Build app?" $true) {
+    Write-Host "Building app..."
+    Set-Location app
     try {
         npm run build
-        Write-Host "Frontend built successfully" -ForegroundColor Green
-    } catch {
+        Write-Host "App built successfully" -ForegroundColor Green
+    }
+    catch {
         Write-Host "Build failed" -ForegroundColor Yellow
     }
     Set-Location ..
@@ -559,12 +500,14 @@ if ($psqlAvailable) {
         try {
             npm run db:init
             Write-Host "Database initialized" -ForegroundColor Green
-        } catch {
+        }
+        catch {
             Write-Host "Database initialization failed" -ForegroundColor Yellow
             Write-Host "Make sure PostgreSQL is running and the database exists." -ForegroundColor Yellow
         }
     }
-} else {
+}
+else {
     Write-Host "PostgreSQL is not available. Skipping database initialization." -ForegroundColor Yellow
     Write-Host "After installing PostgreSQL, create the database and run 'npm run db:init'" -ForegroundColor Yellow
 }

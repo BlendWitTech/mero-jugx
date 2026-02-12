@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project } from '../../../../../../src/database/entities/projects.entity';
-import { Task, TaskStatus } from '../../../../../../src/database/entities/tasks.entity';
+import { Project } from '../../../../src/database/entities/projects.entity';
+import { Task, TaskStatus } from '../../../../src/database/entities/tasks.entity';
 import { TaskTimeLog } from '../entities/task-time-log.entity';
 import { WorkspaceMember } from '../entities/workspace-member.entity';
 
@@ -282,4 +282,5 @@ export class ReportService {
     return { team_members };
   }
 }
+
 

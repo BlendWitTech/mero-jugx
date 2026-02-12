@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsUUID, IsEnum, IsDateString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EpicStatus } from '../../../../../../src/database/entities/epics.entity';
+import { EpicStatus } from '../../../../src/database/entities/epics.entity';
 
 export class CreateEpicDto {
   @ApiProperty({ description: 'Epic name' })
@@ -32,4 +32,5 @@ export class CreateEpicDto {
   @IsDateString()
   end_date?: string;
 }
+
 

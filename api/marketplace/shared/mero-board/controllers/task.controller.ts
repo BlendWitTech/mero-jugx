@@ -20,9 +20,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { TaskService } from '../services/task.service';
-import { JwtAuthGuard } from '../../../../../../src/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../../../../../src/common/decorators/current-user.decorator';
-import { CurrentOrganization } from '../../../../../../src/common/decorators/current-organization.decorator';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
+import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
 import { AddTaskCommentDto } from '../dto/add-task-comment.dto';
@@ -580,4 +580,5 @@ export class TaskController {
     );
   }
 }
+
 

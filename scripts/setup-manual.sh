@@ -158,12 +158,12 @@ if prompt_yesno "Install backend dependencies?" "y"; then
     echo -e "${GREEN}✅ Backend dependencies installed${NC}"
 fi
 
-if prompt_yesno "Install frontend dependencies?" "y"; then
-    echo "Installing frontend dependencies..."
-    cd frontend
+if prompt_yesno "Install app dependencies?" "y"; then
+    echo "Installing app dependencies..."
+    cd app
     npm install
     cd ..
-    echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
+    echo -e "${GREEN}✅ App dependencies installed${NC}"
 fi
 
 if prompt_yesno "Install system-admin backend dependencies?" "y"; then
@@ -330,14 +330,14 @@ EOF
     echo -e "${GREEN}✅ .env file created${NC}"
 fi
 
-# Create frontend/.env
-if [ ! -f frontend/.env ]; then
+# Create app/.env
+if [ ! -f app/.env ]; then
     API_URL=$(grep APP_URL .env | cut -d'=' -f2 || echo "http://localhost:3000")
-    cat > frontend/.env << EOF
+    cat > app/.env << EOF
 VITE_API_URL=${API_URL}/api/v1
 VITE_APP_NAME=Mero Jugx
 EOF
-    echo -e "${GREEN}✅ Frontend .env file created${NC}"
+    echo -e "${GREEN}✅ App .env file created${NC}"
 fi
 
 echo ""
@@ -349,9 +349,9 @@ if prompt_yesno "Build backend?" "y"; then
     npm run build || echo -e "${YELLOW}⚠️  Build failed${NC}"
 fi
 
-if prompt_yesno "Build frontend?" "y"; then
-    echo "Building frontend..."
-    cd frontend
+if prompt_yesno "Build app?" "y"; then
+    echo "Building app..."
+    cd app
     npm run build || echo -e "${YELLOW}⚠️  Build failed${NC}"
     cd ..
 fi

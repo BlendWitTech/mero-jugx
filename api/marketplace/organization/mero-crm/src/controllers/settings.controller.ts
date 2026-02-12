@@ -8,10 +8,10 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@src/auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '@src/common/guards/permissions.guard';
-import { Permissions } from '@src/common/decorators/permissions.decorator';
-import { CurrentUser } from '@src/common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
+import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
+import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
 import { CrmSettingsService } from '../services/settings.service';
 import { UpdateCrmSettingDto, BatchUpdateCrmSettingsDto } from '../dto/setting.dto';
 

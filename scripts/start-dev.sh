@@ -58,9 +58,9 @@ nest start --watch &
 BACKEND_PID=$!
 sleep 3
 
-# Start frontend
-echo "[2/4] Starting frontend server (port 3001)..."
-cd frontend
+# Start app
+echo "[2/4] Starting app server (port 3001)..."
+cd app
 npm run dev &
 FRONTEND_PID=$!
 cd ..
@@ -102,7 +102,7 @@ if [ -f "docker-compose.yml" ]; then
 fi
 echo "Main App:"
 echo "  Backend:  http://localhost:3000"
-echo "  Frontend: http://localhost:3001"
+echo "  App:      http://localhost:3001"
 echo "  API Docs: http://localhost:3000/api/docs"
 echo ""
 if [ -n "$SYSTEM_ADMIN_BACKEND_PID" ] && [ -n "$SYSTEM_ADMIN_FRONTEND_PID" ]; then

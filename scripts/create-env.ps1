@@ -7,8 +7,8 @@ $PROJECT_ROOT = Split-Path -Parent $SCRIPT_DIR
 Set-Location $PROJECT_ROOT
 
 # Generate secure JWT secrets
-$jwt_secret = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | ForEach-Object {[char]$_})
-$jwt_refresh_secret = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | ForEach-Object {[char]$_})
+$jwt_secret = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | ForEach-Object { [char]$_ })
+$jwt_refresh_secret = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | ForEach-Object { [char]$_ })
 
 # eSewa test secret key (contains special characters that need escaping)
 $esewa_test_secret = '8gBm/:&EnhH.1/q'
@@ -168,12 +168,13 @@ FIREBASE_SERVER_KEY=
 "@
     Set-Content -Path .env -Value $envContent
     Write-Host "✓ Created backend .env file with all defaults" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "✓ Backend .env file already exists" -ForegroundColor Yellow
 }
 
 # Create frontend .env if it doesn't exist
-if (-not (Test-Path frontend/.env)) {
+if (-not (Test-Path app/.env)) {
     $frontendEnvContent = @"
 # ============================================
 # MERO JUGX - Frontend Environment Configuration
@@ -196,8 +197,9 @@ VITE_SENTRY_TRACES_SAMPLE_RATE=1.0
 VITE_NPR_TO_USD_RATE=0.0075
 VITE_DEFAULT_CURRENCY=USD
 "@
-    Set-Content -Path frontend/.env -Value $frontendEnvContent
+    Set-Content -Path app/.env -Value $frontendEnvContent
     Write-Host "✓ Created frontend/.env file with all defaults" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "✓ Frontend .env file already exists" -ForegroundColor Yellow
 }

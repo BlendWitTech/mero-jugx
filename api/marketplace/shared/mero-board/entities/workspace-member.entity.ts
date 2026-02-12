@@ -9,7 +9,7 @@ import {
   Index,
   Unique,
 } from 'typeorm';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { User } from '../../../../src/database/entities/users.entity';
 import { Workspace } from './workspace.entity';
 
 export enum WorkspaceRole {
@@ -64,4 +64,5 @@ export class WorkspaceMember {
   @UpdateDateColumn()
   updated_at: Date;
 }
+
 

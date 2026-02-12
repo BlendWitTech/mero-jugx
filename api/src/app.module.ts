@@ -49,7 +49,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     // Configuration module
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env', '../.env'],
     }),
 
     // Database module

@@ -98,15 +98,15 @@ echo ""
 
 # Step 3: Remove build artifacts
 echo "[3/9] Removing build artifacts..."
-[ -d "dist" ] && rm -rf dist && echo "  ✓ Backend dist removed"
-[ -d "frontend/dist" ] && rm -rf frontend/dist && echo "  ✓ Frontend dist removed"
-[ -d "frontend/build" ] && rm -rf frontend/build && echo "  ✓ Frontend build removed"
+[ -d "api/dist" ] && rm -rf api/dist && echo "  ✓ api/dist removed"
+[ -d "app/dist" ] && rm -rf app/dist && echo "  ✓ app/dist removed"
+[ -d "app/build" ] && rm -rf app/build && echo "  ✓ app/build removed"
 [ -d "apps/system-admin/backend/dist" ] && rm -rf apps/system-admin/backend/dist && echo "  ✓ System-admin backend dist removed"
 [ -d "apps/system-admin/frontend/dist" ] && rm -rf apps/system-admin/frontend/dist && echo "  ✓ System-admin frontend dist removed"
 [ -d "coverage" ] && rm -rf coverage && echo "  ✓ Coverage reports removed"
-[ -d "frontend/coverage" ] && rm -rf frontend/coverage && echo "  ✓ Frontend coverage removed"
+[ -d "app/coverage" ] && rm -rf app/coverage && echo "  ✓ app coverage removed"
 [ -d ".next" ] && rm -rf .next && echo "  ✓ Next.js build removed"
-[ -d "frontend/.next" ] && rm -rf frontend/.next && echo "  ✓ Frontend Next.js build removed"
+[ -d "app/.next" ] && rm -rf app/.next && echo "  ✓ app Next.js build removed"
 echo ""
 
 # Step 4: Clear logs

@@ -29,12 +29,12 @@ npm run build
 Write-Host "✅ Backend built" -ForegroundColor Green
 Write-Host ""
 
-# Step 2: Build frontend
-Write-Host "🔨 Building frontend..." -ForegroundColor Blue
-Set-Location frontend
+# Step 2: Build app (frontend)
+Write-Host "🔨 Building app..." -ForegroundColor Blue
+Set-Location app
 npm run build
 Set-Location ..
-Write-Host "✅ Frontend built" -ForegroundColor Green
+Write-Host "✅ App built" -ForegroundColor Green
 Write-Host ""
 
 # Step 3: Check database connection

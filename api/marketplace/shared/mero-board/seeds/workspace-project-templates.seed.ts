@@ -3,9 +3,9 @@ import { WorkspaceTemplate } from '../entities/workspace-template.entity';
 import { WorkspaceTemplateProject } from '../entities/workspace-template-project.entity';
 import { ProjectTemplate } from '../entities/project-template.entity';
 import { ProjectTemplateTask } from '../entities/project-template-task.entity';
-import { Organization } from '../../../../../../src/database/entities/organizations.entity';
-import { User } from '../../../../../../src/database/entities/users.entity';
-import { TaskStatus, TaskPriority } from '../../../../../../src/database/entities/tasks.entity';
+import { Organization } from '../../../../src/database/entities/organizations.entity';
+import { User } from '../../../../src/database/entities/users.entity';
+import { TaskStatus, TaskPriority } from '../../../../src/database/entities/tasks.entity';
 
 /**
  * Seed workspace and project templates
@@ -42,12 +42,12 @@ export async function seedWorkspaceProjectTemplates(dataSource: DataSource): Pro
   });
 
   if (!systemUser && systemOrg) {
-    const orgMembers = await dataSource
+    const orgMembers = systemOrg ? await dataSource
       .getRepository('organization_members')
       .findOne({
         where: { organization_id: systemOrg.id },
         order: { joined_at: 'ASC' },
-      });
+      }) : null;
 
     if (orgMembers) {
       systemUser = await userRepository.findOne({
@@ -157,3 +157,4 @@ export async function seedWorkspaceProjectTemplates(dataSource: DataSource): Pro
 
   console.log('\n✅ Workspace and project templates seeded successfully!\n');
 }
+

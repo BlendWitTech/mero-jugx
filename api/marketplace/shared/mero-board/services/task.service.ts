@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Task, TaskStatus, TaskPriority } from '../../../../../../src/database/entities/tasks.entity';
-import { Project } from '../../../../../../src/database/entities/projects.entity';
+import { Task, TaskStatus, TaskPriority } from '../../../../src/database/entities/tasks.entity';
+import { Project } from '../../../../src/database/entities/projects.entity';
 import { WorkspaceMember, WorkspaceRole } from '../entities/workspace-member.entity';
 import { TaskComment } from '../entities/task-comment.entity';
 import { TaskAttachment } from '../entities/task-attachment.entity';
@@ -22,8 +22,8 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 import { AddTaskCommentDto } from '../dto/add-task-comment.dto';
 import { UpdateTaskCommentDto } from '../dto/update-task-comment.dto';
 import { AddTaskAttachmentDto } from '../dto/add-task-attachment.dto';
-import { NotificationHelperService, NotificationType } from '../../../../../../src/notifications/notification-helper.service';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { NotificationHelperService, NotificationType } from '../../../../src/notifications/notification-helper.service';
+import { User } from '../../../../src/database/entities/users.entity';
 
 @Injectable()
 export class TaskService {
@@ -1402,4 +1402,5 @@ export class TaskService {
     };
   }
 }
+
 

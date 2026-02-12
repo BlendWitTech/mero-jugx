@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Workspace } from '../entities/workspace.entity';
 import { WorkspaceMember, WorkspaceRole } from '../entities/workspace-member.entity';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { User } from '../../../../src/database/entities/users.entity';
 import { CreateWorkspaceDto } from '../dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from '../dto/update-workspace.dto';
 import { InviteMemberDto } from '../dto/invite-member.dto';
@@ -408,4 +408,5 @@ export class WorkspaceService {
     });
   }
 }
+
 

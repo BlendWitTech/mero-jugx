@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Epic, EpicStatus } from '../../../../../../src/database/entities/epics.entity';
-import { Project } from '../../../../../../src/database/entities/projects.entity';
+import { Epic, EpicStatus } from '../../../../src/database/entities/epics.entity';
+import { Project } from '../../../../src/database/entities/projects.entity';
 import { WorkspaceMember, WorkspaceRole } from '../entities/workspace-member.entity';
 import { CreateEpicDto } from '../dto/create-epic.dto';
 import { UpdateEpicDto } from '../dto/update-epic.dto';
@@ -274,4 +274,5 @@ export class EpicService {
     await this.epicRepository.remove(epic);
   }
 }
+
 

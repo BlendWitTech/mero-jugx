@@ -12,10 +12,10 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@src/auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '@src/common/guards/permissions.guard';
-import { Permissions } from '@src/common/decorators/permissions.decorator';
-import { CurrentUser } from '@src/common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
+import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
+import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
 import { PaymentModesService } from '../services/payment-modes.service';
 import { CreatePaymentModeDto, UpdatePaymentModeDto } from '../dto/payment-mode.dto';
 

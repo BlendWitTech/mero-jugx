@@ -38,12 +38,12 @@ npm run build
 echo -e "${GREEN}✅ Backend built${NC}"
 echo ""
 
-# Step 2: Build frontend
-echo -e "${BLUE}🔨 Building frontend...${NC}"
-cd frontend
+# Step 2: Build app (frontend)
+echo -e "${BLUE}🔨 Building app...${NC}"
+cd app
 npm run build
 cd ..
-echo -e "${GREEN}✅ Frontend built${NC}"
+echo -e "${GREEN}✅ App built${NC}"
 echo ""
 
 # Step 3: Check database connection

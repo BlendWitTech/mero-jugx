@@ -11,8 +11,8 @@ import { Repository, DataSource } from 'typeorm';
 import { WorkspaceTemplate } from '../entities/workspace-template.entity';
 import { WorkspaceTemplateProject } from '../entities/workspace-template-project.entity';
 import { Workspace } from '../entities/workspace.entity';
-import { Project } from '../../../../../../src/database/entities/projects.entity';
-import { Task } from '../../../../../../src/database/entities/tasks.entity';
+import { Project } from '../../../../src/database/entities/projects.entity';
+import { Task } from '../../../../src/database/entities/tasks.entity';
 import { WorkspaceMember, WorkspaceRole } from '../entities/workspace-member.entity';
 import { CreateWorkspaceTemplateDto } from '../dto/create-workspace-template.dto';
 import { UseWorkspaceTemplateDto } from '../dto/use-workspace-template.dto';
@@ -334,4 +334,5 @@ export class WorkspaceTemplateService {
     return match || null;
   }
 }
+
 

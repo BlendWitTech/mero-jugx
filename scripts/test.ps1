@@ -1,5 +1,5 @@
 ﻿# Mero Jugx - Test Script (PowerShell)
-# This script runs all tests (backend and frontend)
+# This script runs all tests (backend and app)
 
 $ErrorActionPreference = "Stop"
 
@@ -16,12 +16,12 @@ $watch = $false
 foreach ($arg in $args) {
     switch ($arg) {
         "--backend-only" { $runFrontend = $false }
-        "--frontend-only" { $runBackend = $false }
+        "--app-only" { $runBackend = $false }
         "--coverage" { $runCoverage = $true }
         "--watch" { $watch = $true }
         default {
             Write-Host "Unknown option: $arg" -ForegroundColor Red
-            Write-Host "Usage: npm run test [--backend-only] [--frontend-only] [--coverage] [--watch]"
+            Write-Host "Usage: npm run test [--backend-only] [--app-only] [--coverage] [--watch]"
             exit 1
         }
     }
@@ -41,10 +41,9 @@ if ($runBackend) {
     Write-Host ""
 }
 
-# Frontend tests
-if ($runFrontend) {
-    Write-Host " Running frontend tests..." -ForegroundColor Blue
-    Set-Location frontend
+# App tests
+    Write-Host " Running app tests..." -ForegroundColor Blue
+    Set-Location app
     if ($runCoverage) {
         try {
             npm run test:coverage
@@ -61,11 +60,11 @@ if ($runFrontend) {
         try {
             npm run test
         } catch {
-            Write-Host "  Frontend tests not configured" -ForegroundColor Yellow
+            Write-Host "  App tests not configured" -ForegroundColor Yellow
         }
     }
     Set-Location ..
-    Write-Host " Frontend tests completed" -ForegroundColor Green
+    Write-Host " App tests completed" -ForegroundColor Green
     Write-Host ""
 }
 

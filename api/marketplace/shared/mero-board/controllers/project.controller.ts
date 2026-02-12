@@ -20,9 +20,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ProjectService } from '../services/project.service';
-import { JwtAuthGuard } from '../../../../../../src/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../../../../../src/common/decorators/current-user.decorator';
-import { CurrentOrganization } from '../../../../../../src/common/decorators/current-organization.decorator';
+import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
+import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectQueryDto } from '../dto/project-query.dto';
@@ -134,4 +134,5 @@ export class ProjectController {
     );
   }
 }
+
 

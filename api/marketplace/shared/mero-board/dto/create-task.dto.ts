@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsUUID, IsEnum, IsDateString, IsInt, Min, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TaskStatus, TaskPriority } from '../../../../../../src/database/entities/tasks.entity';
+import { TaskStatus, TaskPriority } from '../../../../src/database/entities/tasks.entity';
 
 export class CreateTaskDto {
   @ApiProperty({ description: 'Task title' })
@@ -50,4 +50,5 @@ export class CreateTaskDto {
   @Min(0)
   sort_order?: number;
 }
+
 

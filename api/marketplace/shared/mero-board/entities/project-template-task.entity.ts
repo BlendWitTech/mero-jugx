@@ -8,7 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { ProjectTemplate } from './project-template.entity';
-import { TaskStatus, TaskPriority } from '../../../../../../src/database/entities/tasks.entity';
+import { TaskStatus, TaskPriority } from '../../../../src/database/entities/tasks.entity';
 
 @Entity('mero_board_project_template_tasks')
 @Index(['template_id'])
@@ -44,4 +44,5 @@ export class ProjectTemplateTask {
   @CreateDateColumn()
   created_at: Date;
 }
+
 

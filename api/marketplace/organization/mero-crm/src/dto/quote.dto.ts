@@ -1,7 +1,7 @@
 import { IsString, IsNumber, IsOptional, IsDateString, IsEnum, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { QuoteStatus } from '@src/database/entities/crm_quotes.entity';
+import { QuoteStatus } from '../../../../src/database/entities/crm_quotes.entity';
 
 export class CreateQuoteItemDto {
     @ApiProperty({ example: 'Item name' })

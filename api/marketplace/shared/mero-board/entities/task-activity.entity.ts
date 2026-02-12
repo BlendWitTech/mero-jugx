@@ -7,8 +7,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Task } from '../../../../../../src/database/entities/tasks.entity';
-import { User } from '../../../../../../src/database/entities/users.entity';
+import { Task } from '../../../../src/database/entities/tasks.entity';
+import { User } from '../../../../src/database/entities/users.entity';
 
 export enum TaskActivityType {
   CREATED = 'created',
@@ -77,4 +77,5 @@ export class TaskActivity {
   @CreateDateColumn()
   created_at: Date;
 }
+
 

@@ -8,7 +8,7 @@ import { seedRoles } from './003-roles.seed';
 import { seedPackageFeatures } from './004-package-features.seed';
 import { seedRoleTemplates } from './005-role-templates.seed';
 import { seedSystemAdminUser } from './006-system-admin-user.seed';
-import { seedWorkspaceProjectTemplates } from '../../../apps/marketplace/shared/mero-board/backend/seeds/workspace-project-templates.seed';
+import { seedWorkspaceProjectTemplates } from '../../../marketplace/shared/mero-board/seeds/workspace-project-templates.seed';
 
 // Load environment variables
 config();
@@ -25,7 +25,7 @@ async function runSeeds() {
     database: configService.get<string>('DB_NAME', 'mero_jugx'),
     entities: [
       path.join(__dirname, '../entities/**/*.entity{.ts,.js}'),
-      path.join(__dirname, '../../../apps/marketplace/shared/mero-board/backend/entities/**/*.entity{.ts,.js}'),
+      path.join(__dirname, '../../../marketplace/shared/mero-board/entities/**/*.entity{.ts,.js}'),
     ],
     synchronize: false,
     logging: true,

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Mero Jugx - Test Script
-# This script runs all tests (backend and frontend)
+# This script runs all tests (backend and app)
 
 set -e
 
@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
             RUN_FRONTEND=false
             shift
             ;;
-        --frontend-only)
+        --app-only)
             RUN_BACKEND=false
             shift
             ;;
@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo "Usage: npm run test [--backend-only] [--frontend-only] [--coverage] [--watch]"
+            echo "Usage: npm run test [--backend-only] [--app-only] [--coverage] [--watch]"
             exit 1
             ;;
     esac
@@ -62,19 +62,19 @@ if [ "$RUN_BACKEND" = true ]; then
     echo ""
 fi
 
-# Frontend tests
+# App tests
 if [ "$RUN_FRONTEND" = true ]; then
-    echo -e "${BLUE}🎨 Running frontend tests...${NC}"
-    cd frontend
+    echo -e "${BLUE}🎨 Running app tests...${NC}"
+    cd app
     if [ "$RUN_COVERAGE" = true ]; then
         npm run test:coverage 2>/dev/null || npm run test -- --coverage
     elif [ "$WATCH" = true ]; then
         npm run test:watch 2>/dev/null || npm run test -- --watch
     else
-        npm run test 2>/dev/null || echo -e "${YELLOW}⚠️  Frontend tests not configured${NC}"
+        npm run test 2>/dev/null || echo -e "${YELLOW}⚠️  App tests not configured${NC}"
     fi
     cd ..
-    echo -e "${GREEN}✅ Frontend tests completed${NC}"
+    echo -e "${GREEN}✅ App tests completed${NC}"
     echo ""
 fi
 

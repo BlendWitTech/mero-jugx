@@ -19,12 +19,14 @@ import { ConfirmDialog } from '@shared/components/feedback/ConfirmDialog';
 import React, { Suspense, lazy } from 'react';
 
 // Lazy load app routers
-const MeroBoardRouter = lazy(() => import('@apps/mero-board/frontend/MeroBoardRouter'));
-const MeroSaaSKitRouter = lazy(() => import('@apps/mero-saas-kit/frontend/MeroSaaSKitRouter'));
+const MeroBoardRouter = lazy(() => import('@apps/mero-board/MeroBoardRouter'));
+const MeroSaaSKitRouter = lazy(() => import('@apps/mero-saas-kit/MeroSaaSKitRouter'));
 const MeroCrmRouter = lazy(() => import('@crm/MeroCrmRouter'));
-const MeroSocialRouter = lazy(() => import('@social/MeroSocialRouter'));
+const MeroSocialRouter = lazy(() => import('@apps/mero-social/MeroSocialRouter'));
 const MeroInventoryRouter = lazy(() => import('@inventory/MeroInventoryRouter'));
 const MeroAccountingRouter = lazy(() => import('@accounting/MeroAccountingRouter'));
+
+
 
 interface AppViewPageProps {
   appSlug?: string;
