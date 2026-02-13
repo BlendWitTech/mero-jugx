@@ -1,179 +1,101 @@
-# Mero Jugx Platform
+# Mero Jugx ERP (v1.0) 🇳🇵
 
-<div align="center">
+> **The Operating System for Nepali Business**
 
-![Mero Jugx Banner](https://placeholder-banner-url.com)
+Mero Jugx is a unified, multi-tenant ERP platform built to digitize Nepali organizations. It combines CRM, Ticketing, Chat, and HR/Billing into a single "Super App" for business.
 
-**The Ultimate Multi-Tenant SaaS Platform**
-*Organization-based Authentication • App Marketplace • RBAC • Real-time Collaboration • Payment Integration*
+## 🚀 Implemented Features (Current State)
 
-[![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
-[![NestJS](https://img.shields.io/badge/nestjs-%5E10.0.0-red.svg)](https://nestjs.com/)
-[![React](https://img.shields.io/badge/react-%5E18.0.0-blue.svg)](https://reactjs.org/)
+We have built the core **Foundation**, **Communication**, and **CRM** layers.
 
-[**📚 Developer Guide**](./docs/html/developer-guide.html) | [**🚀 Quick Start**](./SETUP.md) | [**🏗️ Architecture**](./ARCHITECTURE.md)
+### 1. **Core Platform**
+*   **Multi-Tenancy**: Organization-based data isolation.
+*   **Authentication**: JWT-based login, Registration, and **2FA (MFA)** support.
+*   **RBAC**: Granular permissions (Roles, Custom Permissions) for members.
+*   **Marketplace**: Plug-and-play app architecture (`apps` module).
 
-</div>
+### 2. **Communication Hub**
+*   **Real-Time Chat**: Internal team chat with channels and DMs (Socket.io).
+*   **Admin Chat**: Support channel for system admins to talk to tenants.
+*   **Notifications**: Real-time in-app alerts and Email notifications.
 
----
+### 3. **CRM & Sales (Beta)**
+*   **Clients**: Manage customer database (`crm_clients`).
+*   **Quotes & Invoices**: Generate professional financing documents (`crm_quotes`, `invoices`).
+*   **Payments**: Record payments via multiple modes (`crm_payments`).
 
-## 📖 Overview
-
-**Mero Jugx** is a production-ready, multi-tenant SaaS platform designed to scale. It provides a robust foundation for building B2B applications with built-in support for organizations, roles, subscriptions, and an extensible app marketplace.
-
-Unlike traditional boilerplates, Mero Jugx is an **Ecosystem**. It allows you to host multiple distinct applications (like Project Management, CRM, HRIS) under one unified authentication and billing umbrella.
-
-### 🌟 Key Differentiators
-- **True Multi-Tenancy**: Data isolation at the row level using `organization_id`.
-- **App Marketplace**: A pluggable architecture where organizations can subscribe to different "Apps" (e.g., Mero Board).
-- **Unified Identity**: One login for all apps and organizations. Switch contexts instantly.
-- **Enterprise Ready**: RBAC, Audit Logs, MFA, and SSO-ready structure.
-
----
-
-## 📦 Integrated Applications
-
-The platform comes with several pre-built applications served from the `apps/` directory:
-
-### 1. [Mero Board](./apps/mero-board/README.md)
-A full-featured Project Management & Collaboration tool inspired by Jira/Trello.
-- **Features**: Workspaces, Kanban Boards, Task Management, Epics, Time Tracking.
-- **Tech**: React + NestJS (Modular).
-
-### 2. [System Admin Console](./apps/system-admin/README.md)
-A dedicated portal for super-admins to manage the SaaS platform itself.
-- **Features**: Tenant management, App marketplace configuration, Global analytics, User oversight.
-- **Tech**: Separate React Frontend + NestJS Module.
-
-### 3. [Mero SaaS Kit](./apps/mero-saas-kit/README.md)
-A starter template and component library for building new apps within the Mero Jugx ecosystem.
-- **Status**: *Alpha / Coming Soon*
+### 4. **Service & Support**
+*   **Ticketing System**: Internal helpdesk for issue tracking (`tickets`).
+*   **Tasks**: Kanban-style task management (`tasks`).
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Backend (`src/`)
-- **Framework**: [NestJS 10](https://nestjs.com/) (Modular Architecture)
-- **Database**: PostgreSQL 16+ via [TypeORM](https://typeorm.io/)
-- **Caching**: Redis 7+
-- **Real-time**: Socket.IO & WebRTC
-- **Auth**: JWT, Refresh Tokens, MFA (TOTP)
-- **Payments**: Stripe & eSewa
+**Backend** (`/api`)
+*   **Framework**: [NestJS](https://nestjs.com/) (Modular Monolith)
+*   **Language**: TypeScript
+*   **Database**: PostgreSQL 15+ (TypeORM)
+*   **Real-time**: Socket.io & Redis
+*   **Queue**: BullMQ (Redis)
 
-### Frontend (`frontend/`)
-- **Core**: React 18
-- **Build**: Vite
-- **Styling**: Tailwind CSS + Custom Design System
-- **State**: Zustand + TanStack Query
-- **Routing**: React Router DOM v6
-
-### DevOps
-- **Containerization**: Docker & Docker Compose
-- **Reverse Proxy**: Nginx
-- **Monitoring**: Prometheus & Grafana ready
+**Frontend** (`/app`)
+*   **Framework**: [Vite](https://vitejs.dev/) + React 18
+*   **Styling**: Tailwind CSS + Radix UI
+*   **State**: Zustand + React Query
+*   **Routing**: React Router DOM 6
 
 ---
 
-## 🚀 Getting Started
+## ⚡ Quick Start
 
-We support both manual and Docker-based setups. For detailed instructions, please refer to [**SETUP.md**](./SETUP.md).
+### Prerequisites
+*   Node.js v18+
+*   Docker & Docker Compose
 
-### Quick Start (Manual)
-
+### 1. Setup Environment
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
+# Clone the repo
+git clone https://github.com/BlendwitTech/mero-jugx.git
 cd mero-jugx
 
-# 2. Install dependencies & Setup Environment
-npm run setup
-
-# 3. Verify Database Connection
-npm run db:check
-
-# 4. Start Development Servers
-npm run start:dev        # Starts Main Backend & Frontend
+# Copy env template
+cp .env.example .env
 ```
 
-### Quick Start (Docker)
-
+### 2. Run with Docker (Recommended)
+This command handles Postgres, Redis, Backend, and Frontend.
 ```bash
-# 1. Start all services
 npm run docker:up
-
-# 2. View Logs
-npm run docker:logs
 ```
+*   **Frontend**: [http://localhost:5173](http://localhost:5173) (or 3001 check console)
+*   **Backend**: [http://localhost:3000](http://localhost:3000)
 
----
-
-## 🏛️ Architecture
-
-The system is built on a **Modular Monolith** architecture with a clear separation of concerns.
-
-- **[Platform Architecture](./ARCHITECTURE.md)**: Details on Multi-tenancy, Auth Flow, and Data Isolation.
-- **[Apps Architecture](./apps/mero-board/ARCHITECTURE.md)**: How individual apps plug into the platform.
-
-### Core Concepts
-
-#### Multi-Tenancy
-We use **Row-Level Isolation**. Every tenant-aware table has an `organization_id`. Access is enforced automatically via Global Guards and Custom Decorators.
-
-```typescript
-// Example: Accessing Organization Context
-@Get()
-findAll(@CurrentOrganization() orgId: string) {
-  return this.service.findAll(orgId);
-}
-```
-
-#### App Ecosystem
-Apps are isolated modules that share the Platform Core (Auth, Payments).
-- Users log in **once**.
-- They select an **Organization**.
-- They open an **App** (e.g., Mero Board) which inherits the Organization Context.
+### 3. Manual Setup
+See [SETUP.md](./SETUP.md) for detailed manual execution instructions.
 
 ---
 
 ## 📂 Project Structure
 
-```
+```bash
 mero-jugx/
-├── apps/
-│   ├── system-admin/       # Super Admin Console (Isolated)
-│   └── marketplace/        # App Marketplace
-│       ├── shared/         # Apps for both Organizations & Creators (e.g. Mero Board)
-│       ├── organization/   # Apps for Organizations
-│       └── creator/        # Apps for Creators
-├── src/                    # Main Platform Backend
-│   ├── auth/               # Authentication & MFA
-│   ├── organizations/      # Tenant Management
-│   ├── apps/               # Marketplace Logic
-│   └── ...
-├── frontend/               # Main Platform Frontend
-├── shared/                 # Shared Code Library
-│   ├── frontend/           # Shared UI Components
-│   └── backend/            # Shared DTOs, Decorators, Utils
-├── scripts/                # Utility Scripts
-└── docs/                   # Documentation
+├── api/             # NestJS Backend
+│   ├── src/
+│   │   ├── auth/    # Auth Logic
+│   │   ├── chat/    # Real-time Chat
+│   │   ├── database/entities/ # Centralized TypeORM Entities
+│   │   └── ...
+├── app/             # React + Vite Frontend
+│   ├── src/
+│   │   ├── pages/   # Routes (Chat, Dashboard, Tickets)
+│   │   └── components/
+├── scripts/         # Automation scripts
+└── docker-compose.yml
 ```
 
----
-
-## 🤝 Contributing
-
-1. **Fork** the repository.
-2. Create a **Feature Branch** (`git checkout -b feature/amazing-feature`).
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`).
-4. **Push** to the branch (`git push origin feature/amazing-feature`).
-5. Open a **Pull Request**.
-
----
-
-## 📄 License
-
-Proprietary Software - Developed by **Blendwit Tech**. 
-All rights reserved.
+## 📖 Documentation
+*   [**Setup Guide**](./SETUP.md): Installation & Troubleshooting.
+*   [**Architecture**](./ARCHITECTURE.md): Directories, Modules, and Patterns.
+*   [**Database**](./DATABASE.md): Schema of the 50+ existing tables.
+*   [**Deployment**](./DEPLOYMENT.md): Production Nginx & Docker config.

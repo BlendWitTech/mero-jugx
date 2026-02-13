@@ -1,128 +1,64 @@
-# Setup Guide
+# Developer Setup Guide 🛠️
 
-## 🚀 Quick Start
+Follow these steps to run the Mero Jugx (Vite + NestJS) stack.
 
-Ensure you have **Node.js 18+** and **PostgreSQL 16+** installed.
+## 1. Prerequisites
+*   Node.js v18+
+*   Docker Desktop (for Database & Redis)
+*   Git
 
-### Standard Setup
-
-```bash
-# 1. Clone & Install
-git clone <repository-url>
-cd mero-jugx
-npm run setup
-
-# 2. Check Database
-npm run db:check
-
-# 3. Start Development
-npm run start:dev
-```
-
-This starts the **Main Platform** Backend & Frontend.
-
----
-
-## 🐳 Docker Setup
-
-The easiest way to get the entire ecosystem running (Platform + Apps + DB + Redis).
+## 2. Quick Start (Root Automation)
+The root `package.json` contains a script to bootstrap everything.
 
 ```bash
-# Build and Start Everything
+# 1. Install Dependencies (Root + Submodules)
+npm install
+cd api && npm install
+cd ../app && npm install
+
+# 2. Start Infrastructure (Postgres + Redis)
+# Run from root
 npm run docker:up
 
-# View Logs
-npm run docker:logs
-
-# Stop Services
-npm run docker:down
+# 3. Environment Config
+cp .env.example .env
+# Ensure DB_HOST=localhost (since we are running Node locally)
 ```
 
-### Docker Services Map
-| Service | Port | Description |
-|---------|------|-------------|
-| **Backend** | 3000 | Main Platform API |
-| **Frontend** | 3001 | Main Platform UI |
-| **Admin API** | 3002 | System Admin API |
-| **Admin UI** | 3003 | System Admin UI |
-| **Postgres** | 5432 | Primary Database |
-| **Redis** | 6379 | Cache & Sessions |
+## 3. Running Services Separately
 
----
-
-## 🔧 Manual Setup (Component by Component)
-
-If you prefer running components individually or natively:
-
-### 1. Main Platform
-
-**Backend**:
+### Backend (API)
+ Runs on Port **3000**.
 ```bash
-# Configure .env first!
+cd api
+npm run start:dev
+```
+*   Swagger Docs: http://localhost:3000/api/docs (if enabled)
+*   Health Check: http://localhost:3000/api/health
+
+### Frontend (App)
+Runs on Port **5173** (Vite default).
+```bash
+cd app
+npm run dev
+```
+
+## 4. Troubleshooting
+
+*   **Vite connection refused**: Ensure you allow port 5173 through your firewall.
+*   **Database connection error**:
+    *   If running Node locally: Set `DB_HOST=localhost`
+    *   If running Node in Docker: Set `DB_HOST=postgres`
+*   **"Module not found"**: Review `tsconfig.json` paths in `api`.
+
+## 5. Database Management
+We use TypeORM scripts in `api/package.json`.
+
+```bash
+cd api
+# Run Migrations
 npm run migration:run
-npm run start:dev
+
+# Seed Data (Roles, Permissions)
+npm run seed:run
 ```
-
-**Frontend**:
-```bash
-cd frontend
-npm run dev
-```
-
-### 2. Mero Board App
-*Note: Mero Board shares the main platform's backend infrastructure but has its own frontend entry points if developed in isolation.*
-
-**To run in context**: Access via the Main Platform Frontend (it routes to the app).
-
-### 3. System Admin Console
-The System Admin console runs as a separate pair of services.
-
-**Backend**:
-```bash
-cd apps/system-admin/backend
-npm run start:dev
-```
-
-**Frontend**:
-```bash
-cd apps/system-admin/frontend
-npm run dev
-```
-
----
-
-## 📝 Environment Configuration
-
-Copy `.env.example` to `.env` and configure:
-
-```env
-# Networking
-PORT=3000
-FRONTEND_URL=http://localhost:3001
-
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=mero_jugx
-
-# Security
-JWT_SECRET=super_secret_key_change_me
-JWT_REFRESH_SECRET=another_secret_key
-
-# Apps
-SYSTEM_ADMIN_PORT=3002
-SYSTEM_ADMIN_FRONTEND_URL=http://localhost:3003
-```
-
-## ⚠️ Common Issues
-
-1. **Relation "organizations" does not exist**
-   - Run `npm run migration:run` to create tables.
-
-2. **Redis connection refused**
-   - Ensure Redis is running (`redis-server`) or use `npm run docker:up`.
-
-3. **Login fails**
-   - Run seeds to create default users: `npm run seed:run`.

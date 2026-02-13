@@ -1,75 +1,59 @@
-# Payment Integration
+# Payment API Integration 💳
 
-This guide details the payment gateway configurations for **eSewa** and **Stripe** within the Mero Jugx platform.
+Technical guide for integrating Nepali payment gateways.
 
-## 💳 Supported Gateways
+## 1. eSewa (EPAY v2)
 
-1. **eSewa** (Nepal) - For NPR transactions.
-2. **Stripe** (International) - For USD and global transactions.
-
----
-
-## 🇳🇵 eSewa Integration
-
-**Status**: ✅ Fully Configured (Test Mode active)
+Docs: [developer.esewa.com.np](https://developer.esewa.com.np)
 
 ### Configuration
-The system is pre-configured with eSewa's public test credentials.
-
 ```env
-# .env Configuration
-ESEWA_TEST_MERCHANT_ID=EPAYTEST
-ESEWA_TEST_SECRET_KEY=8gBm/:&EnhH.1/q
-ESEWA_TEST_API_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form
-ESEWA_USE_MOCK_MODE=false
+ESEWA_MERCHANT_ID=EPAYTEST
+ESEWA_SECRET=8gBm/:&EnhH.1/q
+ESEWA_URL=https://rc-epay.esewa.com.np/api/epay/main/v2/form
 ```
 
-### Testing Flow
-1. Select **eSewa** when purchasing an app.
-2. You will be redirected to the eSewa Release Candidate (RC) environment.
-3. Use the credentials provided in the eSewa developer docs (or default test accounts) to complete the payment.
+### Signature Generation (Node.js)
+```typescript
+import { createHmac } from 'crypto';
 
-**Troubleshooting**:
-If you encounter "Token Authentication" errors, enable Mock Mode in `.env`:
-```env
-ESEWA_USE_MOCK_MODE=true
+function generateSignature(totalAmount: string, txnUuid: string, productCode: string) {
+    const message = `total_amount=${totalAmount},transaction_uuid=${txnUuid},product_code=${productCode}`;
+    const hash = createHmac('sha256', process.env.ESEWA_SECRET);
+    hash.update(message);
+    return hash.digest('base64');
+}
 ```
+
+### Verification Payload
+GET request to eSewa to confirm status.
+```
+GET /api/epay/transaction/status/?product_code=EPAYTEST&total_amount=100&transaction_uuid=TXN-123
+```
+
+## 2. Khalti (Checkout)
+
+Docs: [docs.khalti.com](https://docs.khalti.com)
+
+### Configuration
+```env
+KHALTI_PUBLIC_KEY=test_public_key_...
+KHALTI_SECRET_KEY=test_secret_key_...
+```
+
+### Verification (Backend)
+```typescript
+async function verifyKhalti(pidx: string) {
+    const headers = { Authorization: `Key ${process.env.KHALTI_SECRET_KEY}` };
+    const body = { pidx };
+    
+    return axios.post('https://a.khalti.com/api/v2/epayment/lookup/', body, { headers });
+}
+```
+
+## 3. ConnectIPS (Planned)
+Enterprise bank transfers. Requires `.pfx` certificate handling.
 
 ---
 
-## 🌏 Stripe Integration
-
-**Status**: ⚠️ Ready (Requires API Keys)
-
-### Setup Instructions
-
-1. **Get Test Keys**:
-   - Log in to [Stripe Dashboard](https://dashboard.stripe.com/).
-   - Toggle **Test Mode** on.
-   - Copy `Publishable Key` and `Secret Key`.
-
-2. **Update .env**:
-   ```env
-   STRIPE_TEST_PUBLISHABLE_KEY=pk_test_...
-   STRIPE_TEST_SECRET_KEY=sk_test_...
-   ```
-
-3. **Restart Backend**:
-   - The server initiates Stripe on boot. Look for: `💳 Stripe initialized (Test mode)`.
-
-### Testing Flow
-1. Select **Stripe** when purchasing an app.
-2. Use [Stripe Test Cards](https://stripe.com/docs/testing):
-   - **Success**: `4242 4242 4242 4242`
-   - **Decline**: `4000 0000 0000 0002`
-
----
-
-## 💻 Code Reference
-
-| Component | Path |
-|-----------|------|
-| **Service** | `src/payments/payments.service.ts` |
-| **eSewa Logic** | `src/payments/esewa.service.ts` |
-| **Stripe Logic** | `src/payments/stripe.service.ts` |
-| **Frontend UI** | `frontend/src/pages/apps/AppsPage.tsx` |
+**Note**: Always use Sandbox credentials (`EPAYTEST`) during development. Never commit production keys.

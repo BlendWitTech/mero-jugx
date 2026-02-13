@@ -1,4 +1,4 @@
-import { AppDataSource } from './api/src/database/migrations/DataSource';
+import { AppDataSource } from '../api/src/database/migrations/DataSource';
 
 async function listApps() {
     try {

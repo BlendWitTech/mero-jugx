@@ -1,7 +1,17 @@
 {
   "name": "mero-jugx",
   "version": "1.0.0",
-  "description": "Organization-based authentication and user management system",
+  "description": "Mero Jugx ERP - The Operating System for Nepali Business",
+  "keywords": [
+    "erp",
+    "nepal",
+    "accounting",
+    "billing",
+    "hr",
+    "inventory",
+    "mero-jugx",
+    "saas"
+  ],
   "author": "Blendwit Tech",
   "private": true,
   "license": "UNLICENSED",
@@ -49,6 +59,8 @@
     "docker:clean": "docker-compose down -v && docker volume prune -f",
     "docker:logs": "docker-compose logs -f",
     "docker:build": "docker-compose build",
+    "db:check-schema": "ts-node scripts/check-db.ts",
+    "apps:list": "ts-node scripts/list-apps.ts",
     "typeorm": "typeorm-ts-node-commonjs"
   },
   "dependencies": {
