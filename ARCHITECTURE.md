@@ -1,63 +1,76 @@
 # System Architecture 🏛️
 
-Mero Jugx uses a **Modular Monolith** architecture on the backend and a **Single Page Application (SPA)** on the frontend.
+Mero Jugx is built as a **Modular Monolith** using NestJS (Backend) and React/Vite (Frontend). This architecture provides the development speed of a monolith while maintaining the strict boundaries required for complex enterprise software.
 
-## 1. High-Level Design
+## 1. High-Level Diagram
 
 ```mermaid
 graph TD
-    Client[React/Vite SPA] -->|REST API| API[NestJS Backend]
-    Client -->|Socket.io| WS[Real-time Gateway]
+    User -->|Browser| SPA[React Frontend]
+    SPA -->|REST / HTTP| Gateway[NestJS API Gateway]
+    SPA -->|WebSocket| WSS[Socket.io Gateway]
     
-    subgraph "Backend Services"
-        API --> Auth[Auth Module]
-        API --> Chat[Chat Module]
-        API --> CRM[CRM Module]
-        API --> Ticket[Ticket Module]
+    subgraph "Backend Core"
+        Gateway --> Auth[Auth Module]
+        Gateway --> Org[Organization Logic]
+        Gateway --> Apps[Marketplace Logic]
     end
     
-    Auth --> DB[(PostgreSQL)]
-    Chat --> Redis[(Redis Pub/Sub)]
+    subgraph "Feature Modules"
+        Apps --> CRM[CRM Module]
+        Apps --> Tickets[Ticket Module]
+        Apps --> Chat[Chat Module]
+    end
     
-    API --> Queue[BullMQ Job Queue]
+    Auth --> Postgres[(PostgreSQL DB)]
+    Chat --> Redis[(Redis Pub/Sub)]
+    Tickets --> BullMQ[Job Queue]
 ```
 
-## 2. Directory Structure
+## 2. Backend Architecture (`/api`)
 
-### Backend (`/api`)
-The backend is a flat modular structure in `src`.
+### Modular Design
+Modules are organized by Business Domain in `src/`.
+*   **Domain Modules**: `auth`, `users`, `organizations`, `billing`.
+*   **Feature Modules**: `chat`, `tickets`, `crm_*` (implied in entities), `invoices`.
+*   **Infrastructure Modules**: `database`, `common` (Filters, Guards, Interceptors).
 
-*   **Logic Modules**:
-    *   `auth/`: JWT strategies, Login, Register.
-    *   `chat/` & `admin-chat/`: Socket.io gateways and message services.
-    *   `tickets/`: Issue tracking logic.
-    *   `billing/` & `invoices/`: Finance logic.
-*   **Centralized Database**:
-    *   `database/entities/`: **All** 50+ TypeORM entities reside here (e.g., `chats.entity.ts`, `invoices.entity.ts`). This is a key design choice to avoid circular dependencies.
-    *   `database/migrations/`: Database schema versioning.
+### Centralized Data Layer
+Unlike Microservices where each service owns its DB, we use a **Shared Database** pattern to maximize data integrity for complex relations (e.g., Joining `Users` -> `Tickets` -> `Chats`).
+*   All entities reside in `src/database/entities`.
+*   This avoids circular dependencies between modules sharing common types.
 
-### Frontend (`/app`)
-A modern React SPA wired with Vite.
+### Event-Driven Communication
+Modules communicate asynchronously for side effects.
+*   Example: When a `User` is created -> Emit `UserCreatedEvent` -> `NotificationsModule` sends Welcome Email.
 
-*   **`src/pages/`**: Application routes.
-    *   `chat/`: Chat interface.
-    *   `tickets/`: Support dashboard.
-    *   `dashboard/`: Main analytics view.
-*   **`src/store/`**: Global state management (Zustand).
-*   **`src/services/`**: API clients (Axios) to talk to NestJS.
+## 3. Frontend Architecture (`/app`)
 
-## 3. Key Patterns
+### Component Structure
+*   **`pages/`**: Top-level route components.
+*   **`components/`**: Atomic UI elements (Buttons, Inputs) built with Radix UI + Tailwind.
+*   **`services/`**: API adapters (Axios) mimicking the backend module structure.
 
-### Real-Time Communication
-We use **Socket.io** namespaces for real-time features:
-*   `/chat`: For team messaging.
-*   `/notifications`: For pushing alerts to users.
+### State Management
+*   **Server State**: React Query (TanStack Query) for caching API responses.
+*   **Client State**: Zustand for session/UI state (e.g., Sidebar open/close).
 
-### Marketplace Architecture (`apps/`)
-The system is designed to be extensible. Core features (CRM, Inventory) are treated as "Apps" that can be enabled/disabled per organization.
-*   See `api/src/apps/` and `organization_apps.entity.ts`.
+## 4. Security Architecture
 
-### Security
-*   **Guards**: `JwtAuthGuard`, `RolesGuard`, `PermissionsGuard`.
-*   **Interceptors**: `SentryInterceptor` for error tracking.
-*   **Pipes**: Validation via `class-validator` DTOs.
+### Authentication
+*   **Strategy**: JSON Web Tokens (JWT).
+*   **Tokens**:
+    *   `AccessToken` (15m validity, holds `userId`, `orgId`, `roles`).
+    *   `RefreshToken` (7d validity, Database backed).
+*   **MFA**: TOTP-based 2FA enforced for Admin roles.
+
+### Authorization (RBAC)
+*   **Roles**: `Owner`, `Admin`, `Member`, `Guest`.
+*   **Permissions**: Fine-grained scopes (e.g., `tickets:read`, `tickets:write`, `settings:manage`).
+*   **Guard**: `PermissionsGuard` checks `@RequirePermission('tickets:write')` decorator.
+
+## 5. Scalability Strategy
+
+1.  **Horizontal Scale**: The API is stateless. We can spin up 10x `mero-jugx-backend` containers behind a Load Balancer.
+2.  **Caching**: Redis caches expensive queries (e.g., Organization Settings).
+3.  **Job Offloading**: Heavy tasks (PDF Invoice generation, Email blasts) are pushed to **BullMQ** to prevent Main Thread blocking.

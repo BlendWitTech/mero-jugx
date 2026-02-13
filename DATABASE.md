@@ -1,54 +1,148 @@
-# Database Schema 🗄️
+# Database Schema Reference 🗄️
 
-Mero Jugx runs on **PostgreSQL**. We currently have **57 Tables** defined in `api/src/database/entities`.
+Mero Jugx utilizes a robust **PostgreSQL** schema managed via TypeORM.
+**Total Tables**: 57
 
-## 1. Core Identity & Access
-*   `users`: Global user profiles.
-*   `organizations`: Tenant definitions (Companies).
-*   `organization_members`: Link between Users and Orgs with Roles.
-*   `roles` & `permissions`: RBAC system.
-*   `api_keys`: For external integrations.
+## 1. Schema Overview
 
-## 2. Communication Module
-*   `chats`: Conversation threads.
-*   `messages`: Individual text messages.
-*   `chat_members`: Who is in which chat.
-*   `message_attachments`: Files sent in chat.
-*   `message_reactions`: Emoji reactions.
+The database is divided into logical domains. **All tables** (except system lookups) are **Multi-Tenant**, meaning they contain an `organization_id` foreign key.
 
-## 3. CRM & Finance (Beta)
-*   `crm_clients`: Customer database.
-*   `crm_quotes`: Sales quotations.
-*   `crm_invoices`: Finalized bills.
-*   `crm_payments`: Payment records.
-*   `crm_taxes` & `crm_settings`: Configuration.
+### Key Conventions
+*   **PK**: `UUID` (v4) for all tables.
+*   **Audit**: `created_at` and `updated_at` timestamps on every table.
+*   **Soft Delete**: `deleted_at` column used for safe deletion.
 
-## 4. Ticketing & Tasks
-*   `tickets`: Support issues.
-*   `ticket_comments`: Discussion on tickets.
-*   `tasks`: Project tasks / To-dos.
-*   `epics`: Large bodies of work (Agile).
+---
 
-## 5. System & Apps
-*   `apps`: List of available Marketplace apps.
-*   `organization_apps`: Which org has installed which app.
-*   `audit_logs`: Security trail of actions.
-*   `notifications`: User alerts.
+## 2. Platform Core (Identity)
 
-## 6. Entity Relationship Diagram (ERD) Pattern
+### `users`
+Global user directory.
+*   `email` (Unique)
+*   `password_hash`
+*   `mfa_enabled`, `mfa_secret`
+*   `avatar_url`
 
-Most tables follow this multi-tenant pattern:
-```typescript
-@Entity('tickets')
-export class Ticket {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+### `organizations`
+Tenant definitions.
+*   `slug` (Unique Subdomain)
+*   `package_id` (Subscription Tier)
+*   `custom_css`, `custom_js` (Whitelabeling)
+*   `primary_color`, `logo_url`
 
-  @Column()
-  organization_id: string; // Tenant Isolation
+### `organization_members`
+Links Users to Organizations.
+*   `user_id`
+*   `organization_id`
+*   `role_id` (RBAC)
 
-  @ManyToOne(() => Organization)
-  organization: Organization;
-}
+---
+
+## 3. Ticketing Module
+
+### `tickets`
+Features complex relationships for Task Management.
+*   `title`, `description`
+*   `status`: enum ('open', 'in_progress', 'resolved')
+*   `priority`: enum ('low', 'urgent')
+*   `board_app_id` (Link to Board App)
+*   `estimated_time_minutes`, `actual_time_minutes` (Time Tracking)
+
+### `ticket_comments`
+Discussion thread on tickets.
+*   `ticket_id`
+*   `user_id`
+*   `content` (Rich Text)
+
+---
+
+## 4. CRM & Invoicing (Tenant Business)
+
+Tables prefixed with `crm_` belong to the tenant's business operations.
+
+### `crm_clients`
+The tenant's customers.
+*   `company_name`
+*   `contact_person`
+*   `email`, `phone`
+
+### `crm_invoices`
+Invoices issued BY the tenant TO their clients.
+*   `client_id`
+*   `total`, `taxTotal`, `discount`
+*   `status`: enum ('draft', 'sent', 'paid')
+*   `recurring`: enum ('monthly', 'annually')
+
+### `crm_invoice_items`
+Line items for invoices.
+*   `description`
+*   `quantity`, `price`
+
+---
+
+## 5. Platform Billing (SaaS)
+
+Tables WITHOUT `crm_` prefix refer to Mero Jugx's own billing.
+
+### `invoices`
+Bills sent TO the tenant for using Mero Jugx.
+*   `organization_id`
+*   `amount`
+*   `payment_id`
+
+### `packages`
+SaaS Tiers (e.g., Free, Pro, Enterprise).
+*   `name`
+*   `monthly_price`
+*   `limits` (JSON)
+
+---
+
+## 6. Communication
+
+### `chats`
+Conversation container.
+*   `type`: enum ('direct', 'group')
+*   `last_message_at`
+
+### `messages`
+*   `chat_id`
+*   `sender_id`
+*   `content`
+
+### `message_attachments`
+*   `message_id`
+*   `file_url`
+*   `file_type`
+
+---
+
+## 7. Complete Table List
+
+| Table Name | Description |
+| :--- | :--- |
+| `admin_chats`, `admin_chat_messages` | Support channel between Super Admin & Tenant |
+| `api_keys` | Developer API tokens for tenants |
+| `apps`, `organization_apps` | Marketplace app directory & installation records |
+| `audit_logs` | Security activity trail |
+| `crm_quotes` | Sales estimates/proposals |
+| `notifications`, `notification_preferences` | User alert settings |
+| `permissions`, `roles`, `role_permissions` | RBAC Matrix |
+| `tasks` | General purpose to-do items |
+| `sessions` | Active user sessions (if DB stored) |
+| `webhooks` | External event triggers |
+
+## 8. Migration Workflow
+
+We use standard TypeORM CLI commands.
+
+```bash
+# Generate a new migration after entity changes
+npm run migration:generate -- -n DescriptionOfChange
+
+# Apply pending migrations
+npm run migration:run
+
+# Revert last migration
+npm run migration:revert
 ```
-All distinct modules (Chat, CRM, Tickets) are soft-linked via `organization_id` and `user_id`.

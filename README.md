@@ -1,78 +1,104 @@
 # Mero Jugx ERP (v1.0) 🇳🇵
 
-> **The Operating System for Nepali Business**
+> **The Operating System for Nepali Business** | **नेपाली व्यापारको डिजिटल साथी**
 
-Mero Jugx is a unified, multi-tenant ERP platform built to digitize Nepali organizations. It combines CRM, Ticketing, Chat, and HR/Billing into a single "Super App" for business.
+Mero Jugx is a comprehensive, multi-tenant ERP platform designed to serve as the digital backbone for Nepali organizations. It unifies internal operations (HR, Tickets) with external business functions (CRM, Invoicing) in a single "Super App".
 
-## 🚀 Implemented Features (Current State)
+---
 
-We have built the core **Foundation**, **Communication**, and **CRM** layers.
+## 🚀 Feature Matrix
 
-### 1. **Core Platform**
-*   **Multi-Tenancy**: Organization-based data isolation.
-*   **Authentication**: JWT-based login, Registration, and **2FA (MFA)** support.
-*   **RBAC**: Granular permissions (Roles, Custom Permissions) for members.
-*   **Marketplace**: Plug-and-play app architecture (`apps` module).
+### 1. Core Platform (`/api/src`)
+The foundation that powers the entire ecosystem.
+*   **Authentication (`auth`)**: JWT Login, Registration, and **2FA/MFA** (Google Authenticator).
+*   **User Management (`users`)**: Profiles, Avatars, and Security Settings.
+*   **Organization Hub (`organizations`)**: Multi-tenancy support with branding (Logo, Colors, Custom CSS/JS).
+*   **Roles & Permissions (`roles`, `permissions`)**: Granular RBAC with Custom Roles.
+*   **Notifications (`notifications`)**: Real-time System Alerts and Email/SMS gateways.
+*   **Audit Logs (`audit-logs`)**: Security trail for compliance.
 
-### 2. **Communication Hub**
-*   **Real-Time Chat**: Internal team chat with channels and DMs (Socket.io).
-*   **Admin Chat**: Support channel for system admins to talk to tenants.
-*   **Notifications**: Real-time in-app alerts and Email notifications.
+### 2. Communication Suite (`/api/src/chat`)
+*   **Team Chat**: Real-time messaging with Channels and Direct Messages.
+*   **File Sharing**: Attachment support (`message_attachments`).
+*   **Reactions**: Emoji reactions to messages.
+*   **Admin Support**: Dedicated channel for Platform Admins to support Tenants (`admin-chat`).
 
-### 3. **CRM & Sales (Beta)**
-*   **Clients**: Manage customer database (`crm_clients`).
-*   **Quotes & Invoices**: Generate professional financing documents (`crm_quotes`, `invoices`).
-*   **Payments**: Record payments via multiple modes (`crm_payments`).
+### 3. Service Desk (`/api/src/tickets`)
+*   **Issue Tracking**: Kanban/List view of support tickets.
+*   **Prioritization**: Low/Medium/High/Urgent classification.
+*   **Board Integration**: Link tickets to Project Boards (Trello-style).
+*   **Time Tracking**: Estimated vs Actual time logging.
 
-### 4. **Service & Support**
-*   **Ticketing System**: Internal helpdesk for issue tracking (`tickets`).
-*   **Tasks**: Kanban-style task management (`tasks`).
+### 4. CRM & Finance (`/api/src/crm_*`)
+*   **Client Database**: Manage leads and customers (`crm_clients`).
+*   **Smart Invoicing**: Generate VAT-compliant invoices (`crm_invoices`).
+    *   Recurring Invoices (Daily/Weekly/Monthly).
+    *   Tax Calculation (VAT 13%).
+    *   PDF Generation.
+*   **Estimates/Quotes**: Send proposals to clients (`crm_quotes`).
+*   **Payments**: Record payments against invoices (`crm_payments`).
+
+### 5. Marketplace (`/api/src/marketplace`)
+*   **Apps Module**: Enable/Disable features per organization.
+*   **Billing**: Subscription management for the Platform itself (`billing`, `invoices`).
 
 ---
 
 ## 🛠️ Technology Stack
 
-**Backend** (`/api`)
-*   **Framework**: [NestJS](https://nestjs.com/) (Modular Monolith)
-*   **Language**: TypeScript
-*   **Database**: PostgreSQL 15+ (TypeORM)
-*   **Real-time**: Socket.io & Redis
-*   **Queue**: BullMQ (Redis)
-
-**Frontend** (`/app`)
-*   **Framework**: [Vite](https://vitejs.dev/) + React 18
-*   **Styling**: Tailwind CSS + Radix UI
-*   **State**: Zustand + React Query
-*   **Routing**: React Router DOM 6
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Backend** | NestJS (Node v18) | Modular Monolith Architecture. |
+| **Frontend** | React 18 + Vite | SPA with TailwindCSS & Radix UI. |
+| **Database** | PostgreSQL 15 | Relational Data Store (50+ Tables). |
+| **ORM** | TypeORM | Schema Management & Migrations. |
+| **Real-time** | Socket.io | Chat & Notification Stream. |
+| **Queue** | BullMQ (Redis) | Async Job Processing. |
+| **Search** | Fuse.js / SQL | In-app search capabilities. |
 
 ---
 
 ## ⚡ Quick Start
 
-### Prerequisites
-*   Node.js v18+
-*   Docker & Docker Compose
+### 1. Prerequisites
+*   **Docker Desktop** (Required for DB & Redis).
+*   **Node.js v18+**.
 
-### 1. Setup Environment
+### 2. Installation
+The project includes a root automation script.
+
 ```bash
-# Clone the repo
+# Clone
 git clone https://github.com/BlendwitTech/mero-jugx.git
 cd mero-jugx
 
-# Copy env template
-cp .env.example .env
+# Install All Dependencies
+npm install
+cd api && npm install
+cd ../app && npm install
 ```
 
-### 2. Run with Docker (Recommended)
-This command handles Postgres, Redis, Backend, and Frontend.
+### 3. Start Infrastructure
+Start PostgreSQL and Redis in the background.
 ```bash
+# From root directory
 npm run docker:up
 ```
-*   **Frontend**: [http://localhost:5173](http://localhost:5173) (or 3001 check console)
-*   **Backend**: [http://localhost:3000](http://localhost:3000)
 
-### 3. Manual Setup
-See [SETUP.md](./SETUP.md) for detailed manual execution instructions.
+### 4. Run Development Servers
+**Backend**:
+```bash
+cd api
+npm run start:dev
+# Running on http://localhost:3000
+```
+
+**Frontend**:
+```bash
+cd app
+npm run dev
+# Running on http://localhost:3001 (or 5173)
+```
 
 ---
 
@@ -80,22 +106,26 @@ See [SETUP.md](./SETUP.md) for detailed manual execution instructions.
 
 ```bash
 mero-jugx/
-├── api/             # NestJS Backend
+├── api/                 # NestJS Application
 │   ├── src/
-│   │   ├── auth/    # Auth Logic
-│   │   ├── chat/    # Real-time Chat
-│   │   ├── database/entities/ # Centralized TypeORM Entities
-│   │   └── ...
-├── app/             # React + Vite Frontend
+│   │   ├── auth/        # Authentication Module
+│   │   ├── chat/        # Chat & Real-time Module
+│   │   ├── database/    # TypeORM Config
+│   │   │   ├── entities/# ALL 57 Database Entities
+│   │   │   └── migrations/
+│   │   ├── tickets/     # Ticketing Module
+│   │   └── ... (30+ Modules)
+├── app/                 # React Application
 │   ├── src/
-│   │   ├── pages/   # Routes (Chat, Dashboard, Tickets)
-│   │   └── components/
-├── scripts/         # Automation scripts
-└── docker-compose.yml
+│   │   ├── pages/       # Route Components
+│   │   ├── components/  # UI Kit
+│   │   └── store/       # Zustand State
+└── docker-compose.yml   # Infrastructure Config
 ```
 
-## 📖 Documentation
-*   [**Setup Guide**](./SETUP.md): Installation & Troubleshooting.
-*   [**Architecture**](./ARCHITECTURE.md): Directories, Modules, and Patterns.
-*   [**Database**](./DATABASE.md): Schema of the 50+ existing tables.
-*   [**Deployment**](./DEPLOYMENT.md): Production Nginx & Docker config.
+## 📖 Documentation Index
+
+*   [**Setup Guide**](./SETUP.md): Detailed installation & troubleshooting.
+*   [**Database Reference**](./DATABASE.md): Full schema breakdown.
+*   [**Architecture**](./ARCHITECTURE.md): System design patterns.
+*   [**Deployment**](./DEPLOYMENT.md): Production guide.
