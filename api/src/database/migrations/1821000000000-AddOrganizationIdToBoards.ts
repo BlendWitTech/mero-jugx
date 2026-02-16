@@ -4,6 +4,12 @@ export class AddOrganizationIdToBoards1821000000000 implements MigrationInterfac
     name = 'AddOrganizationIdToBoards1821000000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        const tableExists = await queryRunner.hasTable('board_columns');
+        if (!tableExists) {
+            console.log('⚠️  Skipping board_columns migration - table does not exist yet');
+            return;
+        }
+
         // Add organization_id to board_columns (from boards)
         await queryRunner.query(`
             ALTER TABLE "board_columns" 

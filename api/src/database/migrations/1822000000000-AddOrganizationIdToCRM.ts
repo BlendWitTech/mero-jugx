@@ -4,6 +4,13 @@ export class AddOrganizationIdToCRM1822000000000 implements MigrationInterface {
     name = 'AddOrganizationIdToCRM1822000000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        // Check if table exists before altering
+        const tableExists = await queryRunner.hasTable('crm_deal_items');
+        if (!tableExists) {
+            console.log('⚠️  Skipping crm_deal_items migration - table does not exist yet');
+            return;
+        }
+
         // Add organization_id to crm_deal_items (from crm_deals)
         await queryRunner.query(`
             ALTER TABLE "crm_deal_items" 

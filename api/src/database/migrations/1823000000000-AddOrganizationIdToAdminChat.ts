@@ -4,6 +4,12 @@ export class AddOrganizationIdToAdminChat1823000000000 implements MigrationInter
     name = 'AddOrganizationIdToAdminChat1823000000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        const messagesTableExists = await queryRunner.hasTable('admin_chat_messages');
+        if (!messagesTableExists) {
+            console.log('⚠️  Skipping admin_chat_messages migration - table does not exist yet');
+            return;
+        }
+
         // 1. Add organization_id to admin_chat_messages (from admin_chats)
         await queryRunner.query(`
             ALTER TABLE "admin_chat_messages" 
@@ -36,6 +42,12 @@ export class AddOrganizationIdToAdminChat1823000000000 implements MigrationInter
         `);
 
         // 2. Add organization_id to admin_chat_message_attachments (from admin_chat_messages)
+        const attachmentsTableExists = await queryRunner.hasTable('admin_chat_message_attachments');
+        if (!attachmentsTableExists) {
+            console.log('⚠️  Skipping admin_chat_message_attachments migration - table does not exist yet');
+            return;
+        }
+
         await queryRunner.query(`
             ALTER TABLE "admin_chat_message_attachments" 
             ADD COLUMN "organization_id" uuid
