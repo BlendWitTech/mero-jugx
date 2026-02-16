@@ -6,6 +6,7 @@ import {
     JoinColumn,
 } from 'typeorm';
 import { CrmDeal } from './crm_deals.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('crm_deal_items')
 export class CrmDealItem {
@@ -18,6 +19,13 @@ export class CrmDealItem {
     @ManyToOne(() => CrmDeal, (deal) => deal.items, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'deal_id' })
     deal: CrmDeal;
+
+    @Column({ name: 'organization_id', type: 'uuid' })
+    organizationId: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
 
     @Column({ name: 'product_id', type: 'uuid', nullable: true })
     productId: string;

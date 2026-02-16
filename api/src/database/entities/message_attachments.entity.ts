@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { Message } from './messages.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('message_attachments')
 @Index(['message_id'])
@@ -22,6 +23,14 @@ export class MessageAttachment {
   @ManyToOne(() => Message, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'message_id' })
   message: Message;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'varchar', length: 255 })
   file_name: string;

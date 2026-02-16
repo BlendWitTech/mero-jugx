@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { CallSession } from './call_sessions.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 
 export enum CallParticipantStatus {
   INVITED = 'invited',
@@ -37,6 +38,14 @@ export class CallParticipant {
   @ManyToOne(() => CallSession, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'call_session_id' })
   call_session: CallSession;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'uuid' })
   @Index()

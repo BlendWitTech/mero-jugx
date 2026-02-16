@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { AdminChat } from './admin_chats.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 import { AdminChatMessageAttachment } from './admin_chat_message_attachments.entity';
 
 export enum AdminChatMessageType {
@@ -32,6 +33,14 @@ export class AdminChatMessage {
   @ManyToOne(() => AdminChat, (chat) => chat.messages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'admin_chat_id' })
   admin_chat: AdminChat;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'uuid' })
   sender_id: string; // User or admin who sent the message

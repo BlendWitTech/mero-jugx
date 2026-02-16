@@ -9,7 +9,8 @@ import {
     OneToMany,
 } from 'typeorm';
 import { Board } from './boards.entity';
-import { Ticket } from './tickets.entity'; // Adjust path if needed
+import { Ticket } from './tickets.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('board_columns')
 @Index(['board_id'])
@@ -23,6 +24,14 @@ export class BoardColumn {
     @ManyToOne(() => Board, (board) => board.columns, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'board_id' })
     board: Board;
+
+    @Column({ name: 'organization_id', type: 'uuid' })
+    @Index()
+    organizationId: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
 
     @Column({ type: 'varchar', length: 100 })
     name: string;

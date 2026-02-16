@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { AdminChatMessage } from './admin_chat_messages.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('admin_chat_message_attachments')
 @Index(['message_id'])
@@ -21,6 +22,14 @@ export class AdminChatMessageAttachment {
   @ManyToOne(() => AdminChatMessage, (message) => message.attachments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'message_id' })
   message: AdminChatMessage;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'varchar', length: 255 })
   file_name: string;

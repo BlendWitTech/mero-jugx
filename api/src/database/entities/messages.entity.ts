@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { Chat } from './chats.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 import { MessageAttachment } from './message_attachments.entity';
 import { MessageReaction } from './message_reactions.entity';
 
@@ -47,6 +48,14 @@ export class Message {
   @ManyToOne(() => Chat, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'chat_id' })
   chat: Chat;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'uuid' })
   @Index()

@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Ticket } from './tickets.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('ticket_comments')
 @Index(['ticket_id'])
@@ -24,6 +25,14 @@ export class TicketComment {
   @ManyToOne(() => Ticket, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'ticket_id' })
   ticket: Ticket;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'uuid' })
   author_id: string;

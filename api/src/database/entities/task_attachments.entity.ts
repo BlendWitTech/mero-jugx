@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Task } from './tasks.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('task_attachments')
 @Index(['task_id'])
@@ -23,6 +24,14 @@ export class TaskAttachment {
     @ManyToOne(() => Task, (task) => task.attachments, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'task_id' })
     task: Task;
+
+    @Column({ name: 'organization_id', type: 'uuid' })
+    @Index()
+    organizationId: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
 
     @Column({ type: 'varchar', length: 255 })
     file_name: string;

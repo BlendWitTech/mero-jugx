@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Message } from './messages.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 
 @Entity('message_read_status')
 @Unique(['message_id', 'user_id']) // One status per message per user
@@ -28,6 +29,14 @@ export class MessageReadStatus {
   @ManyToOne(() => Message, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'message_id' })
   message: Message;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'uuid' })
   @Index()

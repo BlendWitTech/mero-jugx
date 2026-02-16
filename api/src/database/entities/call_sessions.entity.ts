@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Chat } from './chats.entity';
 import { User } from './users.entity';
+import { Organization } from './organizations.entity';
 import { CallParticipant } from './call_participants.entity';
 
 export enum CallType {
@@ -43,6 +44,14 @@ export class CallSession {
   @ManyToOne(() => Chat, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'chat_id' })
   chat: Chat;
+
+  @Column({ name: 'organization_id', type: 'uuid' })
+  @Index()
+  organizationId: string;
+
+  @ManyToOne(() => Organization)
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
   @Column({ type: 'uuid' })
   @Index()
