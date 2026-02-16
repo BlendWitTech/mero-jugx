@@ -523,6 +523,7 @@ export class ChatService {
       const newMembers = newMemberIds.map((memberId) =>
         this.chatMemberRepository.create({
           chat_id: chatId,
+          organizationId: organizationId,
           user_id: memberId,
           role: ChatMemberRole.MEMBER,
           status: ChatMemberStatus.ACTIVE,
