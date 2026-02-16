@@ -61,7 +61,7 @@ export class ChatService {
     private dataSource: DataSource,
     private auditLogsService: AuditLogsService,
     private notificationHelper: NotificationHelperService,
-  ) {}
+  ) { }
 
   // Set gateway reference (called from module to avoid circular dependency)
   setGateway(gateway: any) {
@@ -223,6 +223,7 @@ export class ChatService {
       // Creator is owner for groups, member for direct
       this.chatMemberRepository.create({
         chat_id: savedChat.id,
+        organizationId: organizationId,
         user_id: userId,
         role: dto.type === ChatType.GROUP ? ChatMemberRole.OWNER : ChatMemberRole.MEMBER,
         status: ChatMemberStatus.ACTIVE,
@@ -231,6 +232,7 @@ export class ChatService {
       ...memberIds.map((memberId) =>
         this.chatMemberRepository.create({
           chat_id: savedChat.id,
+          organizationId: organizationId,
           user_id: memberId,
           role: ChatMemberRole.MEMBER,
           status: ChatMemberStatus.ACTIVE,
@@ -658,6 +660,7 @@ export class ChatService {
     // Create message
     const message = this.messageRepository.create({
       chat_id: chatId,
+      organizationId: organizationId,
       sender_id: userId,
       type: dto.type,
       content: dto.content || null,
@@ -671,12 +674,13 @@ export class ChatService {
     if (dto.attachments && dto.attachments.length > 0) {
       const attachments = dto.attachments.map((att) => {
         // Convert file_size string to number (TypeORM handles bigint as number)
-        const fileSize = typeof att.file_size === 'string' 
-          ? parseInt(att.file_size, 10) 
+        const fileSize = typeof att.file_size === 'string'
+          ? parseInt(att.file_size, 10)
           : (typeof att.file_size === 'number' ? att.file_size : 0);
-        
+
         return this.attachmentRepository.create({
           message_id: savedMessage.id,
+          organizationId: organizationId,
           file_name: att.file_name,
           file_url: att.file_url,
           file_type: att.file_type,
@@ -707,7 +711,7 @@ export class ChatService {
     const mentionRegex = /@([\w.-]+@?[\w.-]*)/g;
     const mentionedStrings: string[] = [];
     const mentionedUserIds: string[] = [];
-    
+
     if (dto.content) {
       const matches = dto.content.match(mentionRegex);
       if (matches) {
@@ -728,7 +732,7 @@ export class ChatService {
     // Match mentions to actual users
     for (const mentionStr of mentionedStrings) {
       const lowerMention = mentionStr.toLowerCase();
-      
+
       // Try to match by user ID (if mention is a UUID)
       if (lowerMention.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         const matchedMember = allChatMembers.find(m => m.user_id.toLowerCase() === lowerMention);
@@ -740,7 +744,7 @@ export class ChatService {
 
       // Try to match by email
       if (lowerMention.includes('@')) {
-        const matchedMember = allChatMembers.find(m => 
+        const matchedMember = allChatMembers.find(m =>
           m.user?.email?.toLowerCase() === lowerMention
         );
         if (matchedMember && !mentionedUserIds.includes(matchedMember.user_id)) {
@@ -752,12 +756,12 @@ export class ChatService {
       // Try to match by first name, last name, or full name
       for (const member of allChatMembers) {
         if (!member.user) continue;
-        
+
         const firstName = member.user.first_name?.toLowerCase() || '';
         const lastName = member.user.last_name?.toLowerCase() || '';
         const fullName = `${firstName} ${lastName}`.trim();
         const reverseFullName = `${lastName} ${firstName}`.trim();
-        
+
         if (
           firstName === lowerMention ||
           lastName === lowerMention ||
@@ -800,7 +804,7 @@ export class ChatService {
       // Online users might not have the chat open, so they need notifications
       // The unread count badge will update in real-time via WebSocket
       // Notifications ensure users see messages in the notification dropdown
-      
+
       if (isMentioned) {
         // Create mention notification
         await this.notificationHelper.createNotification(
@@ -915,14 +919,14 @@ export class ChatService {
     // Get read statuses for messages from the sender's perspective
     // For each message, get read status for the recipient(s)
     const messageIds = messages.map(m => m.id);
-    
+
     // Get all read statuses for these messages
-    const allReadStatuses = messageIds.length > 0 
+    const allReadStatuses = messageIds.length > 0
       ? await this.messageReadStatusRepository.find({
-          where: {
-            message_id: In(messageIds),
-          },
-        })
+        where: {
+          message_id: In(messageIds),
+        },
+      })
       : [];
 
     // For direct chats, get read status for the other person
@@ -957,7 +961,7 @@ export class ChatService {
           };
         }
       }
-      
+
       // For messages from others, we don't show read status (they show it on their side)
       return {
         ...message,
@@ -974,7 +978,7 @@ export class ChatService {
       member.last_read_at = new Date();
       member.unread_count = 0;
       await this.chatMemberRepository.save(member);
-      
+
       // Mark all messages in this chat as read for this user
       await this.markMessagesAsRead(userId, chatId, messages.map(m => m.id));
     }
@@ -1302,7 +1306,7 @@ export class ChatService {
 
     // Build description with additional context
     let description = dto.description || dto.message_excerpt || `Ticket created from chat message:\n\n${message.content || ''}`;
-    
+
     // Add additional context based on chat type
     if (chat.type === ChatType.GROUP) {
       description += `\n\n--- Chat Details ---\n`;
