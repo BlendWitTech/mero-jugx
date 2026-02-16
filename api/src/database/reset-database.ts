@@ -7,6 +7,9 @@ import { seedPermissions } from './seeds/002-permissions.seed';
 import { seedRoles } from './seeds/003-roles.seed';
 import { seedPackageFeatures } from './seeds/004-package-features.seed';
 import { seedRoleTemplates } from './seeds/005-role-templates.seed';
+import { seedSystemAdminUser } from './seeds/006-system-admin-user.seed';
+import { seedWorkspaceProjectTemplates } from '../../marketplace/shared/mero-board/seeds/workspace-project-templates.seed';
+import { seedNepalChartOfAccounts } from './seeds/007-nepal-chart-of-accounts.seed';
 
 // Load environment variables
 config();
@@ -124,6 +127,10 @@ async function resetDatabase() {
     await seedRoles(AppDataSource);
     await seedPackageFeatures(AppDataSource);
     await seedRoleTemplates(AppDataSource);
+    await seedSystemAdminUser(AppDataSource);
+    await seedWorkspaceProjectTemplates(AppDataSource); // Note: Ensure proper import path if outside 'database/seeds'
+    await seedNepalChartOfAccounts(AppDataSource);
+
     console.log('  ✓ Seeds completed.');
 
     console.log('\n✅ Database reset completed successfully!');

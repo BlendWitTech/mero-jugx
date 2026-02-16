@@ -43,6 +43,9 @@ export class Package {
   @Column({ type: 'int', default: 0 })
   sort_order: number;
 
+  @Column({ type: 'int', default: 1 })
+  base_branch_limit: number;
+
   @CreateDateColumn()
   created_at: Date;
 

@@ -9,15 +9,40 @@ This guide covers Local Development, Production Deployment, and troubleshooting.
 *   **Container**: Docker Desktop 4.20+.
 *   **Package Manager**: NPM v9+.
 
-## 2. Local Development (Step-by-Step)
+## 2. Interactive Setup (Recommended) 🚀
 
-### Step 1: Clone & Install
+The project now includes an interactive CLI setup wizard that handles dependencies, environment configuration, and database initialization.
+
+### Step 1: Run Setup
 ```bash
-# Clone Repository
-git clone https://github.com/BlendwitTech/mero-jugx.git
-cd mero-jugx
+npm run setup
+```
+This command will:
+1.  **Install Dependencies**: Recursively for backend, frontend, and microservices.
+2.  **Generate Environment**: Automatically create `.env` files from `.env.example` templates.
+3.  **Configure System**: Ask if you want to use **Docker** or **Manual** setup.
+    *   **Docker**: Spins up PostgreSQL and Redis containers automatically.
+    *   **Manual**: Guides you to configure local DB connections.
 
-# Install Dependencies (Recursive)
+### Step 2: Initialize Database
+After setup, initialize the schema and seed default data.
+```bash
+npm run db:init
+```
+
+### Step 3: Start Application
+Use the interactive launcher.
+```bash
+npm start
+```
+Select **Development** -> **Full Stack** to run everything.
+
+## 3. Manual Setup (Alternative)
+
+If you prefer setting up manually without the wizard:
+
+### Step 1: Install Dependencies
+```bash
 npm install
 cd api && npm install
 cd ../app && npm install
@@ -25,48 +50,24 @@ cd ..
 ```
 
 ### Step 2: Configure Environment
-Copy the example `.env` file.
-```bash
-cp .env.example .env
-```
-**Key Variables for Local Dev**:
-*   `DB_HOST`: Set to `localhost`.
-*   `DB_PORT`: `5432`.
-*   `REDIS_HOST`: `localhost`.
-*   `REDIS_PORT`: `6379`.
-*   `FRONTEND_URL`: `http://localhost:3001` or `http://localhost:5173`.
+Copy `.env.example` to `.env` in root, `api/`, and `app/`. Configure `DB_HOST`, `DB_PORT`, etc.
 
 ### Step 3: Start Infrastructure
-We use Docker only for the database and Redis in development, running Node processes on the host for faster reloading.
-
 ```bash
 npm run docker:up
-# Verifying: Docker containers 'mero-jugx-postgres' and 'mero-jugx-redis' should be running.
 ```
 
-### Step 4: Seed Database
-Populate the DB with default Roles, Permissions, and Plans.
+### Step 4: Run Migrations & Seeds
 ```bash
-cd api
-npm run migration:run
-npm run seed:run
+ts-node api/src/database/init-database-cli.ts
 ```
 
-### Step 5: Start Applications
-Open two terminal tabs.
-
-**Terminal 1 (Backend)**:
+### Step 5: Run Servers
 ```bash
-cd api
 npm run start:dev
 ```
-**Terminal 2 (Frontend)**:
-```bash
-cd app
-npm run dev
-```
 
-## 3. Production Deployment (Docker)
+## 4. Production Deployment (Docker)
 
 For production, we containerize the entire stack.
 
@@ -89,7 +90,7 @@ This starts:
 3.  `mero-jugx-backend` (Port 3000)
 4.  `mero-jugx-frontend` (Port 80/3001)
 
-## 4. Commands Reference
+## 5. Commands Reference
 
 ### General
 *   `npm run setup`: Runs the initial setup script.
@@ -106,7 +107,7 @@ Run these inside `api/` directory:
 *   `npm run test`: Unit tests.
 *   `npm run test:e2e`: End-to-End API tests.
 
-## 5. Troubleshooting / Common Issues
+## 6. Troubleshooting / Common Issues
 
 ### ❌ `connection refused` (Postgres)
 *   **Cause**: Docker container is not running, or you are using the wrong host.

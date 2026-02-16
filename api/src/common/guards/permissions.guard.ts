@@ -20,7 +20,7 @@ export class PermissionsGuard implements CanActivate {
     private roleRepository: Repository<Role>,
     @Inject(forwardRef(() => AuditLogsService))
     private auditLogsService: AuditLogsService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
@@ -59,9 +59,44 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
+    // Check for app-specific context
+    let roleId = membership.role_id;
+    // Look for appId in request (it might have been set by AppAccessGuard) or params/query/body
+    let appId = request.appId || request.params.appId || request.query.appId || request.body.appId;
+    const appSlug = request.params.appSlug || request.query.appSlug || request.body.appSlug;
+
+    if (!appId && appSlug) {
+      // Resolve appId from slug if not already present
+      const appRepo = this.memberRepository.manager.getRepository('App');
+      const app = await appRepo.findOne({
+        where: { slug: appSlug },
+        select: ['id'],
+      }) as any;
+      if (app) {
+        appId = app.id;
+      }
+    }
+
+    if (appId) {
+      // If we are in an app context, try to find app-specific role
+      const userAppAccessRepo = this.memberRepository.manager.getRepository('UserAppAccess');
+      const appAccess = await userAppAccessRepo.findOne({
+        where: {
+          user_id: user.userId,
+          organization_id: user.organizationId,
+          app_id: appId,
+          is_active: true,
+        },
+      }) as any;
+
+      if (appAccess && appAccess.role_id) {
+        roleId = appAccess.role_id;
+      }
+    }
+
     // Get role with permissions
     const roleWithPermissions = await this.roleRepository.findOne({
-      where: { id: membership.role_id },
+      where: { id: roleId },
       relations: ['role_permissions', 'role_permissions.permission'],
     });
 

@@ -552,7 +552,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         // Silently handle 404/403 errors - endpoint might not support theme updates yet
         // Only log unexpected errors in development
         if (error?.response?.status !== 404 && error?.response?.status !== 403) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.MODE === 'development') {
             console.warn('Failed to save theme:', error?.response?.status || error?.message);
           }
         }

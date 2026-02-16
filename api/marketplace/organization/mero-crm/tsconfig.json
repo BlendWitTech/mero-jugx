@@ -23,6 +23,45 @@
             "@shared/*": [
                 "../../../shared/*"
             ],
+            "@auth/*": [
+                "../../../src/auth/*"
+            ],
+            "@audit-logs/*": [
+                "../../../src/audit-logs/*"
+            ],
+            "@config/*": [
+                "../../../src/config/*"
+            ],
+            "@common/*": [
+                "../../../src/common/*"
+            ],
+            "@database/*": [
+                "../../../src/database/*"
+            ],
+            "@users/*": [
+                "../../../src/users/*"
+            ],
+            "@organizations/*": [
+                "../../../src/organizations/*"
+            ],
+            "@roles/*": [
+                "../../../src/roles/*"
+            ],
+            "@permissions/*": [
+                "../../../src/permissions/*"
+            ],
+            "@notifications/*": [
+                "../../../src/notifications/*"
+            ],
+            "@invitations/*": [
+                "../../../src/invitations/*"
+            ],
+            "@packages/*": [
+                "../../../src/packages/*"
+            ],
+            "@mfa/*": [
+                "../../../src/mfa/*"
+            ],
             "@nestjs/*": [
                 "./node_modules/@nestjs/*"
             ],

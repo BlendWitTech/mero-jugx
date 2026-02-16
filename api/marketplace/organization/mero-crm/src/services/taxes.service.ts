@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CrmTax } from '../../../../src/database/entities/crm_taxes.entity';
+import { CrmTax } from '@src/database/entities/crm_taxes.entity';
 import { CreateTaxDto, UpdateTaxDto } from '../dto/tax.dto';
 
 @Injectable()

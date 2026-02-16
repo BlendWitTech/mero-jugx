@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmOptionsFactory, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) { }
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
@@ -14,7 +15,10 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       username: this.configService.get<string>('DB_USER', 'postgres'),
       password: this.configService.get<string>('DB_PASSWORD', 'postgres'),
       database: this.configService.get<string>('DB_NAME', 'mero_jugx'),
-      entities: [__dirname + '/../database/entities/**/*.entity{.ts,.js}'],
+      entities: [
+        path.join(__dirname, '../database/entities/**/*.entity{.ts,.js}'),
+        path.join(__dirname, '../../marketplace/**/entities/**/*.entity{.ts,.js}')
+      ],
       migrations: [__dirname + '/../database/migrations/[0-9]*-*.ts'],
       migrationsTableName: 'migrations',
       synchronize: false, // Always false when using migrations to avoid conflicts

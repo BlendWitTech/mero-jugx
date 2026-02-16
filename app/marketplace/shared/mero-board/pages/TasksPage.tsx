@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Button, 
-  Card, 
-  CardContent, 
-  CardHeader, 
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
   CardTitle,
   Input,
   Select,
@@ -68,7 +68,7 @@ export default function TasksPage() {
   const { appSlug } = useAppContext();
   const { theme } = useTheme();
   const { user } = useAuthStore();
-  
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
@@ -88,7 +88,7 @@ export default function TasksPage() {
   const [showSaveFilterModal, setShowSaveFilterModal] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  
+
   const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
@@ -100,22 +100,23 @@ export default function TasksPage() {
   });
 
   // Fetch tasks with filters
-  const { data: tasksData, isLoading } = useQuery<{ data: Task[]; meta: { total: number; page: number; limit: number; totalPages: number } }>({
+  const { data: tasksData, isLoading } = useQuery<{ tickets: Task[]; total: number }>({
     queryKey: ['tasks', appSlug, projectId, filters],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.status) params.append('status', filters.status);
       if (filters.priority) params.append('priority', filters.priority);
-      if (filters.assigneeId) params.append('assigneeId', filters.assigneeId);
+      if (filters.assigneeId) params.append('assignee_id', filters.assigneeId); // Match backend expectation
       if (filters.search) params.append('search', filters.search);
-      
+      if (projectId) params.append('projectId', projectId); // Filter by project
+
       const response = await api.get(`/apps/${appSlug}/projects/${projectId}/tasks?${params.toString()}`);
       return response.data;
     },
     enabled: !!projectId && !!appSlug,
     staleTime: 0, // Always fetch fresh data
   });
-  const tasks = tasksData?.data || [];
+  const tasks = tasksData?.tickets || []; // TicketsService returns { tickets, total, ... }
 
   // Fetch project members for assignee dropdown
   const { data: workspace } = useQuery({
@@ -132,7 +133,7 @@ export default function TasksPage() {
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await api.post(`/apps/${appSlug}/projects/${projectId}/tasks`, data);
+      const response = await api.post(`/apps/${appSlug}/projects/${projectId}/tasks`, { ...data });
       return response.data;
     },
     onSuccess: () => {
@@ -190,12 +191,12 @@ export default function TasksPage() {
       toast.error('Project ID is missing. Please navigate to a project first.');
       return;
     }
-    
+
     if (!taskForm.title.trim()) {
       toast.error('Task title is required');
       return;
     }
-    
+
     createTaskMutation.mutate({
       ...taskForm,
       assignee_id: taskForm.assignee_id || undefined,
@@ -432,7 +433,7 @@ export default function TasksPage() {
             <p className="mb-4" style={{ color: theme.colors.textSecondary }}>
               Please navigate to a project to view and create tasks.
             </p>
-            <Button 
+            <Button
               onClick={() => navigate(`../projects`, { relative: 'route' })}
               style={{
                 backgroundColor: theme.colors.surface,
@@ -472,7 +473,7 @@ export default function TasksPage() {
   return (
     <div className="h-full w-full p-6" style={{ backgroundColor: theme.colors.background }}>
       <div className="mb-6">
-          <Button
+        <Button
           variant="outline"
           onClick={() => navigate(`../projects`, { relative: 'route' })}
           className="mb-4"
@@ -503,9 +504,8 @@ export default function TasksPage() {
             <div className="flex items-center gap-1 p-1 rounded-lg" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'list' ? 'bg-primary text-white' : ''
-                }`}
+                className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : ''
+                  }`}
                 style={
                   viewMode === 'list'
                     ? { backgroundColor: theme.colors.primary, color: 'white' }
@@ -517,9 +517,8 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'kanban' ? 'bg-primary text-white' : ''
-                }`}
+                className={`p-1.5 rounded transition-colors ${viewMode === 'kanban' ? 'bg-primary text-white' : ''
+                  }`}
                 style={
                   viewMode === 'kanban'
                     ? { backgroundColor: theme.colors.primary, color: 'white' }
@@ -531,9 +530,8 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={() => setViewMode('gantt')}
-                className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'gantt' ? 'bg-primary text-white' : ''
-                }`}
+                className={`p-1.5 rounded transition-colors ${viewMode === 'gantt' ? 'bg-primary text-white' : ''
+                  }`}
                 style={
                   viewMode === 'gantt'
                     ? { backgroundColor: theme.colors.primary, color: 'white' }
@@ -545,9 +543,8 @@ export default function TasksPage() {
               </button>
               <button
                 onClick={() => setViewMode('calendar')}
-                className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'calendar' ? 'bg-primary text-white' : ''
-                }`}
+                className={`p-1.5 rounded transition-colors ${viewMode === 'calendar' ? 'bg-primary text-white' : ''
+                  }`}
                 style={
                   viewMode === 'calendar'
                     ? { backgroundColor: theme.colors.primary, color: 'white' }
@@ -558,7 +555,7 @@ export default function TasksPage() {
                 <CalendarIcon className="h-4 w-4" />
               </button>
             </div>
-            <Button 
+            <Button
               onClick={() => {
                 if (!projectId) {
                   toast.error('Project ID is missing. Please navigate to a project first.');
@@ -737,8 +734,8 @@ export default function TasksPage() {
       ) : (
         <div className="space-y-4">
           {tasks?.map((task) => (
-            <Card 
-              key={task.id} 
+            <Card
+              key={task.id}
               className="hover:shadow-md transition-shadow cursor-pointer"
               style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
               onMouseEnter={(e) => {
@@ -894,130 +891,130 @@ export default function TasksPage() {
       {projectId && (
         <Modal
           isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          setTaskForm({
-            title: '',
-            description: '',
-            status: TaskStatus.TODO,
-            priority: TaskPriority.MEDIUM,
-            assignee_id: '',
-            due_date: '',
-            tags: [],
-          });
-        }}
-        title="Create New Task"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Task Title *</label>
-            <Input
-              value={taskForm.title}
-              onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-              placeholder="Enter task title"
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Description</label>
-            <Textarea
-              value={taskForm.description}
-              onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-              placeholder="Enter task description"
-              rows={4}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+          onClose={() => {
+            setShowCreateModal(false);
+            setTaskForm({
+              title: '',
+              description: '',
+              status: TaskStatus.TODO,
+              priority: TaskPriority.MEDIUM,
+              assignee_id: '',
+              due_date: '',
+              tags: [],
+            });
+          }}
+          title="Create New Task"
+        >
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Status</label>
-              <Select
-                value={taskForm.status}
-                onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value as TaskStatus })}
-                options={[
-                  { value: TaskStatus.TODO, label: 'To Do' },
-                  { value: TaskStatus.IN_PROGRESS, label: 'In Progress' },
-                  { value: TaskStatus.IN_REVIEW, label: 'In Review' },
-                  { value: TaskStatus.DONE, label: 'Done' },
-                ]}
-                theme={theme}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Priority</label>
-              <Select
-                value={taskForm.priority}
-                onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as TaskPriority })}
-                options={[
-                  { value: TaskPriority.LOW, label: 'Low' },
-                  { value: TaskPriority.MEDIUM, label: 'Medium' },
-                  { value: TaskPriority.HIGH, label: 'High' },
-                  { value: TaskPriority.URGENT, label: 'Urgent' },
-                ]}
-                theme={theme}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Assignee</label>
-              <Select
-                value={taskForm.assignee_id}
-                onChange={(e) => setTaskForm({ ...taskForm, assignee_id: e.target.value })}
-                options={[
-                  { value: '', label: 'Unassigned' },
-                  ...members.map((member: any) => ({
-                    value: member.user.id,
-                    label: `${member.user.first_name} ${member.user.last_name}`,
-                  })),
-                ]}
-                theme={theme}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Due Date</label>
+              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Task Title *</label>
               <Input
-                type="date"
-                value={taskForm.due_date}
-                onChange={(e) => {
-                  const selectedDate = e.target.value;
-                  const today = new Date().toISOString().split('T')[0];
-                  if (selectedDate && selectedDate < today) {
-                    toast.error('Due date cannot be in the past');
-                    return;
-                  }
-                  setTaskForm({ ...taskForm, due_date: selectedDate });
-                }}
-                min={new Date().toISOString().split('T')[0]}
+                value={taskForm.title}
+                onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                placeholder="Enter task title"
+                autoFocus
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Description</label>
+              <Textarea
+                value={taskForm.description}
+                onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                placeholder="Enter task description"
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Status</label>
+                <Select
+                  value={taskForm.status}
+                  onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value as TaskStatus })}
+                  options={[
+                    { value: TaskStatus.TODO, label: 'To Do' },
+                    { value: TaskStatus.IN_PROGRESS, label: 'In Progress' },
+                    { value: TaskStatus.IN_REVIEW, label: 'In Review' },
+                    { value: TaskStatus.DONE, label: 'Done' },
+                  ]}
+                  theme={theme}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Priority</label>
+                <Select
+                  value={taskForm.priority}
+                  onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as TaskPriority })}
+                  options={[
+                    { value: TaskPriority.LOW, label: 'Low' },
+                    { value: TaskPriority.MEDIUM, label: 'Medium' },
+                    { value: TaskPriority.HIGH, label: 'High' },
+                    { value: TaskPriority.URGENT, label: 'Urgent' },
+                  ]}
+                  theme={theme}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Assignee</label>
+                <Select
+                  value={taskForm.assignee_id}
+                  onChange={(e) => setTaskForm({ ...taskForm, assignee_id: e.target.value })}
+                  options={[
+                    { value: '', label: 'Unassigned' },
+                    ...members.map((member: any) => ({
+                      value: member.user.id,
+                      label: `${member.user.first_name} ${member.user.last_name}`,
+                    })),
+                  ]}
+                  theme={theme}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text }}>Due Date</label>
+                <Input
+                  type="date"
+                  value={taskForm.due_date}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    const today = new Date().toISOString().split('T')[0];
+                    if (selectedDate && selectedDate < today) {
+                      toast.error('Due date cannot be in the past');
+                      return;
+                    }
+                    setTaskForm({ ...taskForm, due_date: selectedDate });
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setTaskForm({
+                    title: '',
+                    description: '',
+                    status: TaskStatus.TODO,
+                    priority: TaskPriority.MEDIUM,
+                    assignee_id: '',
+                    due_date: '',
+                    tags: [],
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateTask}
+                disabled={!taskForm.title.trim() || createTaskMutation.isPending}
+                isLoading={createTaskMutation.isPending}
+              >
+                Create
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCreateModal(false);
-                setTaskForm({
-                  title: '',
-                  description: '',
-                  status: TaskStatus.TODO,
-                  priority: TaskPriority.MEDIUM,
-                  assignee_id: '',
-                  due_date: '',
-                  tags: [],
-                });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateTask}
-              disabled={!taskForm.title.trim() || createTaskMutation.isPending}
-              isLoading={createTaskMutation.isPending}
-            >
-              Create
-            </Button>
-          </div>
-        </div>
         </Modal>
       )}
 

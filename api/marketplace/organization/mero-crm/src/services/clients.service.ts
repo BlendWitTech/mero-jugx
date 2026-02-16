@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
-import { CrmClient } from '../../../../src/database/entities/crm_clients.entity';
+import { CrmClient } from '@src/database/entities/crm_clients.entity';
 import { CreateClientDto, UpdateClientDto } from '../dto/client.dto';
 
 @Injectable()

@@ -16,6 +16,7 @@ import { CreateAppInvitationDto } from './dto/create-app-invitation.dto';
 import { AcceptAppInvitationDto } from './dto/accept-app-invitation.dto';
 import { NotificationHelperService, NotificationType } from '../notifications/notification-helper.service';
 import { AppAccessService } from './app-access.service';
+import { EmailService } from '../common/services/email.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -33,7 +34,8 @@ export class AppInvitationService {
     private userRepository: Repository<User>,
     private notificationHelper: NotificationHelperService,
     private appAccessService: AppAccessService,
-  ) {}
+    private emailService: EmailService,
+  ) { }
 
   /**
    * Create an app invitation for an existing organization member
@@ -52,7 +54,7 @@ export class AppInvitationService {
       throw new NotFoundException('App not found');
     }
 
-    // Verify user is a member of the organization
+    // Verify inviter is a member of the organization
     const inviterMember = await this.memberRepository.findOne({
       where: {
         user_id: userId,
@@ -65,23 +67,74 @@ export class AppInvitationService {
       throw new ForbiddenException('You are not a member of this organization');
     }
 
-    // Verify target user is a member of the organization
-    const targetMember = await this.memberRepository.findOne({
-      where: {
-        user_id: dto.user_id,
-        organization_id: organizationId,
-        status: OrganizationMemberStatus.ACTIVE,
-      },
-      relations: ['user'],
-    });
+    // Validate role_id if provided
+    if (dto.role_id) {
+      const role = await this.memberRepository.manager.getRepository('Role').findOne({
+        where: {
+          id: dto.role_id,
+          organization_id: organizationId,
+          app_id: dto.app_id,
+          is_active: true
+        },
+      }) as any;
 
-    if (!targetMember) {
-      throw new NotFoundException('User is not a member of this organization');
+      if (!role) {
+        throw new BadRequestException('Invalid role for this app and organization');
+      }
+    }
+
+    let targetUserId = dto.user_id;
+    let targetEmail = dto.email;
+    let targetMember = null;
+    let targetUser = null;
+
+    // Resolve target user - MUST be an active organization member
+    if (targetUserId) {
+      targetMember = await this.memberRepository.findOne({
+        where: {
+          user_id: targetUserId,
+          organization_id: organizationId,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+        relations: ['user'],
+      });
+
+      if (!targetMember) {
+        throw new NotFoundException('User is not an active member of this organization. Only active organization members can be invited to apps.');
+      }
+      targetUser = targetMember.user;
+      targetEmail = targetUser.email;
+    } else if (targetEmail) {
+      // Find user by email
+      targetUser = await this.userRepository.findOne({
+        where: { email: targetEmail },
+      });
+
+      if (!targetUser) {
+        throw new NotFoundException('User with this email not found. App invitations can only be sent to existing Mero Jugx users who are active members of your organization.');
+      }
+
+      targetUserId = targetUser.id;
+
+      // Check if they are an active member in the organization
+      targetMember = await this.memberRepository.findOne({
+        where: {
+          user_id: targetUserId,
+          organization_id: organizationId,
+          status: OrganizationMemberStatus.ACTIVE,
+        },
+      });
+
+      if (!targetMember) {
+        throw new ForbiddenException('The user is not an active member of this organization. Please invite them to the organization first.');
+      }
+    } else {
+      throw new BadRequestException('Either user_id or email must be provided');
     }
 
     // Check if user already has access to this app
     const existingAccess = await this.appAccessService.hasAccess(
-      dto.user_id,
+      targetUserId,
       organizationId,
       dto.app_id,
     );
@@ -95,14 +148,13 @@ export class AppInvitationService {
       where: {
         organization_id: organizationId,
         app_id: dto.app_id,
-        user_id: dto.user_id,
+        user_id: targetUserId,
         status: AppInvitationStatus.PENDING,
       },
     });
 
     if (existingInvitation) {
       if (existingInvitation.isExpired()) {
-        // Mark as expired and create new one
         existingInvitation.status = AppInvitationStatus.EXPIRED;
         await this.invitationRepository.save(existingInvitation);
       } else {
@@ -113,29 +165,32 @@ export class AppInvitationService {
     // Create invitation
     const token = crypto.randomUUID();
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
     const invitation = this.invitationRepository.create({
       organization_id: organizationId,
       app_id: dto.app_id,
-      user_id: dto.user_id,
+      user_id: targetUserId,
+      email: targetEmail,
       member_id: targetMember.id,
       invited_by: userId,
       token,
       status: AppInvitationStatus.PENDING,
       expires_at: expiresAt,
       message: dto.message || null,
+      role_id: dto.role_id || null,
     });
 
     const savedInvitation = await this.invitationRepository.save(invitation);
 
-    // Send notification to the invited user
+    // Get inviter info
     const inviter = await this.userRepository.findOne({ where: { id: userId } });
     const inviterName = inviter ? `${inviter.first_name} ${inviter.last_name}` : 'Someone';
     const organization = await this.organizationRepository.findOne({ where: { id: organizationId } });
 
+    // 1. Send dashboard notification
     await this.notificationHelper.createNotification(
-      dto.user_id,
+      targetUserId,
       organizationId,
       NotificationType.APP_INVITATION,
       `Invitation to ${app.name}`,
@@ -155,8 +210,18 @@ export class AppInvitationService {
       },
     );
 
+    // 2. Send email invitation
+    await this.emailService.sendInvitationEmail(
+      targetEmail,
+      inviterName,
+      organization?.name || 'Mero Jugx',
+      savedInvitation.token,
+      false, // user already exists
+    );
+
     return savedInvitation;
   }
+
 
   /**
    * Get invitations for a user
@@ -179,10 +244,10 @@ export class AppInvitationService {
     }
 
     const invitations = await this.invitationRepository.find({
-      where: {
-        user_id: userId,
-        organization_id: organizationId,
-      },
+      where: [
+        { user_id: userId, organization_id: organizationId },
+        { email: member.user.email, organization_id: organizationId },
+      ],
       relations: ['app', 'organization', 'inviter'],
       order: { created_at: 'DESC' },
     });
@@ -213,7 +278,19 @@ export class AppInvitationService {
       throw new NotFoundException('Invitation not found');
     }
 
-    if (invitation.user_id !== userId) {
+    if (invitation.user_id && invitation.user_id !== userId) {
+      throw new ForbiddenException('This invitation is not for you');
+    }
+
+    if (!invitation.user_id && invitation.email) {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user || user.email !== invitation.email) {
+        throw new ForbiddenException('This invitation is not for you');
+      }
+      // Link the user if they match by email
+      invitation.user_id = userId;
+      await this.invitationRepository.save(invitation);
+    } else if (invitation.user_id && invitation.user_id !== userId) {
       throw new ForbiddenException('This invitation is not for you');
     }
 
@@ -237,7 +314,19 @@ export class AppInvitationService {
       throw new NotFoundException('Invitation not found');
     }
 
-    if (invitation.user_id !== userId) {
+    if (invitation.user_id && invitation.user_id !== userId) {
+      throw new ForbiddenException('This invitation is not for you');
+    }
+
+    if (!invitation.user_id && invitation.email) {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user || user.email !== invitation.email) {
+        throw new ForbiddenException('This invitation is not for you');
+      }
+      // Link user
+      invitation.user_id = userId;
+      await this.invitationRepository.save(invitation);
+    } else if (invitation.user_id && invitation.user_id !== userId) {
       throw new ForbiddenException('This invitation is not for you');
     }
 
@@ -258,6 +347,7 @@ export class AppInvitationService {
       {
         user_id: userId,
         app_id: invitation.app_id,
+        role_id: invitation.role_id || undefined,
       },
     );
 
@@ -284,7 +374,19 @@ export class AppInvitationService {
       throw new NotFoundException('Invitation not found');
     }
 
-    if (invitation.user_id !== userId) {
+    if (invitation.user_id && invitation.user_id !== userId) {
+      throw new ForbiddenException('This invitation is not for you');
+    }
+
+    if (!invitation.user_id && invitation.email) {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user || user.email !== invitation.email) {
+        throw new ForbiddenException('This invitation is not for you');
+      }
+      // Link user
+      invitation.user_id = userId;
+      await this.invitationRepository.save(invitation);
+    } else if (invitation.user_id && invitation.user_id !== userId) {
       throw new ForbiddenException('This invitation is not for you');
     }
 

@@ -110,7 +110,7 @@ class ChatService {
   connect(organizationId: string, token: string): Socket {
     // Reuse existing socket if it's connected
     if (this.socket?.connected) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.log('[ChatService] Reusing existing socket connection, socket ID:', this.socket.id);
       }
       return this.socket;
@@ -118,7 +118,7 @@ class ChatService {
 
     // If socket exists but not connected, wait for reconnection instead of creating new one
     if (this.socket && !this.socket.connected) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.log('[ChatService] Socket exists but not connected, will reconnect automatically');
       }
       // Return existing socket - socket.io will handle reconnection
@@ -143,7 +143,7 @@ class ChatService {
       socketUrl = 'http://localhost:3000';
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.MODE === 'development') {
       logger.log('[ChatService] Connecting to socket:', `${socketUrl}/chat`);
     }
 
@@ -169,23 +169,23 @@ class ChatService {
 
     // Add connection event listeners for debugging (only in development)
     this.socket.on('connect', () => {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.log('[ChatService] Socket connected to chat namespace, socket ID:', this.socket?.id);
       }
     });
 
     this.socket.on('connect_error', (error) => {
       // Only log connection errors in development
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.error('[ChatService] Connection error:', error);
       }
     });
 
     this.socket.on('disconnect', (reason) => {
       // Only log disconnects in development (unless it's an error)
-      if (process.env.NODE_ENV === 'development' || reason === 'io server disconnect') {
+      if (import.meta.env.MODE === 'development' || reason === 'io server disconnect') {
         // Suppress "io server disconnect" logs - this is expected behavior
-        if (process.env.NODE_ENV === 'development' && reason !== 'io server disconnect') {
+        if (import.meta.env.MODE === 'development' && reason !== 'io server disconnect') {
           logger.log('[ChatService] Socket disconnected:', reason);
         }
       }
@@ -200,7 +200,7 @@ class ChatService {
   disconnect() {
     // Only disconnect if explicitly called (e.g., on logout)
     if (this.socket) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.log('[ChatService] Disconnecting socket');
       }
       this.socket.disconnect();
@@ -254,7 +254,7 @@ class ChatService {
         };
       }
       // Only log unexpected errors in development
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.error('[ChatService] Error fetching chats:', error);
       }
       // Re-throw other errors

@@ -15,6 +15,7 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
+  mfa_enabled?: boolean;
 }
 
 interface AuthState {

@@ -52,7 +52,7 @@ export class TicketsService {
     private featureRepository: Repository<PackageFeature>,
     @InjectRepository(OrganizationPackageFeature)
     private orgFeatureRepository: Repository<OrganizationPackageFeature>,
-  ) {}
+  ) { }
 
   async hasTicketAccess(organizationId: string): Promise<boolean> {
     try {
@@ -168,6 +168,7 @@ export class TicketsService {
       attachment_urls: dto.attachment_urls ?? null,
       estimated_time_minutes: dto.estimated_time_minutes ?? null,
       due_date: dto.due_date ? new Date(dto.due_date) : null,
+      project_id: dto.projectId ?? null,
     });
 
     const savedTicket = await this.ticketRepository.save(ticket);
@@ -248,6 +249,10 @@ export class TicketsService {
         qb.andWhere('ticket.assignee_id = :assigneeId', { assigneeId: query.assignee_id });
       }
 
+      if (query.projectId) {
+        qb.andWhere('ticket.project_id = :projectId', { projectId: query.projectId });
+      }
+
       if (query.search) {
         qb.andWhere('(ticket.title ILIKE :search OR ticket.description ILIKE :search)', {
           search: `%${query.search}%`,
@@ -258,7 +263,7 @@ export class TicketsService {
       // Handle both number and string inputs (query params come as strings)
       const pageNum = typeof query.page === 'string' ? parseInt(query.page, 10) : query.page;
       const limitNum = typeof query.limit === 'string' ? parseInt(query.limit, 10) : query.limit;
-      
+
       const page = pageNum && !isNaN(pageNum) && pageNum > 0 ? pageNum : 1;
       const limit = limitNum && !isNaN(limitNum) && limitNum > 0 ? (limitNum > 100 ? 100 : limitNum) : 20;
 
@@ -277,7 +282,7 @@ export class TicketsService {
         .skip((page - 1) * limit)
         .take(limit)
         .getManyAndCount();
-      
+
       this.logger.debug(`Found ${tickets.length} tickets (total: ${total}) for organization ${organizationId}`);
 
       return { tickets, total, page, limit };
@@ -292,7 +297,7 @@ export class TicketsService {
         error.stack,
       );
       this.logger.error('Query parameters:', { userId, organizationId, query });
-      
+
       // Include the actual error message in the response for debugging
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException(`Failed to retrieve tickets: ${errorMessage}`);
@@ -358,7 +363,7 @@ export class TicketsService {
 
     if (dto.title !== undefined) ticket.title = dto.title;
     if (dto.description !== undefined) ticket.description = dto.description;
-    
+
     if (dto.status !== undefined && dto.status !== oldStatus) {
       ticket.status = dto.status;
       // Create activity for status change
@@ -370,7 +375,7 @@ export class TicketsService {
       // If status changed to resolved/closed, set completed_at and check if on time
       if ((dto.status === TicketStatus.RESOLVED || dto.status === TicketStatus.CLOSED) && !ticket.completed_at) {
         ticket.completed_at = new Date();
-        
+
         // Check if completed on time
         if (ticket.due_date) {
           const isOnTime = new Date(ticket.completed_at) <= new Date(ticket.due_date);
@@ -391,7 +396,7 @@ export class TicketsService {
         }
       }
     }
-    
+
     if (dto.priority !== undefined && dto.priority !== oldPriority) {
       ticket.priority = dto.priority;
       // Create activity for priority change
@@ -400,7 +405,7 @@ export class TicketsService {
         new_priority: dto.priority,
       });
     }
-    
+
     if (dto.tags !== undefined) ticket.tags = dto.tags;
     if (dto.attachment_urls !== undefined) ticket.attachment_urls = dto.attachment_urls;
 
@@ -432,7 +437,7 @@ export class TicketsService {
       ticket.transferred_to_user_id = newAssigneeId;
       ticket.transferred_at = new Date();
       ticket.assignee_id = newAssigneeId;
-      
+
       // Create activity for transfer
       await this.createActivity(ticket.id, userId, TicketActivityType.TRANSFERRED, {
         from_user_id: ticket.transferred_from_user_id,
@@ -587,7 +592,6 @@ export class TicketsService {
     // Update ticket with board information
     ticket.board_app_id = dto.app_id;
     ticket.board_id = dto.board_id || null;
-    ticket.board_card_id = null; // Will be set when card is created in the board
 
     if (dto.assignee_id) {
       ticket.assignee_id = dto.assignee_id;
@@ -595,5 +599,36 @@ export class TicketsService {
 
     return this.ticketRepository.save(ticket);
   }
+  async moveTicket(
+    userId: string,
+    organizationId: string,
+    ticketId: string,
+    targetBoardId: string,
+    targetColumnId: string,
+    newPosition: number,
+  ) {
+    const member = await this.ensureMembership(userId, organizationId);
+    const ticket = await this.findOne(userId, organizationId, ticketId); // Ensuring access & existence
+
+    this.ensureUpdatePermission(ticket, member);
+
+    // Validate target board and column exist in org
+    // Note: You might want to inject BoardsService or BoardColumnsService here, 
+    // or just assume for now and let FK constraints handle it, but better to validate if possible.
+    // For now, we trust the input or simple update.
+
+    ticket.board_id = targetBoardId;
+    ticket.column_id = targetColumnId;
+    ticket.position = newPosition;
+
+    // Logic to shift other tickets' positions in the target column would go here
+    // For MVP, we just set the position. 
+    // detailed reordering logic is usually handled by frontend sending updated positions for affected items 
+    // or backend bulk update.
+
+    return this.ticketRepository.save(ticket);
+  }
+
+  // ... existing methods ...
 }
 

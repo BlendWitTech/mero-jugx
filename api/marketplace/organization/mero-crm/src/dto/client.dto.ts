@@ -26,6 +26,31 @@ export class CreateClientDto {
     @IsOptional()
     address?: string;
 
+    @ApiPropertyOptional({ example: 'Twitter' })
+    @IsString()
+    @IsOptional()
+    company?: string;
+
+    @ApiPropertyOptional({ example: 'Kathmandu' })
+    @IsString()
+    @IsOptional()
+    city?: string;
+
+    @ApiPropertyOptional({ example: 'Bagmati' })
+    @IsString()
+    @IsOptional()
+    state?: string;
+
+    @ApiPropertyOptional({ example: '44600' })
+    @IsString()
+    @IsOptional()
+    zipCode?: string;
+
+    @ApiPropertyOptional({ example: 'Some notes' })
+    @IsString()
+    @IsOptional()
+    notes?: string;
+
     @ApiPropertyOptional({ example: 'user-id-here' })
     @IsString()
     @IsOptional()
@@ -57,6 +82,31 @@ export class UpdateClientDto {
     @IsString()
     @IsOptional()
     address?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    company?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    city?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    state?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    zipCode?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    notes?: string;
 
     @ApiPropertyOptional()
     @IsString()

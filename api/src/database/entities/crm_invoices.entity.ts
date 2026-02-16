@@ -165,4 +165,10 @@ export class CrmInvoiceItem {
 
     @Column({ type: 'decimal', precision: 12, scale: 2 })
     total: number;
+
+    @Column({ name: 'product_id', nullable: true })
+    productId: string;
+
+    // We can add relation if needed, but soft link via ID is enough for now to avoid cross-module entity dependency issues if strict.
+    // However, Product entity is in Inventory module.
 }

@@ -27,6 +27,9 @@ export class CrmClient {
     name: string;
 
     @Column({ nullable: true })
+    company: string;
+
+    @Column({ nullable: true })
     phone: string;
 
     @Column({ nullable: true })
@@ -34,6 +37,18 @@ export class CrmClient {
 
     @Column({ nullable: true, type: 'text' })
     address: string;
+
+    @Column({ nullable: true })
+    city: string;
+
+    @Column({ nullable: true })
+    state: string;
+
+    @Column({ nullable: true })
+    zip_code: string;
+
+    @Column({ nullable: true, type: 'text' })
+    notes: string;
 
     @Column({ nullable: true })
     email: string;

@@ -21,6 +21,9 @@ import {
 } from '@nestjs/swagger';
 import { TaskService } from '../services/task.service';
 import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { AppAccessGuard } from '../../../../src/common/guards/app-access.guard';
+import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
+import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateTaskDto } from '../dto/create-task.dto';
@@ -34,12 +37,13 @@ import { UpdateTaskTimeLogDto } from '../dto/update-task-time-log.dto';
 
 @ApiTags('mero-board-tasks')
 @Controller('apps/:appSlug/projects/:projectId/tasks')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AppAccessGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class TaskController {
-  constructor(private readonly taskService: TaskService) {}
+  constructor(private readonly taskService: TaskService) { }
 
   @Post()
+  @Permissions('board.tasks.manage')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new task' })
   @ApiResponse({ status: 201, description: 'Task created successfully' })
@@ -62,6 +66,7 @@ export class TaskController {
   }
 
   @Get()
+  @Permissions('board.tasks.view')
   @ApiOperation({ summary: 'Get all tasks for a project' })
   @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })
@@ -104,6 +109,7 @@ export class TaskController {
   }
 
   @Get(':taskId')
+  @Permissions('board.tasks.view')
   @ApiOperation({ summary: 'Get a specific task' })
   @ApiResponse({ status: 200, description: 'Task retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Task not found' })
@@ -126,6 +132,7 @@ export class TaskController {
   }
 
   @Put(':taskId')
+  @Permissions('board.tasks.manage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a task' })
   @ApiResponse({ status: 200, description: 'Task updated successfully' })
@@ -151,6 +158,7 @@ export class TaskController {
   }
 
   @Delete(':taskId')
+  @Permissions('board.tasks.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a task' })
   @ApiResponse({ status: 204, description: 'Task deleted successfully' })

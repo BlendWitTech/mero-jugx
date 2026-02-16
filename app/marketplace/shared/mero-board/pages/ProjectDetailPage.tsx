@@ -76,7 +76,7 @@ export default function ProjectDetailPage() {
       <div className="mb-6">
         <Button
           variant="outline"
-          onClick={() => navigate(`../projects`, { relative: 'route' })}
+          onClick={() => navigate('..', { relative: 'path' })}
           className="mb-4"
           style={{
             borderColor: theme.colors.border,
@@ -103,7 +103,29 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate(`boards`, { relative: 'route' })}
+          style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = theme.colors.border;
+          }}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2" style={{ color: theme.colors.text }}>
+              <FolderKanban className="h-5 w-5" />
+              Boards
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Manage project boards</p>
+          </CardContent>
+        </Card>
+
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow"
           onClick={() => navigate(`tasks`, { relative: 'route' })}

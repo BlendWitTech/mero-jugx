@@ -22,6 +22,9 @@ export interface RegisterOrganizationData {
   owner_last_name: string;
   is_existing_user?: boolean;
   package_id?: number;
+  timezone: string;
+  currency: string;
+  language: string;
 }
 
 export interface LoginResponse {

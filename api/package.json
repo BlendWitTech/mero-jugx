@@ -23,7 +23,7 @@
     "start": "node scripts/run-script.js start",
     "start:dev": "node scripts/run-script.js start-dev",
     "start:prod": "node scripts/run-script.js start-prod",
-    "build": "node scripts/run-script.js build",
+    "build": "nest build",
     "build:backend": "nest build",
     "build:frontend": "cd frontend && npm run build",
     "test": "node scripts/run-script.js test",
@@ -133,7 +133,8 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "webpack-node-externals": "^3.0.0"
   },
   "jest": {
     "moduleFileExtensions": [

@@ -13,7 +13,9 @@ The foundation that powers the entire ecosystem.
 *   **Authentication (`auth`)**: JWT Login, Registration, and **2FA/MFA** (Google Authenticator).
 *   **User Management (`users`)**: Profiles, Avatars, and Security Settings.
 *   **Organization Hub (`organizations`)**: Multi-tenancy support with branding (Logo, Colors, Custom CSS/JS).
-*   **Roles & Permissions (`roles`, `permissions`)**: Granular RBAC with Custom Roles.
+*   **Roles & Permissions (`roles`, `permissions`)**: Granular RBAC with Custom Roles and **App-Specific Permissions**.
+*   **App Access Control (`apps`)**: Manage user access to marketplace apps with role-based permissions.
+*   **Invitations (`app-invitations`)**: Email-based invitation system for app access.
 *   **Notifications (`notifications`)**: Real-time System Alerts and Email/SMS gateways.
 *   **Audit Logs (`audit-logs`)**: Security trail for compliance.
 
@@ -39,7 +41,10 @@ The foundation that powers the entire ecosystem.
 *   **Payments**: Record payments against invoices (`crm_payments`).
 
 ### 5. Marketplace (`/api/src/marketplace`)
-*   **Apps Module**: Enable/Disable features per organization.
+*   **Apps Module**: Enable/Disable features per organization with granular access control.
+*   **App Access Control**: User-level permissions for each marketplace app (CRM, Inventory, Board).
+*   **Role-Based Access**: App-specific roles (e.g., CRM Admin, CRM Sales Rep, Inventory Manager).
+*   **Email Invitations**: Invite external users to specific apps with predefined roles.
 *   **Billing**: Subscription management for the Platform itself (`billing`, `invoices`).
 
 ---
@@ -61,44 +66,31 @@ The foundation that powers the entire ecosystem.
 ## ⚡ Quick Start
 
 ### 1. Prerequisites
-*   **Docker Desktop** (Required for DB & Redis).
 *   **Node.js v18+**.
+*   **Docker Desktop** (Recommended).
 
-### 2. Installation
-The project includes a root automation script.
+### 2. Interactive Setup
+Run the setup wizard to install dependencies and configure your environment (Docker or Manual).
 
 ```bash
-# Clone
-git clone https://github.com/BlendwitTech/mero-jugx.git
-cd mero-jugx
-
-# Install All Dependencies
-npm install
-cd api && npm install
-cd ../app && npm install
+npm run setup
 ```
 
-### 3. Start Infrastructure
-Start PostgreSQL and Redis in the background.
+### 3. Initialize Database
+Initialize the schema and seed default data.
+
 ```bash
-# From root directory
-npm run docker:up
+npm run db:init
 ```
 
-### 4. Run Development Servers
-**Backend**:
-```bash
-cd api
-npm run start:dev
-# Running on http://localhost:3000
-```
+### 4. Start the Application
+Use the interactive launcher to start the backend, frontend, or microservices.
 
-**Frontend**:
 ```bash
-cd app
-npm run dev
-# Running on http://localhost:3001 (or 5173)
+npm start
 ```
+*   Select **Development** -> **Full Stack** to run everything.
+*   Access the App at `http://localhost:3001` and Backend at `http://localhost:3000`.
 
 ---
 
@@ -125,7 +117,8 @@ mero-jugx/
 
 ## 📖 Documentation Index
 
-*   [**Setup Guide**](./SETUP.md): Detailed installation & troubleshooting.
-*   [**Database Reference**](./DATABASE.md): Full schema breakdown.
-*   [**Architecture**](./ARCHITECTURE.md): System design patterns.
-*   [**Deployment**](./DEPLOYMENT.md): Production guide.
+*   [**Setup Guide**](SETUP.md): Detailed installation & troubleshooting.
+*   [**Scripts Reference**](SCRIPTS.md): How to use the CLI tools.
+*   [**Architecture**](ARCHITECTURE.md): System design patterns.
+*   [**Database Reference**](DATABASE.md): Full schema breakdown.
+*   [**Deployment**](DEPLOYMENT.md): Production guide.

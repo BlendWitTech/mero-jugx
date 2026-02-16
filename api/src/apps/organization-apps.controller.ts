@@ -34,6 +34,7 @@ import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import { SubscriptionQueryDto } from './dto/subscription-query.dto';
 import { GrantAppAccessDto } from './dto/grant-app-access.dto';
 import { RevokeAppAccessDto } from './dto/revoke-app-access.dto';
+import { UpdateAppAccessDto } from './dto/update-app-access.dto';
 
 @ApiTags('organization-apps')
 @Controller('organizations/:orgId/apps')
@@ -237,6 +238,66 @@ export class OrganizationAppsController {
     return {
       success: true,
       message: 'App access revoked successfully',
+    };
+  }
+
+  @Put(':appId/access/:userId/role')
+  @Permissions('apps.manage')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update user role for app access' })
+  @ApiParam({ name: 'orgId', description: 'Organization ID' })
+  @ApiParam({ name: 'appId', description: 'App ID' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'User role updated successfully' })
+  async updateUserRole(
+    @CurrentUser() user: any,
+    @Param('orgId') orgId: string,
+    @Param('appId', ParseIntPipe) appId: number,
+    @Param('userId') userId: string,
+    @Body('role_id', ParseIntPipe) roleId: number,
+    @Headers('origin') origin?: string,
+  ) {
+    const access = await this.appAccessService.grantAccess(user.userId, orgId, {
+      user_id: userId,
+      app_id: appId,
+      role_id: roleId,
+    }, origin);
+
+    return {
+      success: true,
+      message: 'User role updated successfully',
+      data: access,
+    };
+  }
+
+  @Put(':appId/access')
+  @Permissions('apps.manage')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update app access role for a user' })
+  @ApiParam({ name: 'orgId', description: 'Organization ID' })
+  @ApiParam({ name: 'appId', description: 'App ID' })
+  @ApiResponse({ status: 200, description: 'App access updated successfully' })
+  async updateAppAccess(
+    @CurrentUser() user: any,
+    @Param('orgId') orgId: string,
+    @Param('appId', ParseIntPipe) appId: number,
+    @Body() dto: UpdateAppAccessDto,
+    @Headers('origin') origin?: string,
+  ) {
+    if (dto.app_id !== appId) {
+      throw new BadRequestException('App ID mismatch');
+    }
+    // Grant access handles updates if user already has access
+    const access = await this.appAccessService.grantAccess(user.userId, orgId, {
+      user_id: dto.user_id,
+      app_id: dto.app_id,
+      role_id: dto.role_id,
+    }, origin);
+
+    return {
+      success: true,
+      message: 'App access updated successfully',
+      data: access,
     };
   }
 

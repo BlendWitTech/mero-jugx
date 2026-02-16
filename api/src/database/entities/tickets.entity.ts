@@ -15,6 +15,9 @@ import { Chat } from './chats.entity';
 import { Message } from './messages.entity';
 import { TicketComment } from './ticket_comments.entity';
 import { App } from './apps.entity';
+import { Board } from './boards.entity';
+import { BoardColumn } from './board_columns.entity';
+import { BoardProject } from './board_projects.entity';
 
 export enum TicketStatus {
   OPEN = 'open',
@@ -109,11 +112,29 @@ export class Ticket {
   @JoinColumn({ name: 'board_app_id' })
   board_app: App | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  board_id: string | null; // Board ID within the app
+  @Column({ type: 'uuid', nullable: true })
+  board_id: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  board_card_id: string | null; // Card ID within the board
+  @ManyToOne(() => Board, (board) => board.tickets, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'board_id' })
+  board: Board | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  column_id: string | null;
+
+  @ManyToOne(() => BoardColumn, (column) => column.tickets, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'column_id' })
+  column: BoardColumn | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  project_id: string | null;
+
+  @ManyToOne(() => BoardProject, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'project_id' })
+  project: BoardProject | null;
+
+  @Column({ type: 'int', default: 0 })
+  position: number;
 
   // Time tracking fields
   @Column({ type: 'int', nullable: true })

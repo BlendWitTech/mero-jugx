@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsModule } from '../../../src/notifications/notifications.module';
+import { CommonModule } from '../../../src/common/common.module';
 import { Workspace } from './entities/workspace.entity';
 import { WorkspaceMember } from './entities/workspace-member.entity';
 import { TaskComment } from './entities/task-comment.entity';
@@ -34,6 +35,7 @@ import { EpicController } from './controllers/epic.controller';
 @Module({
   imports: [
     NotificationsModule,
+    CommonModule,
     TypeOrmModule.forFeature([
       Workspace,
       WorkspaceMember,

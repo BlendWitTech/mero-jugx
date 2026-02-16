@@ -26,7 +26,7 @@ export class AppSessionGuard implements CanActivate {
     private configService: ConfigService,
     private mfaService: MfaService,
     private authService: AuthService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -36,65 +36,72 @@ export class AppSessionGuard implements CanActivate {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // JWT strategy returns userId, but some places use id - check both
-    const userId = user.id || user.userId;
-    if (!userId) {
-      throw new UnauthorizedException('User ID not found');
-    }
+    try {
+      // JWT strategy returns userId, but some places use id - check both
+      const userId = user.id || user.userId;
+      if (!userId) {
+        throw new UnauthorizedException('User ID not found');
+      }
 
-    // Allow presenting an app-session token to skip reauth within TTL
-    const appSessionToken = this.extractToken(request);
-    if (appSessionToken) {
-      try {
-        const payload = this.jwtService.verify(appSessionToken, {
-          secret: this.configService.get<string>('JWT_SECRET'),
-          audience: this.audience,
-        });
-        if (payload.sub === userId) {
-          return true;
+      // Allow presenting an app-session token to skip reauth within TTL
+      const appSessionToken = this.extractToken(request);
+      if (appSessionToken) {
+        try {
+          const payload = this.jwtService.verify(appSessionToken, {
+            secret: this.configService.get<string>('JWT_SECRET'),
+            audience: this.audience,
+          });
+          if (payload.sub === userId) {
+            return true;
+          }
+        } catch (_) {
+          // fallthrough to require reauth
         }
-      } catch (_) {
-        // fallthrough to require reauth
       }
-    }
 
-    // Expect password or MFA code in body
-    const body: any = request.body || {};
-    const password = body.password as string | undefined;
-    const mfaCode = body.mfa_code as string | undefined;
+      // Expect password or MFA code in body
+      const body: any = request.body || {};
+      const password = body.password as string | undefined;
+      const mfaCode = body.mfa_code as string | undefined;
 
-    if (!password && !mfaCode) {
-      throw new BadRequestException('Password or MFA code is required for app access');
-    }
-
-    // If MFA enabled, prefer MFA code; else password
-    const userEmail = user.email || (user.user && user.user.email);
-    
-    if (mfaCode) {
-      await this.mfaService.verifyCode(userId, mfaCode);
-    } else if (password) {
-      if (!userEmail) {
-        throw new BadRequestException('User email not found');
+      if (!password && !mfaCode) {
+        throw new BadRequestException('Password or MFA code is required for app access');
       }
-      const valid = await this.authService.verifyPassword(userEmail, password);
-      if (!valid) {
-        throw new UnauthorizedException('Invalid password');
+
+      // If MFA enabled, prefer MFA code; else password
+      // Safely access email with optional chaining
+      const userEmail = user.email || user.user?.email;
+
+      if (mfaCode) {
+        await this.mfaService.verifyCode(userId, mfaCode);
+      } else if (password) {
+        if (!userEmail) {
+          console.error('[AppSessionGuard] User email not found in request.user object', user);
+          throw new BadRequestException('User email not found');
+        }
+        const valid = await this.authService.verifyPassword(userEmail, password);
+        if (!valid) {
+          throw new UnauthorizedException('Invalid password');
+        }
       }
+
+      // Issue short-lived app-session token for reuse
+      const ttlMinutes = this.configService.get<number>('APP_SESSION_TTL_MINUTES', 15);
+      const token = this.jwtService.sign(
+        { sub: userId },
+        {
+          audience: this.audience,
+          expiresIn: `${ttlMinutes}m`,
+          secret: this.configService.get<string>('JWT_SECRET'),
+        },
+      );
+
+      (request as any).appSessionToken = token;
+      return true;
+    } catch (error) {
+      console.error('[AppSessionGuard] Error:', error);
+      throw error;
     }
-
-    // Issue short-lived app-session token for reuse
-    const ttlMinutes = this.configService.get<number>('APP_SESSION_TTL_MINUTES', 15);
-    const token = this.jwtService.sign(
-      { sub: userId },
-      {
-        audience: this.audience,
-        expiresIn: `${ttlMinutes}m`,
-        secret: this.configService.get<string>('JWT_SECRET'),
-      },
-    );
-
-    (request as any).appSessionToken = token;
-    return true;
   }
 
   private extractToken(request: Request): string | null {

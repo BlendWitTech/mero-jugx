@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CrmPayment } from '../../../../src/database/entities/crm_payments.entity';
-import { OrganizationMember } from '../../../../src/database/entities/organization_members.entity';
-import { Role } from '../../../../src/database/entities/roles.entity';
-import { AuditLogsModule } from '../../../../src/audit-logs/audit-logs.module';
+import { CrmPayment } from '@src/database/entities/crm_payments.entity';
+import { OrganizationMember } from '@src/database/entities/organization_members.entity';
+import { Role } from '@src/database/entities/roles.entity';
+import { AuditLogsModule } from '@audit-logs/audit-logs.module';
+import { CommonModule } from '@src/common/common.module';
 import { PaymentsController } from '../controllers/payments.controller';
 import { PaymentsService } from '../services/payments.service';
 import { InvoicesModule } from './invoices.module';
@@ -13,6 +14,7 @@ import { InvoicesModule } from './invoices.module';
         TypeOrmModule.forFeature([CrmPayment, OrganizationMember, Role]),
         InvoicesModule, // Import to access InvoicesService
         AuditLogsModule,
+        CommonModule,
     ],
     controllers: [PaymentsController],
     providers: [PaymentsService],

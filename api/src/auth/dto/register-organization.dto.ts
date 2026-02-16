@@ -52,6 +52,18 @@ export class RegisterOrganizationDto {
   @IsString()
   description?: string;
 
+  @ApiProperty({ description: 'Organization timezone', example: 'UTC' })
+  @IsString()
+  timezone: string;
+
+  @ApiProperty({ description: 'Organization currency', example: 'USD' })
+  @IsString()
+  currency: string;
+
+  @ApiProperty({ description: 'Organization language', example: 'en' })
+  @IsString()
+  language: string;
+
   // Owner details (if new user)
   @ApiProperty({
     description: 'Owner email (must be unique if new user)',

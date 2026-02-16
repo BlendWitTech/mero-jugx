@@ -67,4 +67,6 @@ echo "  - Frontend: http://localhost:3001 (if configured)"
 echo ""
 
 # Start the server
-npm run start:prod
+# Start the server
+cd api
+node dist/main

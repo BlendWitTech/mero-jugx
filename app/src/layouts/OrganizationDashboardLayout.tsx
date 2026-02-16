@@ -9,6 +9,7 @@ import {
   Mail,
   Shield,
   Package,
+  FolderKanban,
   Settings,
   LogOut,
   Menu,
@@ -517,14 +518,7 @@ export default function OrganizationDashboardLayout() {
                             } : {
                               backgroundColor: '#7289da', // Different color for minimized/open apps (lighter blue)
                               color: '#ffffff'
-                            }),
-                            ...(app.icon_url ? {
-                              backgroundImage: `url(${app.icon_url})`,
-                              backgroundSize: '75%',
-                              backgroundPosition: 'center',
-                              backgroundRepeat: 'no-repeat',
-                              padding: '10px'
-                            } : {})
+                            })
                           }}
                           onMouseEnter={(e) => {
                             if (!isActive) {
@@ -540,7 +534,22 @@ export default function OrganizationDashboardLayout() {
                           }}
                           title={isActive ? `Close ${app.name}` : app.name}
                         >
-                          {!app.icon_url && <span className="text-sm font-semibold">{initial}</span>}
+                          {(() => {
+                            if (app.icon_url === 'Users' || app.slug === 'mero-crm') return <Users className="w-6 h-6" />;
+                            if (app.icon_url === 'FolderKanban' || app.slug === 'mero-board') return <FolderKanban className="w-6 h-6" />;
+                            if (app.icon_url === 'Package' || app.slug === 'mero-inventory') return <Package className="w-6 h-6" />;
+
+                            return app.icon_url ? (
+                              <img
+                                src={app.icon_url}
+                                alt={app.name}
+                                className="w-8 h-8 object-contain"
+                              />
+                            ) : (
+                              <span className="text-sm font-semibold">{initial}</span>
+                            );
+                          })()}
+
                           {!isActive && (
                             <div
                               className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 rounded-r-full group-hover:h-5 transition-all duration-200"
@@ -593,14 +602,7 @@ export default function OrganizationDashboardLayout() {
                           } : {
                             backgroundColor: '#5865f2', // Theme-designed color for pinned apps (Discord-like blue)
                             color: '#ffffff'
-                          }),
-                          ...(app.icon_url ? {
-                            backgroundImage: `url(${app.icon_url})`,
-                            backgroundSize: '75%',
-                            backgroundPosition: 'center',
-                            backgroundRepeat: 'no-repeat',
-                            padding: '10px'
-                          } : {})
+                          })
                         }}
                         onMouseEnter={(e) => {
                           if (!isActive) {
@@ -616,7 +618,22 @@ export default function OrganizationDashboardLayout() {
                         }}
                         title={isActive ? `Close ${app.name}` : app.name}
                       >
-                        {!app.icon_url && <span className="text-sm font-semibold">{initial}</span>}
+                        {(() => {
+                          if (app.icon_url === 'Users' || app.slug === 'mero-crm') return <Users className="w-6 h-6" />;
+                          if (app.icon_url === 'FolderKanban' || app.slug === 'mero-board') return <FolderKanban className="w-6 h-6" />;
+                          if (app.icon_url === 'Package' || app.slug === 'mero-inventory') return <Package className="w-6 h-6" />;
+
+                          return app.icon_url ? (
+                            <img
+                              src={app.icon_url}
+                              alt={app.name}
+                              className="w-8 h-8 object-contain"
+                            />
+                          ) : (
+                            <span className="text-sm font-semibold">{initial}</span>
+                          );
+                        })()}
+
                         {!isActive && (
                           <div
                             className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 rounded-r-full group-hover:h-5 transition-all duration-200"
@@ -841,22 +858,50 @@ export default function OrganizationDashboardLayout() {
             theme={theme}
             isDark={isDark}
             onToggleTheme={toggleTheme}
-            sidebarCollapsed={isAppOpen && currentApp?.slug === 'mero-board'
-              ? (() => {
-                const saved = localStorage.getItem('mero-board-sidebar-collapsed');
-                return saved === 'true';
-              })()
-              : leftSidebarCollapsed}
-            onToggleSidebar={isAppOpen && currentApp?.slug === 'mero-board'
-              ? (() => {
-                const saved = localStorage.getItem('mero-board-sidebar-collapsed');
-                const newState = saved !== 'true';
-                localStorage.setItem('mero-board-sidebar-collapsed', String(newState));
-                window.dispatchEvent(new CustomEvent('mero-board-sidebar-toggle', { detail: { collapsed: newState } }));
-              })
-              : () => setLeftSidebarCollapsed(false)}
+            sidebarCollapsed={
+              (isAppOpen && currentApp?.slug === 'mero-board')
+                ? (() => {
+                  const saved = localStorage.getItem('mero-board-sidebar-collapsed');
+                  return saved === 'true';
+                })()
+                : (isAppOpen && currentApp?.slug === 'mero-crm')
+                  ? (() => {
+                    const saved = localStorage.getItem('mero-crm-sidebar-collapsed');
+                    return saved === 'true';
+                  })()
+                  : (isAppOpen && currentApp?.slug === 'mero-inventory')
+                    ? (() => {
+                      const saved = localStorage.getItem('mero-inventory-sidebar-collapsed');
+                      return saved === 'true';
+                    })()
+                    : leftSidebarCollapsed
+            }
+            onToggleSidebar={
+              (isAppOpen && currentApp?.slug === 'mero-board')
+                ? (() => {
+                  const saved = localStorage.getItem('mero-board-sidebar-collapsed');
+                  const newState = saved !== 'true';
+                  localStorage.setItem('mero-board-sidebar-collapsed', String(newState));
+                  window.dispatchEvent(new CustomEvent('mero-board-sidebar-toggle', { detail: { collapsed: newState } }));
+                })
+                : (isAppOpen && currentApp?.slug === 'mero-crm')
+                  ? (() => {
+                    const saved = localStorage.getItem('mero-crm-sidebar-collapsed');
+                    const newState = saved !== 'true';
+                    localStorage.setItem('mero-crm-sidebar-collapsed', String(newState));
+                    window.dispatchEvent(new CustomEvent('mero-crm-sidebar-toggle', { detail: { collapsed: newState } }));
+                  })
+                  : (isAppOpen && currentApp?.slug === 'mero-inventory')
+                    ? (() => {
+                      const saved = localStorage.getItem('mero-inventory-sidebar-collapsed');
+                      const newState = saved !== 'true';
+                      localStorage.setItem('mero-inventory-sidebar-collapsed', String(newState));
+                      window.dispatchEvent(new CustomEvent('mero-inventory-sidebar-toggle', { detail: { collapsed: newState } }));
+                    })
+                    : () => setLeftSidebarCollapsed(false)
+            }
             notificationsComponent={<NotificationDropdown />}
-            showCloseMinimize={isAppOpen && currentApp?.slug === 'mero-board'} // Show close/minimize in header when right sidebar not available
+            showCloseMinimize={isAppOpen && (currentApp?.slug === 'mero-board' || currentApp?.slug === 'mero-crm' || currentApp?.slug === 'mero-inventory')} // Show close/minimize in header when right sidebar not available
             onClose={isAppOpen ? handleCloseApp : undefined}
             onMinimize={isAppOpen ? handleMinimizeApp : undefined}
           />
@@ -899,8 +944,8 @@ export default function OrganizationDashboardLayout() {
       />
 
       {/* Right Sidebar - Hide for mero-board and mero-crm apps (by slug or subdomain), show for other apps and main dashboard */}
-      {currentApp?.slug !== 'mero-board' && currentApp?.slug !== 'mero-crm' &&
-        getAppNameFromSubdomain() !== 'mero-board' && getAppNameFromSubdomain() !== 'mero-crm' && (
+      {currentApp?.slug !== 'mero-board' && currentApp?.slug !== 'mero-crm' && currentApp?.slug !== 'mero-inventory' &&
+        getAppNameFromSubdomain() !== 'mero-board' && getAppNameFromSubdomain() !== 'mero-crm' && getAppNameFromSubdomain() !== 'mero-inventory' && (
           <div className="relative">
             {rightSidebarCollapsed ? (
               <button

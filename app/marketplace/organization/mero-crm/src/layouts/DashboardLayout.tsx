@@ -10,6 +10,10 @@ import {
     CreditCard,
     LogOut,
     User,
+    Target,
+    Briefcase,
+    FileCheck,
+    Settings,
 } from 'lucide-react';
 
 export function DashboardLayout() {
@@ -29,9 +33,24 @@ export function DashboardLayout() {
             icon: LayoutDashboard,
         },
         {
+            name: 'Leads',
+            href: '/leads',
+            icon: Target,
+        },
+        {
+            name: 'Deals',
+            href: '/deals',
+            icon: Briefcase,
+        },
+        {
             name: 'Clients',
             href: '/clients',
             icon: Users,
+        },
+        {
+            name: 'Quotes',
+            href: '/quotes',
+            icon: FileCheck,
         },
         {
             name: 'Invoices',
@@ -42,6 +61,11 @@ export function DashboardLayout() {
             name: 'Payments',
             href: '/payments',
             icon: CreditCard,
+        },
+        {
+            name: 'Settings',
+            href: '/settings',
+            icon: Settings,
         },
     ];
 
@@ -57,7 +81,7 @@ export function DashboardLayout() {
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate" style={{ color: theme.colors.text }}>
-                            {user?.firstName} {user?.lastName}
+                            {user?.first_name} {user?.last_name}
                         </p>
                         <p className="text-xs truncate" style={{ color: theme.colors.textSecondary }}>
                             {user?.email}

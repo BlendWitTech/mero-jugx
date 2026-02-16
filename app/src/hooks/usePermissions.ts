@@ -56,7 +56,7 @@ export function usePermissions() {
 
     // Debug logging in development (only when explicitly enabled via localStorage)
     // To enable: localStorage.setItem('debug-permissions', 'true')
-    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && window.localStorage?.getItem('debug-permissions') === 'true') {
+    if (import.meta.env.MODE === 'development' && typeof window !== 'undefined' && window.localStorage?.getItem('debug-permissions') === 'true') {
       console.log('[usePermissions] Current user role:', userRole);
       console.log('[usePermissions] Role permissions:', rolePermissions);
       console.log('[usePermissions] Permission slugs:', permissionSlugs);
@@ -70,13 +70,13 @@ export function usePermissions() {
    */
   const hasPermission = (permissionSlug: string): boolean => {
     if (!isAuthenticated) return false;
-    
+
     // If we don't have currentUser yet and we're still loading, return false
     // This prevents showing buttons before we know the user's permissions
     if (isLoadingPermissions && currentUser === undefined) {
       return false;
     }
-    
+
     // If we have currentUser but permissions set is empty and we're not an owner,
     // it might mean permissions haven't loaded yet, so return false to be safe
     // But if currentUser exists and has no permissions array and no role_permissions,
@@ -85,16 +85,16 @@ export function usePermissions() {
       // User exists but has no permissions - this is valid (user truly has no permissions)
       return false;
     }
-    
+
     // Wildcard means all permissions
     if (permissions.has('*')) return true;
-    
+
     const hasPerm = permissions.has(permissionSlug);
-    
+
     // Debug logging in development (only when explicitly enabled via localStorage)
     // To enable: localStorage.setItem('debug-permissions', 'true')
     // To disable: localStorage.removeItem('debug-permissions')
-    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && window.localStorage?.getItem('debug-permissions') === 'true') {
+    if (import.meta.env.MODE === 'development' && typeof window !== 'undefined' && window.localStorage?.getItem('debug-permissions') === 'true') {
       console.log(`[usePermissions] Checking permission "${permissionSlug}":`, {
         hasPermission: hasPerm,
         availablePermissions: Array.from(permissions),
@@ -105,7 +105,7 @@ export function usePermissions() {
         isLoading: isLoadingPermissions,
       });
     }
-    
+
     return hasPerm;
   };
 
@@ -131,7 +131,7 @@ export function usePermissions() {
 
   // Check if permissions are actually loaded (not just if query is loading)
   const permissionsLoaded = !isLoadingPermissions && (currentUser !== undefined);
-  
+
   return {
     permissions,
     hasPermission,
@@ -155,15 +155,15 @@ export function withPermission<P extends object>(
 ): React.ComponentType<P> {
   const WrappedComponent = (props: P) => {
     const { hasPermission } = usePermissions();
-    
+
     if (!hasPermission(requiredPermission)) {
       return null;
     }
-    
+
     return React.createElement(Component, props);
   };
-  
+
   WrappedComponent.displayName = `withPermission(${Component.displayName || Component.name || 'Component'})`;
-  
+
   return WrappedComponent;
 }

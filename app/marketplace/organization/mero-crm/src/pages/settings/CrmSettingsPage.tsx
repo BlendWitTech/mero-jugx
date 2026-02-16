@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useTheme } from '@frontend/contexts/ThemeContext';
-import { Settings, Percent, CreditCard, Globe } from 'lucide-react';
+import { Settings, Percent, CreditCard, Globe, Users } from 'lucide-react';
 import { Card } from '@shared';
 import GeneralSettings from './tabs/GeneralSettings';
 import TaxesSettings from './tabs/TaxesSettings';
 import PaymentModesSettings from './tabs/PaymentModesSettings';
+import { UserAppAccessTab } from '@frontend/components/apps/UserAppAccessTab';
 
-type SettingsTab = 'general' | 'taxes' | 'payments';
+type SettingsTab = 'general' | 'taxes' | 'payments' | 'users';
 
 export default function CrmSettingsPage() {
     const { theme } = useTheme();
@@ -16,6 +17,7 @@ export default function CrmSettingsPage() {
         { id: 'general', name: 'General', icon: Globe },
         { id: 'taxes', name: 'Taxes', icon: Percent },
         { id: 'payments', name: 'Payment Modes', icon: CreditCard },
+        { id: 'users', name: 'Users', icon: Users },
     ];
 
     return (
@@ -63,6 +65,7 @@ export default function CrmSettingsPage() {
                 {activeTab === 'general' && <GeneralSettings />}
                 {activeTab === 'taxes' && <TaxesSettings />}
                 {activeTab === 'payments' && <PaymentModesSettings />}
+                {activeTab === 'users' && <UserAppAccessTab appId={1} appName="Mero CRM" />}
             </div>
         </div>
     );

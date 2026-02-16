@@ -180,17 +180,14 @@ export class PaymentsService {
       if (createPaymentDto.gateway === PaymentGateway.ESEWA) {
         const frontendUrl = origin || process.env.FRONTEND_URL || 'http://localhost:3001';
         // Generate eSewa payment form
-        const paymentForm = this.esewaService.generatePaymentForm({
-          amount: baseAmount, // Base amount (excluding tax)
-          taxAmount: taxAmount,
-          totalAmount: finalAmount, // Total = baseAmount + taxAmount
-          transactionId: transactionId,
-          productServiceCharge: 0,
-          productDeliveryCharge: 0,
-          productCode: '', // Empty string - will default to merchant ID in esewa service
-          successUrl: `${frontendUrl}/payment/success`,
-          failureUrl: `${frontendUrl}/payment/failure`,
-        });
+        // Generate eSewa payment form
+        const esewaResponse = await this.esewaService.initiatePayment(
+          finalAmount,
+          transactionId,
+          process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST', // Use a default or config
+          `${frontendUrl}/payment/success`,
+          `${frontendUrl}/payment/failure`
+        );
 
         return {
           payment: {
@@ -200,7 +197,10 @@ export class PaymentsService {
             status: payment.status,
             created_at: payment.created_at,
           },
-          payment_form: paymentForm,
+          payment_form: {
+            formUrl: esewaResponse.gatewayUrl,
+            formData: esewaResponse.formData,
+          },
         };
       } else if (createPaymentDto.gateway === PaymentGateway.STRIPE) {
         // Generate Stripe checkout session
@@ -344,9 +344,8 @@ export class PaymentsService {
       // refId is optional but recommended for better verification
       // Verify with eSewa (v2 API requires total_amount)
       try {
-        verificationResult = await this.esewaService.verifyPayment(
+        verificationResult = await this.esewaService.verifyTransaction(
           transactionId,
-          refId || '', // Allow empty refId for eSewa v2 API
           parseFloat(payment.amount.toString()), // Convert decimal to number
         );
       } catch (error: any) {

@@ -36,10 +36,10 @@ export default function MembersList() {
   });
 
   const allChats = chatsData?.chats || [];
-  
+
   // Debug: Log unread counts (only in development)
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && allChats.length > 0) {
+    if (import.meta.env.MODE === 'development' && allChats.length > 0) {
       const unreadChats = allChats.filter((c: any) => (c.unread_count || 0) > 0);
       if (unreadChats.length > 0) {
         console.log('[MembersList] Chats with unread messages:', unreadChats.map((c: any) => ({ id: c.id, type: c.type, unread: c.unread_count })));
@@ -56,7 +56,7 @@ export default function MembersList() {
     );
     const count = directChat?.unread_count || 0;
     // Debug logging (only in development)
-    if (process.env.NODE_ENV === 'development' && count > 0) {
+    if (import.meta.env.MODE === 'development' && count > 0) {
       console.log('[MembersList] Unread count for user', userId, ':', count, 'chat:', directChat?.id);
     }
     return count;
@@ -117,25 +117,25 @@ export default function MembersList() {
   // Show all active members - no role-based filtering
   // Role hierarchy only affects modification permissions, not visibility or chat access
   const allMembers = members.filter((m: any) => m.status === 'active' && m.id !== currentUser?.id);
-  
+
   // Sort members alphabetically by name for better UX
   const sortedMembers = [...allMembers].sort((a: any, b: any) => {
     const nameA = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
     const nameB = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
     return nameA.localeCompare(nameB);
   });
-  
+
   // Filter by search query
   const filteredMembers = searchQuery.trim()
     ? sortedMembers.filter((m: any) => {
-        const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
-        const email = (m.email || '').toLowerCase();
-        const roleName = (m.role?.name || '').toLowerCase();
-        const query = searchQuery.toLowerCase();
-        return fullName.includes(query) || email.includes(query) || roleName.includes(query);
-      })
+      const fullName = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+      const email = (m.email || '').toLowerCase();
+      const roleName = (m.role?.name || '').toLowerCase();
+      const query = searchQuery.toLowerCase();
+      return fullName.includes(query) || email.includes(query) || roleName.includes(query);
+    })
     : sortedMembers;
-  
+
   // Show only offline members (all members except those shown in Online Now section)
   // Since online status isn't fully tracked yet, we'll show all members as offline here
   // This allows users to chat with members who aren't in the "Online Now" section
@@ -157,8 +157,8 @@ export default function MembersList() {
 
       // Get member's name for display
       const member = members.find((m: any) => m.id === memberId);
-      const memberName = member 
-        ? `${member.first_name || ''} ${member.last_name || ''}`.trim() 
+      const memberName = member
+        ? `${member.first_name || ''} ${member.last_name || ''}`.trim()
         : null;
 
       if (existingChat) {
@@ -241,7 +241,7 @@ export default function MembersList() {
             })}
           </>
         )}
-        
+
         {/* Show message if no members */}
         {offlineMembers.length === 0 && (
           <div className="px-2 py-4 text-center">
@@ -260,11 +260,10 @@ function MemberItem({ member, isOnline, isSelected, unreadCount = 0, onClick }: 
   return (
     <button
       onClick={onClick}
-      className={`w-full px-2 py-1.5 rounded flex items-center gap-2 group transition-colors relative ${
-        isSelected
+      className={`w-full px-2 py-1.5 rounded flex items-center gap-2 group transition-colors relative ${isSelected
           ? 'bg-[#393c43] text-white'
           : 'text-[#96989d] hover:bg-[#393c43] hover:text-[#dcddde]'
-      }`}
+        }`}
     >
       <div className="relative flex-shrink-0">
         {member.avatar_url ? (

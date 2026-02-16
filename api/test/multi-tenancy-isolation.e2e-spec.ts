@@ -15,7 +15,7 @@ import { AppModule } from '../src/app.module';
  */
 describe('Multi-Tenancy Isolation (e2e)', () => {
   let app: INestApplication;
-  
+
   // Organization 1 setup
   let org1Id: string;
   let org1UserId: string;
@@ -26,13 +26,19 @@ describe('Multi-Tenancy Isolation (e2e)', () => {
   let org2UserId: string;
   let org2Token: string;
 
+  // Shared resources
+  let org1TicketId: string | undefined;
+  let org2TicketId: string | undefined;
+  let org1ChatId: string | undefined;
+  let org2ChatId: string | undefined;
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Apply global validation pipe (same as main.ts)
     app.useGlobalPipes(
       new ValidationPipe({
@@ -41,7 +47,7 @@ describe('Multi-Tenancy Isolation (e2e)', () => {
         transform: true,
       }),
     );
-    
+
     await app.init();
 
     // Setup Organization 1
@@ -155,8 +161,7 @@ describe('Multi-Tenancy Isolation (e2e)', () => {
   });
 
   describe('Ticket Data Isolation', () => {
-    let org1TicketId: string | undefined;
-    let org2TicketId: string | undefined;
+
 
     beforeAll(async () => {
       // Note: These tests assume organizations have ticket system access
@@ -292,8 +297,6 @@ describe('Multi-Tenancy Isolation (e2e)', () => {
   });
 
   describe('Chat Data Isolation', () => {
-    let org1ChatId: string | undefined;
-    let org2ChatId: string | undefined;
 
     beforeAll(async () => {
       // Note: These tests assume organizations have chat system access

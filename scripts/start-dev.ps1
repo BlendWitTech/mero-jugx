@@ -43,7 +43,8 @@ if (Test-Path "docker-compose.yml") {
     docker-compose up -d postgres redis 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Docker containers started successfully" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "WARNING: Docker Compose failed. Make sure Docker is running." -ForegroundColor Yellow
         Write-Host "Continuing anyway..." -ForegroundColor Yellow
     }
@@ -53,7 +54,7 @@ if (Test-Path "docker-compose.yml") {
 
 Write-Host "[1/4] Starting backend server (port 3000)..." -ForegroundColor Blue
 # Start backend in a new PowerShell window with a unique title
-$backendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; `$Host.UI.RawUI.WindowTitle = 'Mero Jugx - Backend (Port 3000)'; Write-Host 'Mero Jugx - Backend Server' -ForegroundColor Cyan; Write-Host 'Port: 3000' -ForegroundColor White; Write-Host ''; nest start --watch" -PassThru
+$backendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\api'; `$Host.UI.RawUI.WindowTitle = 'Mero Jugx - Backend (Port 3000)'; Write-Host 'Mero Jugx - Backend Server' -ForegroundColor Cyan; Write-Host 'Port: 3000' -ForegroundColor White; Write-Host ''; nest start --watch" -PassThru
 
 Start-Sleep -Seconds 3
 
@@ -68,7 +69,8 @@ Write-Host "[3/4] Starting system-admin backend server (port 3002)..." -Foregrou
 if (Test-Path "apps/system-admin/backend") {
     $systemAdminBackendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\apps\system-admin\backend'; `$Host.UI.RawUI.WindowTitle = 'System Admin - Backend (Port 3002)'; Write-Host 'System Admin - Backend Server' -ForegroundColor Cyan; Write-Host 'Port: 3002' -ForegroundColor White; Write-Host ''; npm run start:dev" -PassThru
     Start-Sleep -Seconds 2
-} else {
+}
+else {
     Write-Host "  ⚠ System-admin backend directory not found, skipping..." -ForegroundColor Yellow
     $systemAdminBackendWindow = $null
 }
@@ -78,7 +80,8 @@ Write-Host "[4/4] Starting system-admin frontend server (port 3003)..." -Foregro
 if (Test-Path "apps/system-admin/frontend") {
     $systemAdminFrontendWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\apps\system-admin\frontend'; `$Host.UI.RawUI.WindowTitle = 'System Admin - Frontend (Port 3003)'; Write-Host 'System Admin - Frontend Server' -ForegroundColor Cyan; Write-Host 'Port: 3003' -ForegroundColor White; Write-Host ''; npm run dev" -PassThru
     Start-Sleep -Seconds 2
-} else {
+}
+else {
     Write-Host "  ⚠ System-admin frontend directory not found, skipping..." -ForegroundColor Yellow
     $systemAdminFrontendWindow = $null
 }
@@ -104,12 +107,14 @@ if (Test-Path "docker-compose.yml") {
 Write-Host "Main App:" -ForegroundColor White
 if ($backendCheck) {
     Write-Host "  Backend:  http://localhost:3000" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "  Backend:  Starting... (check the backend window)" -ForegroundColor Yellow
 }
 if ($frontendCheck) {
     Write-Host "  Frontend: http://localhost:3001" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "  Frontend: Starting... (check the frontend window)" -ForegroundColor Yellow
 }
 Write-Host "  API Docs: http://localhost:3000/api/docs" -ForegroundColor White
@@ -118,12 +123,14 @@ if ($systemAdminBackendWindow -and $systemAdminFrontendWindow) {
     Write-Host "System Admin:" -ForegroundColor White
     if ($systemAdminBackendCheck) {
         Write-Host "  Backend:  http://localhost:3002" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  Backend:  Starting... (check the system-admin backend window)" -ForegroundColor Yellow
     }
     if ($systemAdminFrontendCheck) {
         Write-Host "  Frontend: http://localhost:3003" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "  Frontend: Starting... (check the system-admin frontend window)" -ForegroundColor Yellow
     }
     Write-Host "  API Docs: http://localhost:3002/api-docs" -ForegroundColor White
@@ -163,7 +170,8 @@ try {
             break
         }
     }
-} catch {
+}
+catch {
     # User pressed Ctrl+C
     Write-Host ""
     Write-Host "Monitoring stopped. Servers are still running in their windows." -ForegroundColor Yellow

@@ -14,6 +14,7 @@ import {
 import { Organization } from './organizations.entity';
 import { OrganizationMember } from './organization_members.entity';
 import { RolePermission } from './role_permissions.entity';
+import { App } from './apps.entity';
 
 @Entity('roles')
 @Unique(['organization_id', 'slug'])
@@ -31,6 +32,14 @@ export class Role {
   @ManyToOne(() => Organization, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'organization_id' })
   organization: Organization | null;
+
+  @Column({ type: 'int', nullable: true })
+  @Index()
+  app_id: number | null;
+
+  @ManyToOne(() => App, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'app_id' })
+  app: App | null;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;

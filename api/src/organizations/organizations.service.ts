@@ -25,6 +25,7 @@ import { UpdateOrganizationSettingsDto } from './dto/update-organization-setting
 import { EmailService } from '../common/services/email.service';
 import { RedisService } from '../common/services/redis.service';
 import { Notification } from '../database/entities/notifications.entity';
+import { OrganizationApp, OrganizationAppStatus, OrganizationAppBillingPeriod } from '../database/entities/organization_apps.entity';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
@@ -46,6 +47,8 @@ export class OrganizationsService {
     private roleRepository: Repository<Role>,
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
+    @InjectRepository(OrganizationApp)
+    private organizationAppRepository: Repository<OrganizationApp>,
     private emailService: EmailService,
     private redisService: RedisService,
     private auditLogsService: AuditLogsService,
@@ -546,6 +549,18 @@ export class OrganizationsService {
         throw new ForbiddenException('Only organization owners can create branches');
       }
 
+      // Enforce branch limit
+      const currentBranches = await this.organizationRepository.count({
+        where: { parent_id: parentId, org_type: OrganizationType.BRANCH },
+      });
+
+      if (currentBranches >= parentOrg.branch_limit) {
+        throw new ForbiddenException(
+          `Branch limit reached for your package (${parentOrg.branch_limit}). ` +
+          `Please upgrade your package or purchase a branch add-on to create more branches.`
+        );
+      }
+
       const branchSlug = this.generateSlug(`${parentOrg.name}-${dto.name}`);
 
       const existing = await this.organizationRepository.findOne({ where: { slug: branchSlug } });
@@ -565,9 +580,36 @@ export class OrganizationsService {
         email_verified: true,
         user_limit: parentOrg.user_limit,
         role_limit: parentOrg.role_limit,
+        timezone: dto.timezone || parentOrg.timezone,
+        currency: dto.currency || parentOrg.currency,
+        language: dto.language || parentOrg.language,
       });
 
       const savedBranch = await this.organizationRepository.save(branch);
+
+      // If app_ids were provided, grant access to those apps for this branch
+      if (dto.app_ids && dto.app_ids.length > 0) {
+        for (const appId of dto.app_ids) {
+          // Check if parent has access to this app
+          const parentApp = await this.organizationAppRepository.findOne({
+            where: { organization_id: parentId, app_id: appId, status: OrganizationAppStatus.ACTIVE },
+          });
+
+          if (parentApp) {
+            const branchApp = this.organizationAppRepository.create({
+              organization_id: savedBranch.id,
+              app_id: appId,
+              status: OrganizationAppStatus.ACTIVE,
+              subscription_start: new Date(),
+              subscription_end: parentApp.subscription_end,
+              subscription_price: 0, // Branch apps are covered by parent
+              billing_period: parentApp.billing_period,
+              auto_renew: false,
+            });
+            await this.organizationAppRepository.save(branchApp);
+          }
+        }
+      }
 
       const branchMembership = this.memberRepository.create({
         user_id: userId,

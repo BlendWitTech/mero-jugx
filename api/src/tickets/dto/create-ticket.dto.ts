@@ -47,5 +47,9 @@ export class CreateTicketDto {
 
   @IsOptional()
   due_date?: Date | string; // Expected completion date
+
+  @IsOptional()
+  @IsUUID()
+  projectId?: string;
 }
 

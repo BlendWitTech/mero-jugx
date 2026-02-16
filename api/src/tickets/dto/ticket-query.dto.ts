@@ -17,6 +17,10 @@ export class TicketQueryDto {
 
   @IsOptional()
   @IsString()
+  projectId?: string;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 
   @IsOptional()

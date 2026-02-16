@@ -36,6 +36,35 @@ Links Users to Organizations.
 *   `organization_id`
 *   `role_id` (RBAC)
 
+### `roles`
+Role definitions for RBAC.
+*   `name`, `slug`
+*   `app_id` (NULL for organization-wide roles, FK to `apps` for app-specific roles)
+*   `is_system_role`, `is_organization_owner`
+*   `permissions` (JSON array of permission slugs)
+
+### `permissions`
+Fine-grained permission definitions.
+*   `name`, `slug`
+*   `category` (e.g., 'crm', 'inventory', 'board')
+*   `description`
+
+### `user_app_access`
+Tracks which users have access to which apps.
+*   `user_id`, `app_id`, `organization_id`
+*   `role_id` (App-specific role)
+*   `granted_by` (User who granted access)
+*   `created_at` (When access was granted)
+
+### `app_invitations`
+Email-based invitations for app access.
+*   `app_id`, `organization_id`
+*   `email` (Invited user email)
+*   `user_id` (NULL until accepted)
+*   `role_id` (Role to assign on acceptance)
+*   `invited_by`, `status` ('pending', 'accepted', 'declined')
+*   `token` (Unique invitation token)
+
 ---
 
 ## 3. Ticketing Module

@@ -39,7 +39,7 @@ export class RolesService {
     @InjectRepository(Package)
     private packageRepository: Repository<Package>,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   async getRoleUsageCounts(
     userId: string,
@@ -165,6 +165,37 @@ export class RolesService {
 
     // Combine and return both organization roles and default roles
     return [...defaultRoles, ...orgRoles];
+  }
+
+  async getRolesByApp(userId: string, organizationId: string, appId: number): Promise<Role[]> {
+    // Verify user is member of organization
+    const membership = await this.memberRepository.findOne({
+      where: {
+        user_id: userId,
+        organization_id: organizationId,
+        status: OrganizationMemberStatus.ACTIVE,
+      },
+      relations: ['role'],
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+
+    // Get app-specific roles for this organization
+    const roles = await this.roleRepository.find({
+      where: {
+        organization_id: organizationId,
+        app_id: appId,
+        is_active: true,
+      },
+      relations: ['role_permissions', 'role_permissions.permission'],
+      order: {
+        created_at: 'ASC',
+      },
+    });
+
+    return roles;
   }
 
   async getRoleById(userId: string, organizationId: string, roleId: number): Promise<Role> {
@@ -310,7 +341,7 @@ export class RolesService {
       if (!membership.role.is_organization_owner && membership.role.slug !== 'admin') {
         throw new ForbiddenException('Only organization owners and admins can set role hierarchy levels');
       }
-      
+
       // Hierarchy level must be >= 3 (Owner=1 and Admin=2 are fixed)
       if (dto.hierarchy_level < 3) {
         throw new BadRequestException('Hierarchy level must be 3 or higher. Organization Owner (1) and Admin (2) are fixed and cannot be changed.');
@@ -325,7 +356,7 @@ export class RolesService {
     if (dto.slug !== undefined) role.slug = dto.slug;
     if (dto.description !== undefined) role.description = dto.description;
     if (dto.is_active !== undefined) role.is_active = dto.is_active;
-    
+
     await this.roleRepository.save(role);
 
     // Update permissions if provided
@@ -740,11 +771,11 @@ export class RolesService {
 
     const orgRoles = organization.package.slug !== 'freemium'
       ? await this.roleRepository.find({
-          where: {
-            organization_id: organizationId,
-            is_active: true,
-          },
-        })
+        where: {
+          organization_id: organizationId,
+          is_active: true,
+        },
+      })
       : [];
 
     const allRoles = [...defaultRoles, ...orgRoles];

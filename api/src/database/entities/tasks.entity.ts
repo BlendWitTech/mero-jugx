@@ -9,12 +9,15 @@ import {
   Index,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 import { Organization } from './organizations.entity';
 import { User } from './users.entity';
 import { Project } from './projects.entity';
 import { Epic } from './epics.entity';
 import { Ticket } from './tickets.entity';
+import { TaskComment } from './task_comments.entity';
+import { TaskAttachment } from './task_attachments.entity';
 
 export enum TaskStatus {
   TODO = 'todo',
@@ -124,5 +127,11 @@ export class Task {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @OneToMany(() => TaskComment, (comment) => comment.task)
+  comments: TaskComment[];
+
+  @OneToMany(() => TaskAttachment, (attachment) => attachment.task)
+  attachments: TaskAttachment[];
 }
 

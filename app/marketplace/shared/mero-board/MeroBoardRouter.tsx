@@ -14,6 +14,9 @@ const TasksPage = React.lazy(() => import('./pages/TasksPage'));
 const TaskDetailPage = React.lazy(() => import('./pages/TaskDetailPage'));
 const ReportsPage = React.lazy(() => import('./pages/ReportsPage'));
 const WorkspaceSettingsPage = React.lazy(() => import('./pages/WorkspaceSettingsPage'));
+const BoardsPage = React.lazy(() => import('./pages/BoardsPage'));
+const BoardDetailPage = React.lazy(() => import('./pages/BoardDetailPage'));
+const BoardSettingsPage = React.lazy(() => import('./pages/BoardSettingsPage'));
 
 interface MeroBoardRouterProps {
   appSlug: string;
@@ -48,6 +51,18 @@ export default function MeroBoardRouter({ appSlug }: MeroBoardRouterProps) {
             <Route path="workspaces/:workspaceId/projects/:projectId/tasks/:taskId" element={<TaskDetailPage />} />
             <Route path="workspaces/:workspaceId/projects/:projectId/reports" element={<ReportsPage />} />
             <Route path="workspaces/:workspaceId/reports" element={<ReportsPage />} />
+
+            {/* Project Boards */}
+            <Route path="workspaces/:workspaceId/projects/:projectId/boards" element={<BoardsPage />} />
+            <Route path="workspaces/:workspaceId/projects/:projectId/boards/:boardId" element={<BoardDetailPage />} />
+
+            {/* Global Ticket Boards */}
+            <Route path="boards" element={<BoardsPage />} />
+            <Route path="boards/:boardId" element={<BoardDetailPage />} />
+
+            {/* Global App Settings */}
+            <Route path="settings" element={<BoardSettingsPage />} />
+
             {/* Catch-all: redirect to index (workspaces page) if route doesn't match */}
             <Route path="*" element={<Navigate to="" replace />} />
           </Route>

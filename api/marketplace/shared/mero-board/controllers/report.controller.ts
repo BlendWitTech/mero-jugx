@@ -15,17 +15,21 @@ import {
 } from '@nestjs/swagger';
 import { ReportService } from '../services/report.service';
 import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { AppAccessGuard } from '../../../../src/common/guards/app-access.guard';
+import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
+import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 
 @ApiTags('mero-board-reports')
 @Controller('apps/:appSlug')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AppAccessGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class ReportController {
-  constructor(private readonly reportService: ReportService) {}
+  constructor(private readonly reportService: ReportService) { }
 
   @Get('projects/:projectId/report')
+  @Permissions('board.projects.view')
   @ApiOperation({ summary: 'Get project report' })
   @ApiResponse({ status: 200, description: 'Project report retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })
@@ -44,6 +48,7 @@ export class ReportController {
   }
 
   @Get('workspaces/:workspaceId/report')
+  @Permissions('board.workspaces.view')
   @ApiOperation({ summary: 'Get workspace report' })
   @ApiResponse({ status: 200, description: 'Workspace report retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })
@@ -62,6 +67,7 @@ export class ReportController {
   }
 
   @Get('workspaces/:workspaceId/productivity')
+  @Permissions('board.workspaces.view')
   @ApiOperation({ summary: 'Get team productivity report for workspace' })
   @ApiResponse({ status: 200, description: 'Productivity report retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })
@@ -87,6 +93,7 @@ export class ReportController {
   }
 
   @Get('projects/:projectId/productivity')
+  @Permissions('board.projects.view')
   @ApiOperation({ summary: 'Get team productivity report for project' })
   @ApiResponse({ status: 200, description: 'Productivity report retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })

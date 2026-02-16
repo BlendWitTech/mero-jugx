@@ -26,7 +26,7 @@ import { AssignRoleDto } from './dto/assign-role.dto';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class RolesController {
-  constructor(private readonly rolesService: RolesService) {}
+  constructor(private readonly rolesService: RolesService) { }
 
   @Get()
   @Permissions('roles.view')
@@ -35,6 +35,18 @@ export class RolesController {
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async getRoles(@CurrentUser() user: any) {
     return this.rolesService.getRoles(user.userId, user.organizationId);
+  }
+
+  @Get('app/:appId')
+  @Permissions('roles.view')
+  @ApiOperation({ summary: 'List roles for a specific app' })
+  @ApiParam({ name: 'appId', description: 'App ID' })
+  @ApiResponse({ status: 200, description: 'Roles retrieved successfully' })
+  async getRolesByApp(
+    @CurrentUser() user: any,
+    @Param('appId', ParseIntPipe) appId: number,
+  ) {
+    return this.rolesService.getRolesByApp(user.userId, user.organizationId, appId);
   }
 
   @Get('permissions')

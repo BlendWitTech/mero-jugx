@@ -6,6 +6,9 @@ import { TaxesModule } from './modules/taxes.module';
 import { PaymentModesModule } from './modules/payment-modes.module';
 import { QuotesModule } from './modules/quotes.module';
 import { CrmSettingsModule } from './modules/settings.module';
+import { LeadsModule } from './modules/leads.module';
+import { DealsModule } from './modules/deals.module';
+import { ActivitiesModule } from './modules/activities.module';
 
 @Module({
     imports: [
@@ -16,6 +19,9 @@ import { CrmSettingsModule } from './modules/settings.module';
         PaymentModesModule,
         QuotesModule,
         CrmSettingsModule,
+        LeadsModule,
+        DealsModule,
+        ActivitiesModule,
     ],
     exports: [
         ClientsModule,
@@ -25,6 +31,9 @@ import { CrmSettingsModule } from './modules/settings.module';
         PaymentModesModule,
         QuotesModule,
         CrmSettingsModule,
+        LeadsModule,
+        DealsModule,
+        ActivitiesModule,
     ],
 })
 export class MeroCrmModule { }

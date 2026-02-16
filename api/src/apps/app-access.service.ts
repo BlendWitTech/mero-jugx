@@ -167,6 +167,9 @@ export class AppAccessService {
       // Reactivate existing access
       existing.is_active = true;
       existing.granted_by = granterId;
+      if (dto.role_id) {
+        existing.role_id = dto.role_id;
+      }
       return this.appAccessRepository.save(existing);
     }
 
@@ -185,6 +188,7 @@ export class AppAccessService {
       app_id: dto.app_id,
       granted_by: granterId,
       member_id: targetMember?.id || null,
+      role_id: dto.role_id || null,
       is_active: true,
     });
 
@@ -456,7 +460,7 @@ export class AppAccessService {
           app_id: appId,
           is_active: true,
         },
-        relations: ['user', 'granter', 'member', 'member.role'],
+        relations: ['user', 'granter', 'member', 'member.role', 'role'],
       });
 
       return {
@@ -517,6 +521,11 @@ export class AppAccessService {
             granted_by: null,
             member: null,
             created_at: access.created_at,
+            role: access.role ? {
+              id: access.role.id,
+              name: access.role.name,
+              slug: access.role.slug,
+            } : null,
           };
         }),
       };

@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { EpicService } from '../services/epic.service';
 import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { AppAccessGuard } from '../../../../src/common/guards/app-access.guard';
+import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
+import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateEpicDto } from '../dto/create-epic.dto';
@@ -28,12 +31,13 @@ import { ProjectQueryDto } from '../dto/project-query.dto';
 
 @ApiTags('mero-board-epics')
 @Controller('apps/:appSlug/projects/:projectId/epics')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AppAccessGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class EpicController {
-  constructor(private readonly epicService: EpicService) {}
+  constructor(private readonly epicService: EpicService) { }
 
   @Post()
+  @Permissions('board.projects.manage')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new epic' })
   @ApiResponse({ status: 201, description: 'Epic created successfully' })
@@ -56,6 +60,7 @@ export class EpicController {
   }
 
   @Get()
+  @Permissions('board.projects.view')
   @ApiOperation({ summary: 'Get all epics for a project' })
   @ApiResponse({ status: 200, description: 'Epics retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })
@@ -76,6 +81,7 @@ export class EpicController {
   }
 
   @Get(':epicId')
+  @Permissions('board.projects.view')
   @ApiOperation({ summary: 'Get a specific epic' })
   @ApiResponse({ status: 200, description: 'Epic retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Epic not found' })
@@ -98,6 +104,7 @@ export class EpicController {
   }
 
   @Put(':epicId')
+  @Permissions('board.projects.manage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update an epic' })
   @ApiResponse({ status: 200, description: 'Epic updated successfully' })
@@ -123,6 +130,7 @@ export class EpicController {
   }
 
   @Delete(':epicId')
+  @Permissions('board.projects.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an epic' })
   @ApiResponse({ status: 204, description: 'Epic deleted successfully' })

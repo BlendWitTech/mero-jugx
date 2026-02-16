@@ -7,7 +7,8 @@ import { authService } from '../../services/authService';
 import toast from '@shared/hooks/useToast';
 import { Loader2, Building2, Mail, User, Lock, Phone, ArrowLeft, Sparkles, Shield } from 'lucide-react';
 // Import shared components
-import { Button, Input, Card, CardContent } from '@shared';
+import { Button, Input, Card, CardContent, Select } from '@shared';
+import { Globe, Clock, Banknote } from 'lucide-react';
 import { getAppNameFromSubdomain, isAppSubdomain } from '../../config/urlConfig';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api';
@@ -22,6 +23,9 @@ const registerSchema = z.object({
   owner_last_name: z.string().min(2, 'Last name is required'),
   owner_phone: z.string().optional(),
   is_existing_user: z.boolean().default(false),
+  timezone: z.string().min(1, 'Timezone is required'),
+  currency: z.string().min(1, 'Currency is required'),
+  language: z.string().min(1, 'Language is required'),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -115,11 +119,14 @@ export default function RegisterOrganizationPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       is_existing_user: false,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      currency: 'USD',
+      language: 'en',
     },
   });
 
   const handleNext = async () => {
-    const isValid = await trigger(['name', 'email']);
+    const isValid = await trigger(['name', 'email', 'timezone', 'currency', 'language']);
     if (isValid) setStep(2);
   };
 
@@ -136,6 +143,9 @@ export default function RegisterOrganizationPage() {
         owner_first_name: data.owner_first_name,
         owner_last_name: data.owner_last_name,
         is_existing_user: data.is_existing_user,
+        timezone: data.timezone,
+        currency: data.currency,
+        language: data.language,
       });
 
       toast.success('Organization registered successfully! Please check your email to verify your account.');
@@ -383,6 +393,75 @@ export default function RegisterOrganizationPage() {
                     error={errors.email?.message}
                     fullWidth
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
+                      Default Currency *
+                    </label>
+                    <select
+                      {...register('currency')}
+                      className="w-full h-10 px-3 py-2 rounded-lg border focus:ring-2 outline-none transition-all"
+                      style={{
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text
+                      }}
+                    >
+                      <option value="USD">USD - Dollar</option>
+                      <option value="NPR">NPR - Rupee</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="GBP">GBP - Pound</option>
+                      <option value="INR">INR - Rupee (India)</option>
+                    </select>
+                    {errors.currency && <p className="text-xs mt-1 text-red-500">{errors.currency.message}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
+                      Language *
+                    </label>
+                    <select
+                      {...register('language')}
+                      className="w-full h-10 px-3 py-2 rounded-lg border focus:ring-2 outline-none transition-all"
+                      style={{
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text
+                      }}
+                    >
+                      <option value="en">English</option>
+                      <option value="ne">Nepali</option>
+                      <option value="hi">Hindi</option>
+                    </select>
+                    {errors.language && <p className="text-xs mt-1 text-red-500">{errors.language.message}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>
+                    Timezone *
+                  </label>
+                  <select
+                    {...register('timezone')}
+                    className="w-full h-10 px-3 py-2 rounded-lg border focus:ring-2 outline-none transition-all"
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text
+                    }}
+                  >
+                    <option value="Asia/Kathmandu">(GMT+05:45) Kathmandu</option>
+                    <option value="UTC">(GMT+00:00) UTC</option>
+                    <option value="America/New_York">(GMT-05:00) New York</option>
+                    <option value="Europe/London">(GMT+00:00) London</option>
+                    <option value="Asia/Dubai">(GMT+04:00) Dubai</option>
+                    <option value="Asia/Kolkata">(GMT+05:30) Mumbai, Kolkata</option>
+                    <option value="Asia/Singapore">(GMT+08:00) Singapore</option>
+                    <option value="Australia/Sydney">(GMT+11:00) Sydney</option>
+                  </select>
+                  {errors.timezone && <p className="text-xs mt-1 text-red-500">{errors.timezone.message}</p>}
                 </div>
 
                 <div>

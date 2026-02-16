@@ -12,16 +12,19 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
-import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
-import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { AppAccessGuard } from '../../../../../src/common/guards/app-access.guard';
+import { PermissionsGuard } from '@common/guards/permissions.guard';
+import { Permissions } from '@common/decorators/permissions.decorator';
+import { AppSlug } from '../../../../../src/common/decorators/app-slug.decorator';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { ClientsService } from '../services/clients.service';
 import { CreateClientDto, UpdateClientDto } from '../dto/client.dto';
 
 @ApiTags('CRM - Clients')
 @Controller('crm/clients')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, AppAccessGuard, PermissionsGuard)
+@AppSlug('mero-crm')
 @ApiBearerAuth()
 export class ClientsController {
     constructor(private clientsService: ClientsService) { }

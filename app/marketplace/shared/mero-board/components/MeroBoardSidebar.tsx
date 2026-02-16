@@ -6,6 +6,7 @@ import {
   FolderKanban,
   CheckSquare,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Plus,
   Settings,
@@ -26,7 +27,7 @@ import { useAuthStore } from '@frontend/store/authStore';
 import { logoutFromAppBySlug } from '@shared/frontend/utils/appAuth';
 import toast from '@shared/frontend/hooks/useToast';
 import { ConfirmDialog } from '@shared/frontend/components/feedback/ConfirmDialog';
-import { Modal, Button, Input, Textarea, Select } from '@shared';
+import { Modal, Button, Input, Textarea, Select } from '@shared/frontend';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import WorkspaceTemplateSelector from './WorkspaceTemplateSelector';
 import WorkspaceColorPicker from './WorkspaceColorPicker';
@@ -275,7 +276,7 @@ export default function MeroBoardSidebar({
                   className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: theme.colors.primary }}
                 >
-                  <Hash className="h-5 w-5 text-white" />
+                  <FolderKanban className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2
@@ -308,7 +309,7 @@ export default function MeroBoardSidebar({
                 }}
                 title="Collapse sidebar"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
             </>
           ) : (
@@ -326,15 +327,17 @@ export default function MeroBoardSidebar({
               }}
               title="Expand sidebar"
             >
-              <ChevronRight className="h-4 w-4" />
+              <FolderKanban className="h-5 w-5" style={{ color: theme.colors.primary }} />
             </button>
           )}
         </div>
 
+
+
         {/* Navigation Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {!collapsed ? (
-            <div className="flex-1 flex flex-col overflow-hidden py-2">
+            <div className={`flex-1 flex flex-col overflow-hidden py-2 ${collapsed ? 'overflow-y-hidden' : 'overflow-y-auto scrollbar-thin'}`}>
               {/* Workspace Header */}
               <div className="px-2 mb-2 flex-shrink-0">
                 <div className="px-3 py-1.5 mb-1 flex items-center justify-between">
@@ -362,6 +365,34 @@ export default function MeroBoardSidebar({
                   </button>
                 </div>
                 <div className="h-px mb-2" style={{ backgroundColor: theme.colors.border }}></div>
+              </div>
+
+              {/* Global Boards */}
+              <div className="px-2 mb-2 flex-shrink-0">
+                <Link
+                  to={buildHref('boards')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${isActive('boards') ? '' : ''}`}
+                  style={
+                    isActive('boards')
+                      ? { backgroundColor: theme.colors.primary, color: 'white' }
+                      : { color: theme.colors.textSecondary }
+                  }
+                >
+                  <FolderKanban className="h-4 w-4" />
+                  <span className="font-semibold">Boards</span>
+                </Link>
+                <Link
+                  to={buildHref('settings')}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${isActive('settings') ? '' : ''}`}
+                  style={
+                    isActive('settings')
+                      ? { backgroundColor: theme.colors.primary, color: 'white' }
+                      : { color: theme.colors.textSecondary }
+                  }
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="font-semibold">App Settings</span>
+                </Link>
               </div>
 
               {/* Workspace Switcher */}
@@ -581,6 +612,36 @@ export default function MeroBoardSidebar({
                             {isExpanded && (
                               <div className="ml-4 mt-0.5 space-y-0.5">
                                 <Link
+                                  to={buildHref(`workspaces/${currentWorkspace.id}/projects/${project.id}/boards`)}
+                                  className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${isActive(`workspaces/${currentWorkspace.id}/projects/${project.id}/boards`) ? '' : ''
+                                    }`}
+                                  style={
+                                    isActive(`workspaces/${currentWorkspace.id}/projects/${project.id}/boards`)
+                                      ? {
+                                        backgroundColor: theme.colors.primary + '80',
+                                        color: 'white',
+                                      }
+                                      : {
+                                        color: theme.colors.textSecondary,
+                                      }
+                                  }
+                                  onMouseEnter={(e) => {
+                                    if (!isActive(`workspaces/${currentWorkspace.id}/projects/${project.id}/boards`)) {
+                                      e.currentTarget.style.backgroundColor = theme.colors.border;
+                                      e.currentTarget.style.color = theme.colors.text;
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isActive(`workspaces/${currentWorkspace.id}/projects/${project.id}/boards`)) {
+                                      e.currentTarget.style.backgroundColor = 'transparent';
+                                      e.currentTarget.style.color = theme.colors.textSecondary;
+                                    }
+                                  }}
+                                >
+                                  <FolderKanban className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="truncate">Boards</span>
+                                </Link>
+                                <Link
                                   to={buildHref(`workspaces/${currentWorkspace.id}/projects/${project.id}/tasks`)}
                                   className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${tasksActive ? '' : ''
                                     }`}
@@ -736,55 +797,48 @@ export default function MeroBoardSidebar({
             </div>
           ) : (
             // Collapsed view - icons only
-            <div className="py-2 space-y-1">
+            <div className={`py-2 space-y-1 overflow-x-hidden ${collapsed ? 'overflow-y-hidden' : ''}`}>
+              {/* Boards Icon */}
+              <Link
+                to={buildHref('boards')}
+                className="w-full flex items-center justify-center p-2 rounded transition-colors"
+                style={
+                  isActive('boards')
+                    ? { backgroundColor: theme.colors.primary, color: 'white' }
+                    : { color: theme.colors.textSecondary }
+                }
+                title="Boards"
+              >
+                <FolderKanban className="h-5 w-5" />
+              </Link>
+
+              <Link
+                to={buildHref('settings')}
+                className="w-full flex items-center justify-center p-2 rounded transition-colors"
+                style={
+                  isActive('settings')
+                    ? { backgroundColor: theme.colors.primary, color: 'white' }
+                    : { color: theme.colors.textSecondary }
+                }
+                title="App Settings"
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
+
+              {/* Workspace Switcher (Collapsed) */}
+              <div className="px-2 mb-2 w-full flex justify-center">
+                <WorkspaceSwitcher
+                  currentWorkspaceId={currentWorkspace?.id || null}
+                  onWorkspaceChange={(workspaceId) => {
+                    navigate(buildHref(`workspaces/${workspaceId}`));
+                  }}
+                  collapsed={true}
+                />
+              </div>
+
+
               {currentWorkspace && (
                 <>
-                  {/* Workspace Icon */}
-                  <Link
-                    to={buildHref(`workspaces/${currentWorkspace.id}`)}
-                    className="w-full flex items-center justify-center p-2 rounded transition-colors"
-                    style={
-                      isActive(`workspaces/${currentWorkspace.id}`) && !isActive(`workspaces/${currentWorkspace.id}/projects`) && !isActive(`workspaces/${currentWorkspace.id}/settings`) && !isActive(`workspaces/${currentWorkspace.id}/reports`)
-                        ? {
-                          backgroundColor: theme.colors.primary,
-                          color: 'white',
-                        }
-                        : {
-                          color: theme.colors.textSecondary,
-                        }
-                    }
-                    onMouseEnter={(e) => {
-                      if (!(isActive(`workspaces/${currentWorkspace.id}`) && !isActive(`workspaces/${currentWorkspace.id}/projects`) && !isActive(`workspaces/${currentWorkspace.id}/settings`) && !isActive(`workspaces/${currentWorkspace.id}/reports`))) {
-                        e.currentTarget.style.backgroundColor = theme.colors.border;
-                        e.currentTarget.style.color = theme.colors.text;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!(isActive(`workspaces/${currentWorkspace.id}`) && !isActive(`workspaces/${currentWorkspace.id}/projects`) && !isActive(`workspaces/${currentWorkspace.id}/settings`) && !isActive(`workspaces/${currentWorkspace.id}/reports`))) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.colors.textSecondary;
-                      }
-                    }}
-                    title={currentWorkspace.name}
-                  >
-                    {(() => {
-                      const emojiMatch = currentWorkspace.name.match(/^[\p{Emoji}\u200d]+/u);
-                      const emoji = emojiMatch ? emojiMatch[0] : null;
-                      if (emoji) {
-                        return <span className="text-lg">{emoji}</span>;
-                      }
-                      if (currentWorkspace.color) {
-                        return (
-                          <div
-                            className="h-5 w-5 rounded"
-                            style={{ backgroundColor: currentWorkspace.color }}
-                          />
-                        );
-                      }
-                      return <LayoutDashboard className="h-5 w-5" />;
-                    })()}
-                  </Link>
-
                   {/* Invite Member */}
                   <button
                     onClick={() => setShowInviteMemberModal(true)}
@@ -875,43 +929,72 @@ export default function MeroBoardSidebar({
                     const isProjectActive = projectActive || tasksActive || reportsActive;
 
                     return (
-                      <Link
-                        key={project.id}
-                        to={buildHref(`workspaces/${currentWorkspace.id}/projects/${project.id}`)}
-                        className="w-full flex items-center justify-center p-2 rounded transition-colors"
-                        style={
-                          isProjectActive
-                            ? {
-                              backgroundColor: theme.colors.primary,
-                              color: 'white',
+                      <div key={project.id} className="relative group w-full flex justify-center">
+                        <Link
+                          to={buildHref(`workspaces/${currentWorkspace.id}/projects/${project.id}`)}
+                          className="w-full flex items-center justify-center p-2 rounded transition-colors"
+                          style={
+                            isProjectActive
+                              ? {
+                                backgroundColor: theme.colors.primary,
+                                color: 'white',
+                              }
+                              : {
+                                color: theme.colors.textSecondary,
+                              }
+                          }
+                          onMouseEnter={(e) => {
+                            if (!isProjectActive) {
+                              e.currentTarget.style.backgroundColor = theme.colors.border;
+                              e.currentTarget.style.color = theme.colors.text;
                             }
-                            : {
-                              color: theme.colors.textSecondary,
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isProjectActive) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = theme.colors.textSecondary;
                             }
-                        }
-                        onMouseEnter={(e) => {
-                          if (!isProjectActive) {
-                            e.currentTarget.style.backgroundColor = theme.colors.border;
-                            e.currentTarget.style.color = theme.colors.text;
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isProjectActive) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = theme.colors.textSecondary;
-                          }
-                        }}
-                        title={project.name}
-                      >
-                        {(() => {
-                          const emojiMatch = project.name.match(/^[\p{Emoji}\u200d]+/u);
-                          const emoji = emojiMatch ? emojiMatch[0] : null;
-                          if (emoji) {
-                            return <span className="text-lg">{emoji}</span>;
-                          }
-                          return <FolderKanban className="h-5 w-5" />;
-                        })()}
-                      </Link>
+                          }}
+                        >
+                          {(() => {
+                            const emojiMatch = project.name.match(/^[\p{Emoji}\u200d]+/u);
+                            const emoji = emojiMatch ? emojiMatch[0] : null;
+                            if (emoji) {
+                              return <span className="text-lg">{emoji}</span>;
+                            }
+                            return <FolderKanban className="h-5 w-5" />;
+                          })()}
+                        </Link>
+
+                        {/* Custom Tooltip / Submenu */}
+                        <div
+                          className="hidden group-hover:block absolute left-full top-0 ml-2 z-50 rounded-lg shadow-lg min-w-[160px] p-2"
+                          style={{
+                            backgroundColor: theme.colors.surface,
+                            border: `1px solid ${theme.colors.border}`,
+                          }}
+                        >
+                          <div className="font-medium text-sm mb-1 pb-1 border-b" style={{ borderColor: theme.colors.border }}>
+                            {project.name}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Link
+                              to={buildHref(`workspaces/${currentWorkspace.id}/projects/${project.id}/tasks`)}
+                              className="text-xs px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                              style={{ color: tasksActive ? theme.colors.primary : theme.colors.textSecondary }}
+                            >
+                              Tasks
+                            </Link>
+                            <Link
+                              to={buildHref(`workspaces/${currentWorkspace.id}/projects/${project.id}/reports`)}
+                              className="text-xs px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                              style={{ color: reportsActive ? theme.colors.primary : theme.colors.textSecondary }}
+                            >
+                              Reports
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
 
@@ -938,66 +1021,88 @@ export default function MeroBoardSidebar({
               )}
             </div>
           )}
-        </div>
+        </div >
 
         {/* User Panel at Bottom */}
-        {!collapsed && user && (
-          <div
-            className="px-2 py-2 border-t flex-shrink-0"
-            style={{ borderColor: theme.colors.border }}
-          >
+        {
+          user && (
             <div
-              className="flex items-center gap-2 px-2 py-1.5 rounded transition-colors"
-              style={{ backgroundColor: theme.colors.background }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.border;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.background;
-              }}
+              className="px-2 py-2 border-t flex-shrink-0"
+              style={{ borderColor: theme.colors.border }}
             >
-              <div
-                className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: theme.colors.primary }}
-              >
-                <span className="text-xs font-semibold text-white">
-                  {user?.first_name?.[0]}
-                  {user?.last_name?.[0]}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: theme.colors.text }}>
-                  {user?.first_name} {user?.last_name}
-                </p>
-                <p className="text-xs truncate" style={{ color: theme.colors.textSecondary }}>
-                  {user?.email}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="p-1.5 rounded transition-colors"
-                style={{ color: theme.colors.textSecondary }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#ed4245';
-                  e.currentTarget.style.backgroundColor = theme.colors.border;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-                title="Logout from app"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+              {!collapsed ? (
+                <div
+                  className="flex items-center gap-2 px-2 py-1.5 rounded transition-colors"
+                  style={{ backgroundColor: theme.colors.background }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.border;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                  }}
+                >
+                  <div
+                    className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: theme.colors.primary }}
+                  >
+                    <span className="text-xs font-semibold text-white">
+                      {user?.first_name?.[0]}
+                      {user?.last_name?.[0]}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: theme.colors.text }}>
+                      {user?.first_name} {user?.last_name}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: theme.colors.textSecondary }}>
+                      {user?.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowLogoutConfirm(true)}
+                    className="p-1.5 rounded transition-colors"
+                    style={{ color: theme.colors.textSecondary }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ed4245';
+                      e.currentTarget.style.backgroundColor = theme.colors.border;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    title="Logout from app"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full flex items-center justify-center p-2 rounded transition-colors"
+                  style={{ color: theme.colors.textSecondary }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#ed4245';
+                    e.currentTarget.style.backgroundColor = theme.colors.border;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = theme.colors.textSecondary;
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Logout"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          )
+        }
+      </div >
 
       {/* Logout Confirmation Dialog */}
-      <ConfirmDialog
+      < ConfirmDialog
         isOpen={showLogoutConfirm}
-        onClose={() => setShowLogoutConfirm(false)}
+        onClose={() => setShowLogoutConfirm(false)
+        }
         onConfirm={handleLogout}
         title="Logout"
         message="Are you sure you want to logout? You will need to login again to access your account."
@@ -1008,7 +1113,7 @@ export default function MeroBoardSidebar({
       />
 
       {/* Delete Workspace Confirmation */}
-      <ConfirmDialog
+      < ConfirmDialog
         isOpen={showDeleteWorkspaceConfirm}
         onClose={() => setShowDeleteWorkspaceConfirm(false)}
         onConfirm={handleDeleteWorkspace}
@@ -1022,7 +1127,7 @@ export default function MeroBoardSidebar({
       />
 
       {/* Create Workspace Modal - Choice */}
-      <Modal
+      < Modal
         isOpen={showCreateWorkspaceModal}
         onClose={() => setShowCreateWorkspaceModal(false)}
         title="Create Workspace"
@@ -1055,10 +1160,10 @@ export default function MeroBoardSidebar({
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal >
 
       {/* Template Selection Modal */}
-      <Modal
+      < Modal
         isOpen={showTemplateModal}
         onClose={() => setShowTemplateModal(false)}
         title="Create Workspace from Template"
@@ -1072,10 +1177,10 @@ export default function MeroBoardSidebar({
           }}
           onCancel={() => setShowTemplateModal(false)}
         />
-      </Modal>
+      </Modal >
 
       {/* Create Workspace Form Modal */}
-      <Modal
+      < Modal
         isOpen={showCreateFormModal}
         onClose={() => {
           setShowCreateFormModal(false);
@@ -1133,10 +1238,10 @@ export default function MeroBoardSidebar({
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal >
 
       {/* Invite Member Modal */}
-      <Modal
+      < Modal
         isOpen={showInviteMemberModal}
         onClose={() => {
           setShowInviteMemberModal(false);
@@ -1231,7 +1336,7 @@ export default function MeroBoardSidebar({
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal >
     </>
   );
 }

@@ -25,6 +25,8 @@ import {
   RefreshCw,
   UserPlus,
   UserMinus,
+  FolderKanban,
+  Package,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import toast from '@shared/hooks/useToast';
@@ -217,7 +219,7 @@ export default function AppsPage() {
     mutationFn: async (appId: number) => {
       const isFavorite = favoriteAppIds.includes(appId);
       let newFavorites: number[];
-      
+
       if (isFavorite) {
         newFavorites = favoriteAppIds.filter((id: number) => id !== appId);
       } else {
@@ -226,7 +228,7 @@ export default function AppsPage() {
         }
         newFavorites = [...favoriteAppIds, appId];
       }
-      
+
       await marketplaceService.setFavorites(newFavorites);
       return newFavorites;
     },
@@ -242,7 +244,7 @@ export default function AppsPage() {
   const togglePinMutation = useMutation({
     mutationFn: async (appId: number) => {
       const isPinned = pinnedAppIds.includes(appId);
-      
+
       if (isPinned) {
         await marketplaceService.unpinApp(appId);
       } else {
@@ -290,43 +292,43 @@ export default function AppsPage() {
       if (data.payment_url) {
         // Store return path before redirecting
         localStorage.setItem('payment_return_path', `/org/${slug}/apps`);
-        
+
         // For Stripe, redirect directly
         if (purchaseGateway === 'stripe') {
           window.location.href = data.payment_url;
+        } else {
+          // For eSewa, check if we have form data
+          // The payment_url should be the form URL for eSewa
+          // If backend returns payment_form with formData, use that
+          if (data.payment_form && data.payment_form.formData) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = data.payment_url || data.payment_form.formUrl || data.payment_form.action;
+            form.target = '_self';
+            form.style.display = 'none';
+            form.enctype = 'application/x-www-form-urlencoded';
+            form.acceptCharset = 'UTF-8';
+
+            Object.entries(data.payment_form.formData).forEach(([key, value]) => {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = String(value);
+              form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            // Small delay to ensure form is in DOM
+            setTimeout(() => {
+              form.submit();
+            }, 100);
+          } else if (data.payment_url) {
+            // Fallback to direct redirect
+            window.location.href = data.payment_url;
           } else {
-            // For eSewa, check if we have form data
-            // The payment_url should be the form URL for eSewa
-            // If backend returns payment_form with formData, use that
-            if (data.payment_form && data.payment_form.formData) {
-              const form = document.createElement('form');
-              form.method = 'POST';
-              form.action = data.payment_url || data.payment_form.formUrl || data.payment_form.action;
-              form.target = '_self';
-              form.style.display = 'none';
-              form.enctype = 'application/x-www-form-urlencoded';
-              form.acceptCharset = 'UTF-8';
-
-              Object.entries(data.payment_form.formData).forEach(([key, value]) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = String(value);
-                form.appendChild(input);
-              });
-
-              document.body.appendChild(form);
-              // Small delay to ensure form is in DOM
-              setTimeout(() => {
-                form.submit();
-              }, 100);
-            } else if (data.payment_url) {
-              // Fallback to direct redirect
-              window.location.href = data.payment_url;
-            } else {
-              toast.error('Payment form data is missing. Please try again.');
-            }
+            toast.error('Payment form data is missing. Please try again.');
           }
+        }
       } else if (data.organization_app?.status === 'trial') {
         toast.success(`Trial started! Your ${data.organization_app.app?.name || 'app'} trial is now active.`);
       } else {
@@ -336,13 +338,13 @@ export default function AppsPage() {
     onError: (error: any) => {
       logError(error, 'App Purchase');
       let errorMessage = getErrorMessage(error);
-      
+
       // Check for eSewa token authentication error
       const errorData = error?.response?.data;
       if (errorData?.set_token_message || errorData?.user_token) {
         errorMessage = 'eSewa requires token authentication. Please enable Mock Mode in .env (ESEWA_USE_MOCK_MODE=true) for development testing.';
       }
-      
+
       toast.error(errorMessage, { duration: 5000 });
     },
   });
@@ -556,7 +558,7 @@ export default function AppsPage() {
                 <div
                   key={app.id}
                   className="group relative flex flex-col items-center p-4 rounded-2xl transition-all duration-300 hover:-translate-y-1"
-                  style={{ 
+                  style={{
                     background: `linear-gradient(to bottom right, ${theme.colors.surface}, ${theme.colors.background})`,
                     border: `1px solid ${theme.colors.border}`
                   }}
@@ -632,7 +634,7 @@ export default function AppsPage() {
                   </div>
 
                   {/* App Icon - Clickable */}
-                  <div 
+                  <div
                     className="relative mb-3 cursor-pointer"
                     onClick={() => {
                       setSelectedApp(app);
@@ -640,20 +642,32 @@ export default function AppsPage() {
                     }}
                   >
                     <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                      style={{ 
+                      style={{
                         background: app.icon_url ? 'transparent' : `linear-gradient(to bottom right, ${theme.colors.primary}33, ${theme.colors.secondary}33)`,
                         border: `2px solid ${theme.colors.border}`
                       }}
                     >
-                      {app.icon_url ? (
-                        <img
-                          src={app.icon_url}
-                          alt={app.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Grid3x3 className="w-10 h-10" style={{ color: theme.colors.primary }} />
-                      )}
+                      {(() => {
+                        // Check if icon_url is a Lucide icon name
+                        if (app.icon_url === 'Users') return <Users className="w-10 h-10" style={{ color: theme.colors.primary }} />;
+                        if (app.icon_url === 'FolderKanban') return <FolderKanban className="w-10 h-10" style={{ color: theme.colors.primary }} />;
+                        if (app.icon_url === 'Package') return <Package className="w-10 h-10" style={{ color: theme.colors.primary }} />;
+
+                        // Check for older slug-based mappings if icon_url is null (fallback)
+                        if (app.slug === 'mero-crm') return <Users className="w-10 h-10" style={{ color: theme.colors.primary }} />;
+                        if (app.slug === 'mero-board') return <FolderKanban className="w-10 h-10" style={{ color: theme.colors.primary }} />;
+                        if (app.slug === 'mero-inventory') return <Package className="w-10 h-10" style={{ color: theme.colors.primary }} />;
+
+                        return app.icon_url ? (
+                          <img
+                            src={app.icon_url}
+                            alt={app.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Grid3x3 className="w-10 h-10" style={{ color: theme.colors.primary }} />
+                        );
+                      })()}
                     </div>
                     {/* Status Badges */}
                     {app.is_featured && (
@@ -669,10 +683,10 @@ export default function AppsPage() {
                   </div>
 
                   {/* App Name - Clickable */}
-                  <h3 
-                    className="text-sm font-semibold text-center transition-colors duration-300 line-clamp-2 w-full cursor-pointer" 
+                  <h3
+                    className="text-sm font-semibold text-center transition-colors duration-300 line-clamp-2 w-full cursor-pointer"
                     style={{ color: theme.colors.text }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.primary} 
+                    onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.primary}
                     onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.text}
                     onClick={() => {
                       setSelectedApp(app);
@@ -702,15 +716,27 @@ export default function AppsPage() {
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full">
-                      {selectedApp.icon_url ? (
-                        <img
-                          src={selectedApp.icon_url}
-                          alt={selectedApp.name}
-                          className="w-32 h-32 rounded-2xl"
-                        />
-                      ) : (
-                        <Grid3x3 className="w-24 h-24" style={{ color: theme.colors.primary, opacity: 0.5 }} />
-                      )}
+                      {(() => {
+                        // Check if icon_url is a Lucide icon name
+                        if (selectedApp.icon_url === 'Users') return <Users className="w-32 h-32" style={{ color: theme.colors.primary }} />;
+                        if (selectedApp.icon_url === 'FolderKanban') return <FolderKanban className="w-32 h-32" style={{ color: theme.colors.primary }} />;
+                        if (selectedApp.icon_url === 'Package') return <Package className="w-32 h-32" style={{ color: theme.colors.primary }} />;
+
+                        // Check for older slug-based mappings (fallback)
+                        if (selectedApp.slug === 'mero-crm') return <Users className="w-32 h-32" style={{ color: theme.colors.primary }} />;
+                        if (selectedApp.slug === 'mero-board') return <FolderKanban className="w-32 h-32" style={{ color: theme.colors.primary }} />;
+                        if (selectedApp.slug === 'mero-inventory') return <Package className="w-32 h-32" style={{ color: theme.colors.primary }} />;
+
+                        return selectedApp.icon_url ? (
+                          <img
+                            src={selectedApp.icon_url}
+                            alt={selectedApp.name}
+                            className="w-32 h-32 rounded-2xl"
+                          />
+                        ) : (
+                          <Grid3x3 className="w-24 h-24" style={{ color: theme.colors.primary, opacity: 0.5 }} />
+                        );
+                      })()}
                     </div>
                   )}
                   <Button

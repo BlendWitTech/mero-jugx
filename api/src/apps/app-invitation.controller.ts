@@ -18,15 +18,18 @@ import { CurrentOrganization } from '../common/decorators/current-organization.d
 import { AppInvitationService } from './app-invitation.service';
 import { CreateAppInvitationDto } from './dto/create-app-invitation.dto';
 import { AcceptAppInvitationDto } from './dto/accept-app-invitation.dto';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @ApiTags('app-invitations')
 @Controller('apps/invitations')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class AppInvitationController {
-  constructor(private readonly appInvitationService: AppInvitationService) {}
+  constructor(private readonly appInvitationService: AppInvitationService) { }
 
   @Post()
+  @Permissions('apps.manage')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an app invitation for an organization member' })
   @ApiResponse({ status: 201, description: 'Invitation created successfully' })
@@ -46,6 +49,7 @@ export class AppInvitationController {
   }
 
   @Get()
+  @Permissions('apps.subscribe') // Minimum permission to view invitations?
   @ApiOperation({ summary: 'Get app invitations for the current user' })
   @ApiResponse({ status: 200, description: 'Invitations retrieved successfully' })
   async getInvitations(
@@ -123,6 +127,7 @@ export class AppInvitationController {
   }
 
   @Delete(':invitationId')
+  @Permissions('apps.manage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel an app invitation (by inviter)' })
   @ApiResponse({ status: 200, description: 'Invitation cancelled successfully' })

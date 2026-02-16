@@ -1,7 +1,7 @@
 import { IsString, IsNumber, IsDate, IsArray, IsOptional, IsEnum, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { InvoiceStatus, PaymentStatus } from '../../../../src/database/entities/crm_invoices.entity';
+import { InvoiceStatus, PaymentStatus } from '@src/database/entities/crm_invoices.entity';
 
 export class InvoiceItemDto {
     @ApiProperty()

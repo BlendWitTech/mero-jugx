@@ -12,6 +12,7 @@ import { Organization } from './organizations.entity';
 import { App } from './apps.entity';
 import { User } from './users.entity';
 import { OrganizationMember } from './organization_members.entity';
+import { Role } from './roles.entity';
 
 export enum AppInvitationStatus {
   PENDING = 'pending',
@@ -46,21 +47,32 @@ export class AppInvitation {
   @JoinColumn({ name: 'app_id' })
   app: App;
 
-  @Column({ type: 'uuid' })
-  @Index()
-  user_id: string; // Organization member user ID
+  @Column({ type: 'int', nullable: true })
+  role_id: number | null;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Role, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'role_id' })
+  role: Role | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Index()
+  email: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  user_id: string | null; // Organization member user ID (null for new users)
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: User | null;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   @Index()
-  member_id: string; // Organization member ID
+  member_id: string | null; // Organization member ID (null for non-members)
 
-  @ManyToOne(() => OrganizationMember, { onDelete: 'CASCADE' })
+  @ManyToOne(() => OrganizationMember, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'member_id' })
-  member: OrganizationMember;
+  member: OrganizationMember | null;
 
   @Column({ type: 'uuid' })
   invited_by: string; // User who sent the invitation

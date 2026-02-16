@@ -10,6 +10,7 @@ import { formatLimit } from '../../utils/formatLimit';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTaskbar } from '../../contexts/TaskbarContext';
 import { Loading } from '@shared';
+import BranchesTab from './BranchesTab';
 
 // Theme Customization Component
 function ThemeCustomizationTab({ organization }: { organization: any }) {
@@ -725,7 +726,7 @@ function ThemeCustomizationTab({ organization }: { organization: any }) {
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 
@@ -1741,205 +1742,14 @@ export default function SettingsPage() {
           )}
 
           {/* Branches Tab */}
-          {activeTab === 'branches' && (
-            <BranchManagementTab
-              parentOrganization={organization}
-              theme={theme}
+          {activeTab === 'branches' && isOrganizationOwner && organization?.org_type === 'MAIN' && (
+            <BranchesTab
+              organization={organization}
+              stats={stats}
               onSwitchOrganization={(id) => switchOrganizationMutation.mutate(id)}
               isSwitching={switchOrganizationMutation.isPending}
             />
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BranchManagementTab({
-  parentOrganization,
-  theme,
-  onSwitchOrganization,
-  isSwitching
-}: {
-  parentOrganization: any;
-  theme: any;
-  onSwitchOrganization: (id: string) => void;
-  isSwitching: boolean;
-}) {
-  const queryClient = useQueryClient();
-  const [isAddingBranch, setIsAddingBranch] = useState(false);
-  const [newBranchData, setNewBranchData] = useState({ name: '', city: '', country: parentOrganization?.country || '' });
-
-  const { data: branches, isLoading } = useQuery({
-    queryKey: ['organization-branches'],
-    queryFn: async () => {
-      const response = await api.get('/organizations/branches');
-      return response.data;
-    },
-  });
-
-  const createBranchMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await api.post('/organizations/branches', data);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-branches'] });
-      toast.success('Branch created successfully');
-      setIsAddingBranch(false);
-      setNewBranchData({ name: '', city: '', country: parentOrganization?.country || '' });
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create branch');
-    }
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-lg p-6" style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}` }}>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Building2 className="h-6 w-6 mr-3" style={{ color: theme.colors.primary }} />
-            <div>
-              <h2 className="text-xl font-semibold" style={{ color: theme.colors.text }}>Branches & Outlets</h2>
-              <p className="text-sm" style={{ color: theme.colors.textSecondary }}>Manage your sub-organizations and business locations</p>
-            </div>
-          </div>
-          {!isAddingBranch && (
-            <button
-              onClick={() => setIsAddingBranch(true)}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
-              style={{ backgroundColor: theme.colors.primary, color: 'white' }}
-            >
-              Add New Branch
-            </button>
-          )}
-        </div>
-
-        {isAddingBranch && (
-          <div className="mb-6 p-6 rounded-xl border-2" style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.primary + '40' }}>
-            <h3 className="text-lg font-semibold mb-4" style={{ color: theme.colors.text }}>New Branch Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>Branch Name</label>
-                <input
-                  type="text"
-                  value={newBranchData.name}
-                  onChange={(e) => setNewBranchData({ ...newBranchData, name: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}`, color: theme.colors.text }}
-                  placeholder="e.g. Kathmandu Hub"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>City</label>
-                <input
-                  type="text"
-                  value={newBranchData.city}
-                  onChange={(e) => setNewBranchData({ ...newBranchData, city: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}`, color: theme.colors.text }}
-                  placeholder="e.g. Kathmandu"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text }}>Country</label>
-                <input
-                  type="text"
-                  value={newBranchData.country}
-                  onChange={(e) => setNewBranchData({ ...newBranchData, country: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}`, color: theme.colors.text }}
-                  placeholder="e.g. Nepal"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsAddingBranch(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ color: theme.colors.textSecondary }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => createBranchMutation.mutate(newBranchData)}
-                disabled={createBranchMutation.isPending || !newBranchData.name}
-                className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ backgroundColor: theme.colors.primary, color: 'white' }}
-              >
-                {createBranchMutation.isPending ? 'Creating...' : 'Create Branch'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="text-center py-8"><Loading text="Loading branches..." /></div>
-          ) : branches?.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {branches.map((branch: any) => (
-                <div
-                  key={branch.id}
-                  className="p-4 rounded-xl border transition-all hover:shadow-md"
-                  style={{ backgroundColor: theme.colors.background, borderColor: theme.colors.border }}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-lg" style={{ color: theme.colors.text }}>{branch.name}</h4>
-                    <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: theme.colors.primary + '20', color: theme.colors.primary }}>
-                      Branch
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-                      <Globe className="inline w-3 h-3 mr-1" /> {branch.city}{branch.city && branch.country ? ', ' : ''}{branch.country}
-                    </p>
-                    <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                      Created on: {new Date(branch.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-4 border-t flex gap-2" style={{ borderColor: theme.colors.border }}>
-                    <button
-                      className="text-xs font-medium"
-                      style={{ color: theme.colors.primary }}
-                      onClick={() => toast.info('Branch details coming soon')}
-                    >
-                      View Details
-                    </button>
-                    <button
-                      className="text-xs font-medium disabled:opacity-50"
-                      style={{ color: theme.colors.textSecondary }}
-                      disabled={isSwitching}
-                      onClick={() => {
-                        onSwitchOrganization(branch.id);
-                      }}
-                    >
-                      {isSwitching ? 'Switching...' : 'Switch to Branch'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 border-2 border-dashed rounded-xl" style={{ borderColor: theme.colors.border }}>
-              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p style={{ color: theme.colors.textSecondary }}>No branches found. Build your network by adding an outlet.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-lg p-6" style={{ backgroundColor: theme.colors.primary + '10', border: `1px solid ${theme.colors.primary}30` }}>
-        <div className="flex items-start">
-          <Info className="h-5 w-5 mr-3 mt-0.5" style={{ color: theme.colors.primary }} />
-          <div>
-            <h4 className="text-sm font-semibold mb-1" style={{ color: theme.colors.text }}>Branch Inheritance Policy</h4>
-            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-              Branches automatically inherit the active package and app subscriptions from the Main Organization.
-              Data (clients, invoices, etc.) created within a branch is scoped to that branch but viewable in aggregate reports from the Main Organization.
-            </p>
-          </div>
         </div>
       </div>
     </div>

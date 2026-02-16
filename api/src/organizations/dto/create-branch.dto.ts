@@ -43,4 +43,18 @@ export class CreateBranchDto {
     @IsString()
     @MaxLength(10)
     currency?: string;
+
+    @ApiPropertyOptional({ description: 'Timezone' })
+    @IsOptional()
+    @IsString()
+    timezone?: string;
+
+    @ApiPropertyOptional({ description: 'Language' })
+    @IsOptional()
+    @IsString()
+    language?: string;
+
+    @ApiPropertyOptional({ description: 'List of app IDs this branch can access', type: [Number] })
+    @IsOptional()
+    app_ids?: number[];
 }

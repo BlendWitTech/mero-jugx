@@ -13,7 +13,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
 import { User, UserStatus } from '../database/entities/users.entity';
-import { Organization, OrganizationStatus } from '../database/entities/organizations.entity';
+import { Organization, OrganizationStatus, OrganizationType } from '../database/entities/organizations.entity';
 import {
   OrganizationMember,
   OrganizationMemberStatus,
@@ -62,7 +62,7 @@ export class AuthService {
       where: { email, status: UserStatus.ACTIVE },
     });
 
-    if (!user) {
+    if (!user || !user.password_hash) {
       return null;
     }
 
@@ -78,8 +78,20 @@ export class AuthService {
    * Lightweight password check used for app re-auth flows.
    */
   async verifyPassword(email: string, password: string): Promise<boolean> {
-    const user = await this.validateUser(email, password);
-    return !!user;
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email, status: UserStatus.ACTIVE },
+      });
+
+      if (!user || !user.password_hash) {
+        return false;
+      }
+
+      return await bcrypt.compare(password, user.password_hash);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
   }
 
   async registerOrganization(
@@ -290,9 +302,34 @@ export class AuthService {
         status: OrganizationStatus.ACTIVE,
         mfa_enabled: false,
         email_verified: false, // Organization email must be verified
+        timezone: dto.timezone,
+        currency: dto.currency,
+        language: dto.language,
+        branch_limit: pkg.base_branch_limit,
       });
 
-      const savedOrganization = await this.organizationRepository.save(organization);
+      const savedOrganization = await queryRunner.manager.save(organization);
+
+      // Create initial "Main Branch" automatically
+      const mainBranchSlug = this.generateSlug(`${dto.name}-main`);
+      const mainBranch = this.organizationRepository.create({
+        name: `${dto.name} (Main Branch)`,
+        slug: mainBranchSlug,
+        email: dto.email,
+        parent_id: savedOrganization.id,
+        org_type: OrganizationType.BRANCH,
+        status: OrganizationStatus.ACTIVE,
+        package_id: packageId,
+        email_verified: true,
+        timezone: dto.timezone,
+        currency: dto.currency,
+        language: dto.language,
+        user_limit: savedOrganization.user_limit,
+        role_limit: savedOrganization.role_limit,
+        branch_limit: 0, // Branches don't need branch limits
+      });
+
+      const savedMainBranch = await queryRunner.manager.save(mainBranch);
 
       // Get Organization Owner role
       const ownerRole = await this.roleRepository.findOne({
@@ -303,8 +340,8 @@ export class AuthService {
         throw new NotFoundException('Organization Owner role not found');
       }
 
-      // Create organization membership for owner
-      const membership = this.memberRepository.create({
+      // Create organization membership for owner in the MAIN organization
+      const mainMembership = this.memberRepository.create({
         user_id: ownerUser.id,
         organization_id: savedOrganization.id,
         role_id: ownerRole.id,
@@ -312,7 +349,18 @@ export class AuthService {
         joined_at: new Date(),
       });
 
-      await this.memberRepository.save(membership);
+      await queryRunner.manager.save(mainMembership);
+
+      // Also create membership for the owner in the Main Branch
+      const branchMembership = this.memberRepository.create({
+        user_id: ownerUser.id,
+        organization_id: savedMainBranch.id,
+        role_id: ownerRole.id,
+        status: OrganizationMemberStatus.ACTIVE,
+        joined_at: new Date(),
+      });
+
+      await queryRunner.manager.save(branchMembership);
 
       // Generate organization email verification token
       const orgVerificationToken = crypto.randomBytes(32).toString('hex');

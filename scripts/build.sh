@@ -1,83 +1,61 @@
 #!/bin/bash
+# Build Script
 
-# Mero Jugx - Build Script (Bash)
-# Builds both app and backend
+TARGET=$1
+TYPE=$2
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+if [ -z "$TARGET" ]; then
+    TARGET="all"
+fi
 
-cd "$PROJECT_ROOT"
-
-echo "Mero Jugx - Build"
-echo "================"
-echo ""
-
-echo "What would you like to build?"
-echo "  1. Backend only"
-echo "  2. App only"
-echo "  3. Both (Backend + App)"
-echo ""
-
-read -p "Enter your choice (1, 2, or 3): " choice
-
-case $choice in
-    1)
-        echo ""
-        echo "Building backend..."
-        nest build
-        if [ $? -eq 0 ]; then
-            echo ""
-            echo "Backend build complete!"
-        else
-            echo ""
-            echo "Backend build failed!"
-            exit 1
-        fi
-        ;;
-    2)
-        echo ""
-        echo "Building app..."
-        cd app
-        npm run build
-        if [ $? -eq 0 ]; then
-            echo ""
-            echo "App build complete!"
-        else
-            echo ""
-            echo "App build failed!"
-            cd ..
-            exit 1
-        fi
-        cd ..
-        ;;
-    3)
-        echo ""
-        echo "Building backend..."
-        nest build
+build_project() {
+    PATH_DIR=$1
+    NAME=$2
+    if [ -d "$PATH_DIR" ]; then
+        echo "Building $NAME..."
+        (cd "$PATH_DIR" && npm run build)
         if [ $? -ne 0 ]; then
-            echo ""
-            echo "Backend build failed!"
+            echo "Failed to build $NAME"
             exit 1
         fi
-        echo "Backend build complete!"
-        echo ""
-        echo "Building app..."
-        cd app
-        npm run build
-        if [ $? -ne 0 ]; then
-            echo ""
-            echo "App build failed!"
-            cd ..
-            exit 1
-        fi
-        cd ..
-        echo "App build complete!"
-        echo ""
-        echo "All builds complete!"
-        ;;
-    *)
-        echo "Invalid choice. Exiting."
-        exit 1
-        ;;
-esac
+        echo "$NAME built successfully"
+    else
+        echo "$NAME path not found: $PATH_DIR"
+    fi
+}
 
+find_service_path() {
+    BASE_DIR=$1
+    SERVICE_NAME=$2
+    for category in "$BASE_DIR"/*; do
+        if [ -d "$category/$SERVICE_NAME" ]; then
+            echo "$category/$SERVICE_NAME"
+            return 0
+        fi
+    done
+    return 1
+}
+
+if [ "$TARGET" == "all" ]; then
+    build_project "api" "Main Backend"
+    build_project "app" "Main Frontend"
+elif [ "$TARGET" == "backend" ]; then
+    build_project "api" "Main Backend"
+elif [ "$TARGET" == "frontend" ]; then
+    build_project "app" "Main Frontend"
+elif [[ "$TARGET" == ms:* ]]; then
+    MS_NAME=${TARGET#ms:}
+    
+    BACKEND_PATH=$(find_service_path "api/marketplace" "$MS_NAME")
+    FRONTEND_PATH=$(find_service_path "app/marketplace" "$MS_NAME")
+
+    if [ -z "$TYPE" ] || [ "$TYPE" == "all" ] || [ "$TYPE" == "backend" ]; then
+        build_project "$BACKEND_PATH" "$MS_NAME Backend"
+    fi
+    if [ -z "$TYPE" ] || [ "$TYPE" == "all" ] || [ "$TYPE" == "frontend" ]; then
+        build_project "$FRONTEND_PATH" "$MS_NAME Frontend"
+    fi
+else
+    echo "Unknown target: $TARGET"
+    exit 1
+fi

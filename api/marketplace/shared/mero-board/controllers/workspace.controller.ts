@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { WorkspaceService } from '../services/workspace.service';
 import { JwtAuthGuard } from '../../../../src/auth/guards/jwt-auth.guard';
+import { AppAccessGuard } from '../../../../src/common/guards/app-access.guard';
+import { PermissionsGuard } from '../../../../src/common/guards/permissions.guard';
+import { Permissions } from '../../../../src/common/decorators/permissions.decorator';
 import { CurrentUser } from '../../../../src/common/decorators/current-user.decorator';
 import { CurrentOrganization } from '../../../../src/common/decorators/current-organization.decorator';
 import { CreateWorkspaceDto } from '../dto/create-workspace.dto';
@@ -30,12 +33,14 @@ import { WorkspaceQueryDto } from '../dto/workspace-query.dto';
 
 @ApiTags('mero-board-workspaces')
 @Controller('apps/:appSlug/workspaces')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AppAccessGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class WorkspaceController {
-  constructor(private readonly workspaceService: WorkspaceService) {}
+  constructor(private readonly workspaceService: WorkspaceService) { }
 
   @Post()
+  @Permissions('board.workspaces.manage')
+  @HttpCode(HttpStatus.CREATED)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new workspace' })
   @ApiResponse({ status: 201, description: 'Workspace created successfully' })
@@ -55,6 +60,7 @@ export class WorkspaceController {
   }
 
   @Get()
+  @Permissions('board.workspaces.view')
   @ApiOperation({ summary: 'Get all workspaces for the current user' })
   @ApiResponse({ status: 200, description: 'Workspaces retrieved successfully' })
   @ApiParam({ name: 'appSlug', description: 'App Slug' })
@@ -68,6 +74,7 @@ export class WorkspaceController {
   }
 
   @Get(':workspaceId')
+  @Permissions('board.workspaces.view')
   @ApiOperation({ summary: 'Get a specific workspace' })
   @ApiResponse({ status: 200, description: 'Workspace retrieved successfully' })
   @ApiResponse({ status: 403, description: 'Not a member of workspace' })
@@ -88,6 +95,7 @@ export class WorkspaceController {
   }
 
   @Put(':workspaceId')
+  @Permissions('board.workspaces.manage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a workspace' })
   @ApiResponse({ status: 200, description: 'Workspace updated successfully' })
@@ -110,6 +118,7 @@ export class WorkspaceController {
   }
 
   @Delete(':workspaceId')
+  @Permissions('board.workspaces.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a workspace' })
   @ApiResponse({ status: 204, description: 'Workspace deleted successfully' })
@@ -130,6 +139,7 @@ export class WorkspaceController {
   }
 
   @Post(':workspaceId/members')
+  @Permissions('board.members.invite')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Invite a member to workspace' })
   @ApiResponse({ status: 201, description: 'Member invited successfully' })
@@ -153,6 +163,7 @@ export class WorkspaceController {
   }
 
   @Put(':workspaceId/members/:memberId/role')
+  @Permissions('board.workspaces.manage')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update member role' })
   @ApiResponse({ status: 200, description: 'Member role updated successfully' })
@@ -178,6 +189,7 @@ export class WorkspaceController {
   }
 
   @Get(':workspaceId/members')
+  @Permissions('board.workspaces.view')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all workspace members' })
   @ApiResponse({ status: 200, description: 'Workspace members retrieved successfully' })
@@ -198,6 +210,7 @@ export class WorkspaceController {
   }
 
   @Delete(':workspaceId/members/:memberId')
+  @Permissions('board.workspaces.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove a member from workspace' })
   @ApiResponse({ status: 204, description: 'Member removed successfully' })

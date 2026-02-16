@@ -54,8 +54,10 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend
 echo "[1/4] Starting backend server (port 3000)..."
+cd api
 nest start --watch &
 BACKEND_PID=$!
+cd ..
 sleep 3
 
 # Start app

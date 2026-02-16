@@ -13,6 +13,7 @@ import { User } from './users.entity';
 import { Organization } from './organizations.entity';
 import { App } from './apps.entity';
 import { OrganizationMember } from './organization_members.entity';
+import { Role } from './roles.entity';
 
 @Entity('user_app_access')
 @Unique(['user_id', 'organization_id', 'app_id'])
@@ -57,6 +58,13 @@ export class UserAppAccess {
   @ManyToOne(() => OrganizationMember, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'member_id' })
   member: OrganizationMember | null;
+
+  @Column({ type: 'int', nullable: true })
+  role_id: number | null;
+
+  @ManyToOne(() => Role, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'role_id' })
+  role: Role | null;
 
   @Column({ type: 'boolean', default: true })
   is_active: boolean;

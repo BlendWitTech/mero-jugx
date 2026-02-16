@@ -118,6 +118,21 @@ export class Organization {
   @Column({ type: 'int', default: 2 })
   role_limit: number;
 
+  @Column({ type: 'int', default: 1 })
+  branch_limit: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  timezone: string;
+
+  @Column({ type: 'varchar', length: 10, default: 'en' })
+  language: string;
+
+  @Column({ type: 'varchar', length: 20, default: 'YYYY-MM-DD' })
+  date_format: string;
+
+  @Column({ type: 'varchar', length: 10, default: 'HH:mm' })
+  time_format: string;
+
   @Column({ type: 'boolean', default: false })
   mfa_enabled: boolean;
 

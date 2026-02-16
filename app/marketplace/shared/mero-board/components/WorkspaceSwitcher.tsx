@@ -18,11 +18,13 @@ interface Workspace {
 interface WorkspaceSwitcherProps {
   currentWorkspaceId?: string | null;
   onWorkspaceChange?: (workspaceId: string) => void;
+  collapsed?: boolean;
 }
 
 export default function WorkspaceSwitcher({
   currentWorkspaceId,
-  onWorkspaceChange
+  onWorkspaceChange,
+  collapsed = false
 }: WorkspaceSwitcherProps) {
   const { theme } = useTheme();
   const { appSlug } = useAppContext();
@@ -99,46 +101,54 @@ export default function WorkspaceSwitcher({
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors w-full text-sm"
+        className={`flex items-center gap-2 rounded-lg transition-colors ${collapsed ? 'justify-center p-2 w-full' : 'px-2 py-1.5 w-full text-sm'}`}
         style={{
-          backgroundColor: theme.colors.surface,
+          backgroundColor: collapsed ? 'transparent' : theme.colors.surface,
           color: theme.colors.text,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = theme.colors.border;
+          e.currentTarget.style.color = theme.colors.text;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.surface;
+          e.currentTarget.style.backgroundColor = collapsed ? 'transparent' : theme.colors.surface;
+          e.currentTarget.style.color = theme.colors.text;
         }}
+        title={collapsed ? (workspace?.name || 'Select Workspace') : undefined}
       >
         {workspace?.logo_url ? (
           <img
             src={workspace.logo_url}
             alt={workspace.name}
-            className="w-5 h-5 rounded object-cover flex-shrink-0"
+            className={`${collapsed ? 'w-6 h-6' : 'w-5 h-5'} rounded object-cover flex-shrink-0`}
           />
         ) : workspace?.color ? (
           <div
-            className="w-5 h-5 rounded flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+            className={`${collapsed ? 'w-6 h-6' : 'w-5 h-5'} rounded flex items-center justify-center text-xs font-semibold text-white flex-shrink-0`}
             style={{ backgroundColor: workspace.color }}
           >
             {getWorkspaceInitials(workspace.name)}
           </div>
         ) : (
           <div
-            className="w-5 h-5 rounded flex items-center justify-center text-xs font-semibold flex-shrink-0"
+            className={`${collapsed ? 'w-6 h-6' : 'w-5 h-5'} rounded flex items-center justify-center text-xs font-semibold flex-shrink-0`}
             style={{
               backgroundColor: theme.colors.primary,
               color: 'white',
             }}
           >
-            {workspace ? getWorkspaceInitials(workspace.name) : <Building2 className="h-3 w-3" />}
+            {workspace ? getWorkspaceInitials(workspace.name) : <Building2 className={collapsed ? "h-4 w-4" : "h-3 w-3"} />}
           </div>
         )}
-        <span className="flex-1 text-left font-medium truncate text-sm">
-          {workspace?.name || 'Select Workspace'}
-        </span>
-        <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: theme.colors.textSecondary }} />
+
+        {!collapsed && (
+          <>
+            <span className="flex-1 text-left font-medium truncate text-sm">
+              {workspace?.name || 'Select Workspace'}
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: theme.colors.textSecondary }} />
+          </>
+        )}
       </button>
 
       {isOpen && createPortal(
@@ -239,4 +249,3 @@ export default function WorkspaceSwitcher({
     </>
   );
 }
-

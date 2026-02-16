@@ -43,6 +43,10 @@ import { MeroInventoryModule } from '../marketplace/organization/mero-inventory/
 import { MeroAccountingModule } from '../marketplace/organization/mero-accounting/mero-accounting.module';
 import { CreatorPortalModule } from '../marketplace/creator/portal/creator-portal.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { BoardsModule } from './boards/boards.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
+import { ProjectsModule } from './projects/projects.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -105,6 +109,10 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     MeroAccountingModule,
     CreatorPortalModule,
     AnnouncementsModule,
+    BoardsModule,
+    WorkspacesModule,
+    ProjectsModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [

@@ -9,9 +9,10 @@ import { seedPackageFeatures } from './004-package-features.seed';
 import { seedRoleTemplates } from './005-role-templates.seed';
 import { seedSystemAdminUser } from './006-system-admin-user.seed';
 import { seedWorkspaceProjectTemplates } from '../../../marketplace/shared/mero-board/seeds/workspace-project-templates.seed';
+import { seedNepalChartOfAccounts } from './007-nepal-chart-of-accounts.seed';
 
 // Load environment variables
-config();
+config({ path: path.resolve(__dirname, '../../../../.env') });
 
 async function runSeeds() {
   const configService = new ConfigService();
@@ -55,6 +56,9 @@ async function runSeeds() {
     console.log('');
 
     await seedWorkspaceProjectTemplates(dataSource);
+    console.log('');
+
+    await seedNepalChartOfAccounts(dataSource);
     console.log('');
 
     console.log('✅ All seeds completed successfully!');

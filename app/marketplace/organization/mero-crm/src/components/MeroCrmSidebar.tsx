@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -15,17 +15,30 @@ import { useTheme } from '@frontend/contexts/ThemeContext';
 import { useAuthStore } from '@frontend/store/authStore';
 import { logoutFromAppBySlug } from '@shared/frontend/utils/appAuth';
 import toast from '@shared/frontend/hooks/useToast';
+import { ConfirmDialog } from '@shared/frontend/components/feedback/ConfirmDialog';
+import { useAppContext } from '../contexts/AppContext';
+
+
+interface User {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    avatar_url?: string | null;
+}
 
 interface MeroCrmSidebarProps {
     buildHref: (href: string) => string;
     checkActive: (href: string, currentPath: string) => boolean;
     appSlug: string;
+    members?: User[];
 }
 
 export default function MeroCrmSidebar({
     buildHref,
     checkActive,
     appSlug,
+    members = [],
 }: MeroCrmSidebarProps) {
     const { theme } = useTheme();
     const { user, organization } = useAuthStore();
@@ -35,11 +48,31 @@ export default function MeroCrmSidebar({
         return saved === 'true';
     });
 
+    // Listen for sidebar toggle events from header
+    const { appSlug: contextAppSlug } = useAppContext(); // Ensure we have appSlug
+    useEffect(() => {
+        const handleSidebarToggle = (e: CustomEvent) => {
+            setCollapsed(e.detail.collapsed);
+        };
+        window.addEventListener('mero-crm-sidebar-toggle', handleSidebarToggle as EventListener);
+        return () => window.removeEventListener('mero-crm-sidebar-toggle', handleSidebarToggle as EventListener);
+    }, []);
+
     const navigationItems = [
         {
             name: 'Dashboard',
             href: '/',
             icon: LayoutDashboard,
+        },
+        {
+            name: 'Deals',
+            href: '/deals',
+            icon: FileText, // Or suitable icon
+        },
+        {
+            name: 'Leads',
+            href: '/leads',
+            icon: Users, // Or suitable icon, reusing Users for now
         },
         {
             name: 'Clients',
@@ -68,7 +101,13 @@ export default function MeroCrmSidebar({
         },
     ];
 
-    const handleLogout = async () => {
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    const handleLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    const handleLogoutAuth = async () => {
         try {
             await logoutFromAppBySlug(appSlug);
             toast.success('Logged out from CRM');
@@ -76,6 +115,7 @@ export default function MeroCrmSidebar({
             console.error('Logout error:', error);
             toast.error('Failed to logout');
         }
+        setShowLogoutConfirm(false);
     };
 
     const isActive = (href: string): boolean => {
@@ -88,7 +128,7 @@ export default function MeroCrmSidebar({
         localStorage.setItem('mero-crm-sidebar-collapsed', newState.toString());
     };
 
-    const sidebarWidth = collapsed ? 72 : 260;
+    const sidebarWidth = collapsed ? 72 : 280;
 
     return (
         <div
@@ -99,23 +139,23 @@ export default function MeroCrmSidebar({
                 borderColor: theme.colors.border,
             }}
         >
-            {/* Header */}
+            {/* Header - Fixed at top */}
             <div
-                className="h-16 px-4 flex items-center justify-between border-b flex-shrink-0"
+                className="h-14 px-4 flex items-center justify-between border-b flex-shrink-0"
                 style={{ borderColor: theme.colors.border }}
             >
                 {!collapsed ? (
                     <>
-                        <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                             <div
                                 className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
                                 style={{ backgroundColor: theme.colors.primary }}
                             >
-                                <LayoutDashboard className="h-5 w-5 text-white" />
+                                <Users className="h-5 w-5 text-white" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h2
-                                    className="text-sm font-bold truncate"
+                                    className="text-sm font-semibold truncate"
                                     style={{ color: theme.colors.text }}
                                 >
                                     Mero CRM
@@ -130,8 +170,17 @@ export default function MeroCrmSidebar({
                         </div>
                         <button
                             onClick={toggleCollapsed}
-                            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                            className="p-1.5 rounded transition-colors"
                             style={{ color: theme.colors.textSecondary }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = theme.colors.text;
+                                e.currentTarget.style.backgroundColor = theme.colors.border;
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = theme.colors.textSecondary;
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                            title="Collapse sidebar"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
@@ -139,77 +188,151 @@ export default function MeroCrmSidebar({
                 ) : (
                     <button
                         onClick={toggleCollapsed}
-                        className="w-full h-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                        className="w-full h-full flex items-center justify-center transition-colors"
                         style={{ color: theme.colors.textSecondary }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = theme.colors.text;
+                            e.currentTarget.style.backgroundColor = theme.colors.border;
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = theme.colors.textSecondary;
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        title="Expand sidebar"
                     >
-                        <ChevronRight className="h-5 w-5" />
+                        <Users className="h-5 w-5" style={{ color: theme.colors.primary }} />
                     </button>
                 )}
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
-                {navigationItems.map((item) => {
-                    const Active = isActive(item.href);
-                    const Icon = item.icon;
-                    const href = buildHref(item.href);
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <nav className={`flex-1 py-2 px-2 space-y-0.5 overflow-x-hidden ${collapsed ? 'overflow-y-hidden' : 'overflow-y-auto scrollbar-thin'}`}>
+                    {navigationItems.map((item) => {
+                        const href = buildHref(item.href);
+                        const Active = isActive(item.href);
+                        const Icon = item.icon;
 
-                    return (
-                        <Link
-                            key={item.name}
-                            to={href}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative ${Active ? 'shadow-sm' : ''
-                                }`}
-                            style={{
-                                backgroundColor: Active ? theme.colors.primary : 'transparent',
-                                color: Active ? '#fff' : theme.colors.textSecondary,
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!Active) {
-                                    e.currentTarget.style.backgroundColor = `${theme.colors.primary}10`;
-                                    e.currentTarget.style.color = theme.colors.primary;
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!Active) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                    e.currentTarget.style.color = theme.colors.textSecondary;
-                                }
-                            }}
-                        >
-                            <Icon className="h-5 w-5 flex-shrink-0" />
-                            {!collapsed && (
-                                <span className="text-sm font-medium truncate">{item.name}</span>
-                            )}
-                            {collapsed && (
+                        return (
+                            <Link
+                                key={item.name}
+                                to={href}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors group relative ${Active ? '' : ''
+                                    }`}
+                                style={{
+                                    backgroundColor: Active ? theme.colors.primary : 'transparent',
+                                    color: Active ? '#fff' : theme.colors.textSecondary,
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!Active) {
+                                        e.currentTarget.style.backgroundColor = theme.colors.border;
+                                        e.currentTarget.style.color = theme.colors.text;
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!Active) {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.color = theme.colors.textSecondary;
+                                    }
+                                }}
+                            >
+                                <Icon className="h-4 w-4 flex-shrink-0" />
+                                {!collapsed && (
+                                    <span className="truncate">{item.name}</span>
+                                )}
+                                {collapsed && (
+                                    <div
+                                        className="absolute left-full ml-2 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50"
+                                        style={{
+                                            backgroundColor: theme.colors.surface,
+                                            color: theme.colors.text,
+                                            border: `1px solid ${theme.colors.border}`,
+                                        }}
+                                    >
+                                        {item.name}
+                                    </div>
+                                )}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* Members Section */}
+                {!collapsed && members && members.length > 0 && (
+                    <div className="px-2 mb-2 mt-auto flex-shrink-0">
+                        <div className="h-[1px] mb-2" style={{ backgroundColor: theme.colors.border }} />
+                        <div className="px-3 py-1.5 mb-1">
+                            <h3
+                                className="text-xs font-semibold uppercase tracking-wide"
+                                style={{ color: theme.colors.textSecondary }}
+                            >
+                                Members ({members.length})
+                            </h3>
+                        </div>
+                        <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin" style={{ scrollbarColor: `${theme.colors.border} transparent` }}>
+                            {members.slice(0, 8).map((member) => (
                                 <div
-                                    className="absolute left-full ml-2 px-2 py-1 rounded bg-gray-900 text-white text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50"
+                                    key={member.id}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded text-sm"
+                                    style={{ color: theme.colors.textSecondary }}
                                 >
-                                    {item.name}
+                                    {member.avatar_url ? (
+                                        <img
+                                            src={member.avatar_url}
+                                            alt={`${member.first_name} ${member.last_name}`}
+                                            className="w-6 h-6 rounded-full flex-shrink-0"
+                                        />
+                                    ) : (
+                                        <div
+                                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
+                                            style={{
+                                                backgroundColor: theme.colors.primary,
+                                                color: 'white',
+                                            }}
+                                        >
+                                            {member.first_name[0]}{member.last_name[0]}
+                                        </div>
+                                    )}
+                                    <span className="truncate text-xs">
+                                        {member.first_name} {member.last_name}
+                                    </span>
+                                </div>
+                            ))}
+                            {members.length > 8 && (
+                                <div className="px-3 py-1 text-xs" style={{ color: theme.colors.textSecondary }}>
+                                    +{members.length - 8} more
                                 </div>
                             )}
-                        </Link>
-                    );
-                })}
-            </nav>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Footer */}
             <div className="mt-auto border-t flex-shrink-0" style={{ borderColor: theme.colors.border }}>
                 {!collapsed ? (
-                    <div className="p-4 space-y-3">
-                        {/* User Profile */}
-                        <div className="flex items-center gap-3">
+                    <div className="px-2 py-2">
+                        <div
+                            className="flex items-center gap-2 px-2 py-1.5 rounded transition-colors"
+                            style={{ backgroundColor: theme.colors.surface }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = theme.colors.border;
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = theme.colors.surface;
+                            }}
+                        >
                             <div
-                                className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0"
+                                className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
                                 style={{ backgroundColor: theme.colors.primary }}
                             >
-                                <span className="text-sm font-bold text-white uppercase">
+                                <span className="text-xs font-semibold text-white uppercase">
                                     {user?.first_name?.[0]}{user?.last_name?.[0]}
                                 </span>
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p
-                                    className="text-sm font-semibold truncate"
+                                    className="text-sm font-medium truncate"
                                     style={{ color: theme.colors.text }}
                                 >
                                     {user?.first_name} {user?.last_name}
@@ -221,72 +344,57 @@ export default function MeroCrmSidebar({
                                     {user?.email}
                                 </p>
                             </div>
+                            <button
+                                onClick={() => setShowLogoutConfirm(true)}
+                                className="p-1.5 rounded transition-colors"
+                                style={{ color: theme.colors.textSecondary }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = '#ed4245';
+                                    e.currentTarget.style.backgroundColor = theme.colors.border;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = theme.colors.textSecondary;
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                                title="Logout from app"
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </button>
                         </div>
-
-                        {/* Logout Button */}
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors"
-                            style={{
-                                backgroundColor: `${theme.colors.danger}15`,
-                                color: theme.colors.danger,
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = theme.colors.danger;
-                                e.currentTarget.style.color = 'white';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = `${theme.colors.danger}15`;
-                                e.currentTarget.style.color = theme.colors.danger;
-                            }}
-                        >
-                            <LogOut className="h-4 w-4" />
-                            <span className="text-sm font-medium">Logout</span>
-                        </button>
                     </div>
                 ) : (
-                    <div className="py-3 space-y-2">
-                        {/* User Avatar */}
-                        <div className="flex justify-center">
-                            <div
-                                className="h-9 w-9 rounded-full flex items-center justify-center"
-                                style={{ backgroundColor: theme.colors.primary }}
-                                title={`${user?.first_name} ${user?.last_name}`}
-                            >
-                                <span className="text-sm font-bold text-white uppercase">
-                                    {user?.first_name?.[0]}{user?.last_name?.[0]}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Logout Icon */}
+                    <div className="py-2 px-2 flex justify-center">
                         <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center p-2 rounded-lg transition-colors group relative"
-                            style={{ color: theme.colors.danger }}
+                            onClick={() => setShowLogoutConfirm(true)}
+                            className="w-full flex items-center justify-center p-2 rounded transition-colors"
+                            style={{ color: theme.colors.textSecondary }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = `${theme.colors.danger}15`;
+                                e.currentTarget.style.color = '#ed4245';
+                                e.currentTarget.style.backgroundColor = theme.colors.border;
                             }}
                             onMouseLeave={(e) => {
+                                e.currentTarget.style.color = theme.colors.textSecondary;
                                 e.currentTarget.style.backgroundColor = 'transparent';
                             }}
                             title="Logout"
                         >
                             <LogOut className="h-5 w-5" />
-                            <div
-                                className="absolute left-full ml-2 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50"
-                                style={{
-                                    backgroundColor: theme.colors.surface,
-                                    color: theme.colors.text,
-                                    border: `1px solid ${theme.colors.border}`,
-                                }}
-                            >
-                                Logout
-                            </div>
                         </button>
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={handleLogoutAuth}
+                title="Logout"
+                message="Are you sure you want to logout? You will need to login again to access your account."
+                confirmText="Logout"
+                cancelText="Cancel"
+                variant="warning"
+                theme={theme}
+            />
         </div>
     );
 }

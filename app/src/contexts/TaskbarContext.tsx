@@ -13,7 +13,7 @@ const TaskbarContext = createContext<TaskbarContextType | undefined>(undefined);
 
 export function TaskbarProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuthStore();
-  
+
   // Initialize with preference from localStorage or default
   const [visibility, setVisibilityState] = useState<TaskbarVisibility>(() => {
     if (isAuthenticated && user?.id) {
@@ -80,7 +80,7 @@ export function TaskbarProvider({ children }: { children: ReactNode }) {
       } catch (error: any) {
         // Silently handle errors - preference is still saved locally
         if (error?.response?.status !== 404 && error?.response?.status !== 403) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.MODE === 'development' && typeof window !== 'undefined' && window.localStorage?.getItem('debug-permissions') === 'true') {
             console.warn('Failed to save taskbar preference:', error?.response?.status || error?.message);
           }
         }

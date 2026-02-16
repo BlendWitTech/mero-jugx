@@ -74,5 +74,9 @@
     "test",
     "../app",
     "../packages"
+  ],
+  "include": [
+    "src/**/*",
+    "marketplace/**/*"
   ]
 }

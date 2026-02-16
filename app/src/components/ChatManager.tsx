@@ -26,14 +26,14 @@ export default function ChatManager() {
     if (!organization?.id || !accessToken) return;
 
     const socket = chatService.connect(organization.id, accessToken);
-    
+
     // Ensure socket is connected
     if (!socket.connected) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.log('[ChatManager] Socket not connected, waiting for connection...');
       }
       socket.once('connect', () => {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.MODE === 'development') {
           logger.log('[ChatManager] Socket connected, setting up listeners');
         }
       });
@@ -41,32 +41,32 @@ export default function ChatManager() {
 
     // Listen for new messages
     const handleNewMessage = (data: { message: any; chat_id: string }) => {
-      if (process.env.NODE_ENV === 'development') {
-        logger.log('[ChatManager] Received message:new event', { 
-          chat_id: data.chat_id, 
+      if (import.meta.env.MODE === 'development') {
+        logger.log('[ChatManager] Received message:new event', {
+          chat_id: data.chat_id,
           message_id: data.message.id,
           message_content: data.message.content?.substring(0, 50)
         });
       }
-      
+
       // Find if any open chat window is viewing this chat
       const isChatOpen = openChats.some(
         (chat) => chat.chatId === data.chat_id && !chat.isMinimized
       );
-      
+
       // Update unread counts optimistically - this updates all components using this query
       queryClient.setQueryData(['chats', organization.id], (old: any) => {
         if (!old) {
           return old;
         }
-        
+
         const updatedChats = old.chats.map((chat: any) => {
           if (chat.id === data.chat_id) {
             // If chat is open and not minimized, unread_count should be 0
             // If chat is closed, increment unread_count
             const currentUnread = typeof chat.unread_count === 'number' ? chat.unread_count : 0;
             let newUnread: number;
-            
+
             if (isChatOpen) {
               // Chat is open and visible - mark as read
               newUnread = 0;
@@ -75,7 +75,7 @@ export default function ChatManager() {
               // Always increment, even if currentUnread is 0 (in case it was just reset)
               newUnread = currentUnread + 1;
             }
-            
+
             return {
               ...chat,
               unread_count: newUnread,
@@ -84,18 +84,18 @@ export default function ChatManager() {
           }
           return chat;
         });
-        
+
         return {
           ...old,
           chats: updatedChats,
         };
       });
-      
+
       // Invalidate messages query to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['messages', data.chat_id] });
     };
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.MODE === 'development') {
       logger.log('[ChatManager] Attaching message:new listener');
     }
     socket.on('message:new', handleNewMessage);
@@ -108,7 +108,7 @@ export default function ChatManager() {
     return () => {
       // Only remove event listeners, don't disconnect the socket
       // The socket is shared with ChatWindow and other components
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         logger.log('[ChatManager] Removing event listeners');
       }
       socket.off('message:new', handleNewMessage);
@@ -139,19 +139,19 @@ export default function ChatManager() {
             const oldestOpen = openChats
               .filter((c) => !c.isMinimized && c.id !== existingChat.id)
               .sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]))[0];
-            
+
             if (oldestOpen) {
               return openChats.map((chat) =>
                 chat.id === oldestOpen.id
                   ? { ...chat, isMinimized: true }
                   : chat.id === existingChat.id
-                  ? { ...chat, isMinimized: false, chatName, initials, userName, chatId: chatId || chat.chatId, userId: userId || chat.userId }
-                  : chat
+                    ? { ...chat, isMinimized: false, chatName, initials, userName, chatId: chatId || chat.chatId, userId: userId || chat.userId }
+                    : chat
               );
             } else {
-            return openChats.map((chat) =>
-              chat.id === existingChat.id ? { ...chat, isMinimized: false, chatName, initials, userName, chatId: chatId || chat.chatId, userId: userId || chat.userId } : chat
-            );
+              return openChats.map((chat) =>
+                chat.id === existingChat.id ? { ...chat, isMinimized: false, chatName, initials, userName, chatId: chatId || chat.chatId, userId: userId || chat.userId } : chat
+              );
             }
           } else {
             return openChats.map((chat) =>
@@ -162,7 +162,7 @@ export default function ChatManager() {
         // Already open and not minimized - just update the info if provided
         if (chatName || userName) {
           return openChats.map((chat) =>
-            chat.id === existingChat.id 
+            chat.id === existingChat.id
               ? { ...chat, chatName: chatName || chat.chatName, userName: userName || chat.userName, initials: initials || chat.initials, chatId: chatId || chat.chatId, userId: userId || chat.userId }
               : chat
           );
@@ -172,14 +172,14 @@ export default function ChatManager() {
 
       // Check if we already have 3 open windows
       const openCount = openChats.filter((c) => !c.isMinimized).length;
-      
+
       // If we have 3 open windows, minimize the oldest one
       let chatsToUpdate = [...openChats];
       if (openCount >= 3) {
         const oldestOpen = openChats
           .filter((c) => !c.isMinimized)
           .sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]))[0];
-        
+
         if (oldestOpen) {
           chatsToUpdate = chatsToUpdate.map((chat) =>
             chat.id === oldestOpen.id ? { ...chat, isMinimized: true } : chat
@@ -207,7 +207,7 @@ export default function ChatManager() {
       const chatToClose = chats.find((chat) => chat.id === chatId);
       const updated = chats.filter((chat) => chat.id !== chatId);
       logger.log('[ChatManager] Chat closed:', chatId, 'Remaining open chats:', updated.length);
-      
+
       // When a chat window is closed, restore unread count from backend
       // This ensures that if there are unread messages, the count will be restored
       if (chatToClose?.chatId && organization?.id) {
@@ -217,7 +217,7 @@ export default function ChatManager() {
           queryClient.invalidateQueries({ queryKey: ['chats', organization.id] });
         }, 100);
       }
-      
+
       return updated;
     });
   };
@@ -233,20 +233,20 @@ export default function ChatManager() {
   const restoreChat = (chatId: string) => {
     setOpenChats((openChats) => {
       const openCount = openChats.filter((c) => !c.isMinimized).length;
-      
+
       // If we have 3 open windows, minimize the oldest one
       if (openCount >= 3) {
         const oldestOpen = openChats
           .filter((c) => !c.isMinimized)
           .sort((a, b) => parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]))[0];
-        
+
         if (oldestOpen) {
           return openChats.map((chat) =>
             chat.id === oldestOpen.id
               ? { ...chat, isMinimized: true }
               : chat.id === chatId
-              ? { ...chat, isMinimized: false }
-              : chat
+                ? { ...chat, isMinimized: false }
+                : chat
           );
         } else {
           return openChats.map((chat) =>
@@ -344,14 +344,14 @@ function ChatWindowWrapper({
         zIndex: 50 + index,
       }}
     >
-              <ChatWindow
-                chatId={chat.chatId}
-                userId={chat.userId}
-                userName={chat.userName}
-                onClose={onClose}
-                onMinimize={onMinimize}
-                onChatLoaded={stableOnChatLoaded}
-              />
+      <ChatWindow
+        chatId={chat.chatId}
+        userId={chat.userId}
+        userName={chat.userName}
+        onClose={onClose}
+        onMinimize={onMinimize}
+        onChatLoaded={stableOnChatLoaded}
+      />
     </div>
   );
 }

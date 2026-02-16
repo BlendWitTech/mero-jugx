@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@frontend/contexts/ThemeContext';
 import { Link } from 'react-router-dom';
 import { Users, FileText, CreditCard, DollarSign, TrendingUp, Plus, Activity } from 'lucide-react';
-import { Card } from '@shared';
-
 import { useAppContext } from '../contexts/AppContext';
 
 interface DashboardStats {
@@ -88,19 +86,18 @@ export default function DashboardPage() {
     return (
         <div className="p-8 max-w-[1600px] mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight mb-2" style={{ color: theme.colors.text }}>
-                        CRM Overview
-                    </h1>
-                    <p className="text-lg opacity-80" style={{ color: theme.colors.textSecondary }}>
-                        Welcome back to Mero CRM. Here's what's happening today.
-                    </p>
-                </div>
+            <div className="mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider"
-                        style={{ backgroundColor: `${theme.colors.primary}20`, color: theme.colors.primary }}>
-                        Live Updates
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: theme.colors.primary }}>
+                        <Activity className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: theme.colors.text }}>
+                            CRM Overview
+                        </h1>
+                        <p className="mt-2 text-sm sm:text-base" style={{ color: theme.colors.textSecondary }}>
+                            Welcome back to Mero CRM. Here's what's happening today.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -111,47 +108,52 @@ export default function DashboardPage() {
                     const Icon = stat.icon;
                     return (
                         <Link key={stat.title} to={stat.link}
-                            className="block transform transition-all duration-300 hover:-translate-y-2"
+                            className="block"
                             style={{ animationDelay: `${index * 100}ms` }}>
-                            <Card
-                                className="p-6 relative overflow-hidden backdrop-blur-sm border shadow-sm group"
+                            <div
+                                className="group relative backdrop-blur-sm rounded-xl p-6 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-1"
                                 style={{
-                                    backgroundColor: `${theme.colors.surface}80`,
-                                    borderColor: theme.colors.border,
-                                    borderRadius: '20px'
+                                    background: `linear-gradient(to bottom right, ${theme.colors.surface}, ${theme.colors.background})`,
+                                    border: `1px solid ${theme.colors.border}80`
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = `${stat.color}80`;
+                                    e.currentTarget.style.boxShadow = `0 20px 25px -5px ${stat.color}33`;
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = `${theme.colors.border}80`;
+                                    e.currentTarget.style.boxShadow = '';
                                 }}
                             >
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-6">
+                                {/* Gradient overlay on hover */}
+                                <div className="absolute inset-0 transition-all duration-300"
+                                    style={{ background: `linear-gradient(to bottom right, transparent, transparent)` }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = `linear-gradient(to bottom right, ${stat.color}1A, transparent)`;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = `linear-gradient(to bottom right, transparent, transparent)`;
+                                    }}
+                                ></div>
+
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex items-center">
                                         <div
-                                            className="p-4 rounded-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 shadow-lg"
-                                            style={{
-                                                backgroundColor: `${stat.color}15`,
-                                                boxShadow: `0 8px 16px -4px ${stat.color}40`
-                                            }}
+                                            className="p-3 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300"
+                                            style={{ backgroundColor: stat.color }}
                                         >
-                                            <Icon className="h-7 w-7" style={{ color: stat.color }} />
+                                            <Icon className="h-6 w-6 text-white" />
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            <TrendingUp className="h-5 w-5 opacity-40" style={{ color: stat.color }} />
-                                            <span className="text-[10px] font-bold uppercase mt-1 opacity-40">Growth</span>
+                                        <div className="ml-4">
+                                            <p className="text-sm font-medium transition-colors" style={{ color: theme.colors.textSecondary }}>{stat.title}</p>
+                                            <p className="text-2xl font-bold mt-1" style={{ color: theme.colors.text }}>{stat.value}</p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-sm font-semibold uppercase tracking-wider opacity-60 mb-2" style={{ color: theme.colors.text }}>
-                                            {stat.title}
-                                        </h3>
-                                        <div className="flex items-baseline gap-2">
-                                            <p className="text-3xl font-black" style={{ color: theme.colors.text }}>
-                                                {stat.value}
-                                            </p>
-                                        </div>
+                                    <div className="flex flex-col items-end">
+                                        <TrendingUp className="h-4 w-4 opacity-40" style={{ color: stat.color }} />
                                     </div>
                                 </div>
-                                {/* Decorative background element */}
-                                <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full opacity-5 group-hover:opacity-10 transition-opacity duration-500"
-                                    style={{ backgroundColor: stat.color }}></div>
-                            </Card>
+                            </div>
                         </Link>
                     );
                 })}
@@ -169,12 +171,19 @@ export default function DashboardPage() {
                             const Icon = action.icon;
                             return (
                                 <Link key={action.title} to={action.link} className="group">
-                                    <Card
-                                        className="p-5 flex items-center justify-between transition-all duration-300 hover:shadow-xl border"
+                                    <div
+                                        className="p-5 flex items-center justify-between transition-all duration-300 hover:shadow-xl shadow-lg backdrop-blur-sm rounded-xl overflow-hidden hover:-translate-y-1"
                                         style={{
-                                            backgroundColor: theme.colors.surface,
-                                            borderColor: theme.colors.border,
-                                            borderRadius: '16px'
+                                            background: `linear-gradient(to bottom right, ${theme.colors.surface}, ${theme.colors.background})`,
+                                            border: `1px solid ${theme.colors.border}80`
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = `${action.color}80`;
+                                            e.currentTarget.style.boxShadow = `0 10px 15px -3px ${action.color}33`;
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = `${theme.colors.border}80`;
+                                            e.currentTarget.style.boxShadow = '';
                                         }}
                                     >
                                         <div className="flex items-center gap-5">
@@ -192,7 +201,7 @@ export default function DashboardPage() {
                                             style={{ backgroundColor: `${action.color}15` }}>
                                             <Plus className="h-5 w-5" style={{ color: action.color }} />
                                         </div>
-                                    </Card>
+                                    </div>
                                 </Link>
                             );
                         })}
@@ -204,26 +213,25 @@ export default function DashboardPage() {
                     <h2 className="text-2xl font-bold px-1" style={{ color: theme.colors.text }}>
                         Recent Activity
                     </h2>
-                    <Card
-                        className="h-[calc(100%-48px)] flex flex-col items-center justify-center min-h-[300px] border relative overflow-hidden"
+                    <div
+                        className="h-[calc(100%-48px)] flex flex-col items-center justify-center min-h-[300px] border relative overflow-hidden backdrop-blur-sm rounded-xl shadow-lg"
                         style={{
-                            backgroundColor: theme.colors.surface,
-                            borderColor: theme.colors.border,
-                            borderRadius: '24px'
+                            background: `linear-gradient(to bottom right, ${theme.colors.surface}, ${theme.colors.background})`,
+                            border: `1px solid ${theme.colors.border}80`
                         }}
                     >
                         {/* Decorative background grid/dots could go here */}
                         <div className="relative z-10 text-center space-y-4">
-                            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
-                                <Activity className="h-8 w-8 opacity-20" style={{ color: theme.colors.textSecondary }} />
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: theme.colors.background }}>
+                                <Activity className="h-8 w-8 opacity-40" style={{ color: theme.colors.textSecondary }} />
                             </div>
-                            <p className="text-xl font-medium opacity-40 max-w-[280px] mx-auto">
+                            <p className="text-xl font-medium opacity-60 max-w-[280px] mx-auto" style={{ color: theme.colors.text }}>
                                 Monitoring your stream...
                                 <br />
                                 Recent activity will appear here shortly.
                             </p>
                         </div>
-                    </Card>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,13 +1,13 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User, UserStatus } from '../../src/database/entities/user.entity';
-import { Organization, OrganizationStatus } from '../../src/database/entities/organization.entity';
-import { OrganizationMember, OrganizationMemberStatus } from '../../src/database/entities/organization-member.entity';
-import { Role } from '../../src/database/entities/role.entity';
-import { Package } from '../../src/database/entities/package.entity';
+import { User, UserStatus } from '@src/database/entities/user.entity';
+import { Organization, OrganizationStatus } from '@src/database/entities/organization.entity';
+import { OrganizationMember, OrganizationMemberStatus } from '@src/database/entities/organization-member.entity';
+import { Role } from '@src/database/entities/role.entity';
+import { Package } from '@src/database/entities/package.entity';
 
 export class TestFixtures {
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   async createUser(overrides?: Partial<User>): Promise<User> {
     const userRepository = this.dataSource.getRepository(User);

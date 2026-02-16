@@ -4,11 +4,23 @@ import { useTheme } from '@frontend/contexts/ThemeContext';
 import { useAppContext } from '../contexts/AppContext';
 import MeroCrmSidebar from '../components/MeroCrmSidebar';
 import { isAppSubdomain } from '@frontend/config/urlConfig';
+import { useQuery } from '@tanstack/react-query';
+import api from '@frontend/services/api';
 
 export default function MeroCrmLayout() {
     const { theme } = useTheme();
     const { organizationId, buildHref } = useAppContext();
     const location = useLocation();
+    const { appSlug } = useAppContext();
+
+    // Fetch organization members
+    const { data: members = [] } = useQuery({
+        queryKey: ['organization-members'],
+        queryFn: async () => {
+            const response = await api.get('/users');
+            return response.data.users || [];
+        },
+    });
 
     // Check if path is active
     const checkActive = (href: string, currentPath: string): boolean => {
@@ -37,6 +49,7 @@ export default function MeroCrmLayout() {
                 appSlug="mero-crm"
                 buildHref={buildHref}
                 checkActive={checkActive}
+                members={members}
             />
 
             <div

@@ -41,7 +41,8 @@ Write-Host ""
 Write-Host "🗄️  Checking database connection..." -ForegroundColor Blue
 try {
     npm run db:check
-} catch {
+}
+catch {
     Write-Host "⚠️  Database check failed. Make sure database is running." -ForegroundColor Yellow
 }
 Write-Host ""
@@ -50,7 +51,8 @@ Write-Host ""
 Write-Host "📦 Running database migrations..." -ForegroundColor Blue
 try {
     npm run migration:run
-} catch {
+}
+catch {
     Write-Host "⚠️  Migration failed. Check logs." -ForegroundColor Yellow
 }
 Write-Host ""
@@ -66,4 +68,6 @@ Write-Host "  - Frontend: http://localhost:3001 (if configured)" -ForegroundColo
 Write-Host ""
 
 # Start the server
-npm run start:prod
+# Start the server
+Set-Location api
+node dist/main
